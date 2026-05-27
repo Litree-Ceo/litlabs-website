@@ -9,5 +9,15 @@ export async function GET(req: NextRequest) {
   const payload = await verifyToken(token);
   if (!payload) return NextResponse.json({ user: null });
 
-  return NextResponse.json({ user: { id: payload.id, email: payload.email, name: payload.name } });
+  // Look up fresh user data from database
+  const user = await findUserByEmail(payload.email as string);
+  if (!user) return NextResponse.json({ user: null });
+
+  return NextResponse.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    },
+  });
 }

@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { verifyToken } from "./src/lib/jwt";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/api/auth", "/api/chat", "/gallery"];
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/register",
+  "/api/auth",
+  "/api/chat",
+  "/api/settings",
+  "/gallery",
+];
 
 export async function middleware(request: {
   nextUrl: { pathname: string; origin: string; href: string };
@@ -30,7 +38,9 @@ export async function middleware(request: {
 
   const payload = await verifyToken(token);
   if (!payload) {
-    const res = NextResponse.redirect(new URL("/login", request.nextUrl.origin));
+    const res = NextResponse.redirect(
+      new URL("/login", request.nextUrl.origin)
+    );
     res.cookies.delete("auth-token");
     return res;
   }

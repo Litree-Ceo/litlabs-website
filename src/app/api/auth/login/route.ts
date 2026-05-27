@@ -15,7 +15,10 @@ export async function POST(req: NextRequest) {
 
   const token = await signToken({ id: user.id, email: user.email, name: user.name });
   const res = NextResponse.json({ user: { id: user.id, email: user.email, name: user.name } });
+
+  // Cookie: 7 days default, 30 days if remember me
   const maxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
+
   res.cookies.set("auth-token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -23,5 +26,6 @@ export async function POST(req: NextRequest) {
     maxAge,
     path: "/",
   });
+
   return res;
 }
