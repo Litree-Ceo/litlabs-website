@@ -664,7 +664,7 @@ export default function SettingsPage() {
                         }`}
                         style={{
                           backgroundColor: color.hex,
-                          ringColor: color.hex,
+                          outlineColor: accentColor === color.id ? color.hex : undefined,
                         }}
                         title={color.label}
                       />
