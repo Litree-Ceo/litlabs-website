@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack && cp -f node_modules/sql.js/dist/sql-wasm.wasm .next/server/node_modules/sql.js/dist/ 2>/dev/null; cp -f node_modules/sql.js/dist/sql-wasm.wasm .next/standalone/node_modules/sql.js/dist/ 2>/dev/null; echo 'sql-wasm.wasm copied'",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
@@ -13,8 +13,7 @@
     "jose": "^6.2.3",
     "next": "16.2.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "sql.js": "^1.14.1"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
