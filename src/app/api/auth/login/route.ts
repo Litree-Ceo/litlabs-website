@@ -3,27 +3,47 @@ import { verifyPassword } from "@/lib/db";
 import { signToken } from "@/lib/jwt";
 
 export async function POST(req: NextRequest) {
-  const { email, password, rememberMe } = await req.json();
+  // Handle both JSON (fetch) and form POST (HTML form)
+  let email = "";
+  let password = "";
+
+  const contentType = req.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    const body = await req.json();
+    email = body.email || "";
+    password = body.password || "";
+  } else {
+    // Form POST
+    const formData = await req.formData();
+    email = (formData.get("email") as string) || "";
+    password = (formData.get("password") as string) || "";
+  }
+
   if (!email || !password) {
-    return NextResponse.json({ error: "Email and password required" }, { status: 400 });
+    return NextResponse.redirect(
+      new URL("/login?error=Email+and+password+required", req.url)
+    );
   }
 
   const user = await verifyPassword(email, password);
   if (!user) {
-    return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    return NextResponse.redirect(
+      new URL("/login?error=Invalid+credentials", req.url)
+    );
   }
 
-  const token = await signToken({ id: user.id, email: user.email, name: user.name });
-  const res = NextResponse.json({ user: { id: user.id, email: user.email, name: user.name } });
+  const token = await signToken({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+  });
 
-  // Cookie: 7 days default, 30 days if remember me
-  const maxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
-
+  const res = NextResponse.redirect(new URL("/dashboard", req.url));
   res.cookies.set("auth-token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge,
+    maxAge: 60 * 60 * 24 * 7,
     path: "/",
   });
 

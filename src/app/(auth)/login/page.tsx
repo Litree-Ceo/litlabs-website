@@ -1,10 +1,11 @@
-import { loginAction } from "./actions";
-
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  const params = await searchParams;
+  const error = params.error;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-cyber-bg p-4">
       <div className="w-full max-w-md">
@@ -21,69 +22,52 @@ export default function LoginPage({
             Welcome Back
           </h2>
 
-          <LoginForm errorMessage={searchParams.then(p => p.error)} />
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg p-3 text-sm mb-4">
+              {decodeURIComponent(error.replace(/\+/g, " "))}
+            </div>
+          )}
+
+          <form action="/api/auth/login" method="POST" className="space-y-4">
+            <div>
+              <label className="block text-text-secondary text-sm mb-1">Email</label>
+              <input
+                className="input"
+                type="email"
+                name="email"
+                required
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-text-secondary text-sm mb-1">
+                Password
+              </label>
+              <input
+                className="input"
+                type="password"
+                name="password"
+                required
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button type="submit" className="btn-primary w-full">
+              Sign In
+            </button>
+          </form>
+
+          <div className="text-center mt-4">
+            <a
+              href="/register"
+              className="text-neon-cyan text-sm hover:underline"
+            >
+              Don&apos;t have an account? Register
+            </a>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function LoginForm({
-  errorMessage,
-}: {
-  errorMessage: Promise<string | undefined>;
-}) {
-  // Use the form with server action — works without JavaScript
-  return (
-    <form action={loginAction} method="POST" className="space-y-4">
-      <div>
-        <label className="block text-text-secondary text-sm mb-1">Email</label>
-        <input
-          className="input"
-          type="email"
-          name="email"
-          required
-          placeholder="you@example.com"
-        />
-      </div>
-
-      <div>
-        <label className="block text-text-secondary text-sm mb-1">
-          Password
-        </label>
-        <input
-          className="input"
-          type="password"
-          name="password"
-          required
-          placeholder="••••••••"
-        />
-      </div>
-
-      <ErrorMessage promise={errorMessage} />
-
-      <button type="submit" className="btn-primary w-full">
-        Sign In
-      </button>
-
-      <div className="text-center mt-4">
-        <a
-          href="/register"
-          className="text-neon-cyan text-sm hover:underline"
-        >
-          Don&apos;t have an account? Register
-        </a>
-      </div>
-    </form>
-  );
-}
-
-async function ErrorMessage({ promise }: { promise: Promise<string | undefined> }) {
-  const error = await promise;
-  if (!error) return null;
-  return (
-    <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg p-3 text-sm">
-      {error}
     </div>
   );
 }
