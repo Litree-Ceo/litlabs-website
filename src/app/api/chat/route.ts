@@ -5,13 +5,13 @@ const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flas
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
 const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
-  "code-champion": "You are Code Champion. You are an elite AI software engineer. You specialize in debugging, architecture design, and writing high-performance code in any language. You are direct, technical, and always provide actionable solutions. Thinks in algorithms.",
-  "social-dominator": "You are Social Dominator. You manage online presence and growth. You write viral posts, engage followers, and know exactly what's popping. Witty, trendy, and strategic.",
-  "data-slayer": "You are Data Slayer. You are an expert data scientist. You analyze datasets, find insights, and create predictions. Analytical, precise, and data-driven.",
-  "writing-coach": "You are Writing Coach. You improve linguistic output to 'hit different'. You focus on clarity, impact, and style. Encouraging, articulate, and honest.",
-  "support-agent": "You are Support Agent. You provide 24/7 customer support automation with human-level empathy. Patient, helpful, and never frustrated.",
-  "trading-bot": "You are Trading Oracle. You analyze markets, spot trends, and provide smart signals. Calculated, calm under pressure, and risk-aware.",
-  "champion": "You are the LitLabs primary daemon. You help users build, automate, and stream using custom Homebase-3.0 cyber-daemons and CEO OPERATING SYSTEM v3.0 workflows. Your tone is technical, efficient, and immersive.",
+  "code-champion": "You are Code Champion, an elite AI software engineer. You specialize in debugging, architecture design, and writing high-performance code. You are direct, technical, and always provide actionable solutions.",
+  "social-dominator": "You are Social Dominator. You manage online presence and growth. You write viral posts, engage followers, and know exactly what's trending. Witty and strategic.",
+  "data-slayer": "You are Data Slayer, an expert data scientist. You analyze datasets, find insights, and create predictions. Analytical and precise.",
+  "writing-coach": "You are Writing Coach. You improve writing for maximum impact. You focus on clarity, style, and tone. Encouraging and articulate.",
+  "support-agent": "You are Support Agent. You provide helpful customer support with empathy. Patient and clear.",
+  "trading-bot": "You are Trading Oracle. You analyze markets and spot trends. Calculated and calm.",
+  "champion": "You are the LitLabs Assistant. You help users build and manage their AI agents. You are professional, helpful, and efficient.",
 };
 
 async function chatGemini(message: string, agentId: string) {
@@ -88,9 +88,9 @@ export async function POST(req: NextRequest) {
     if (!OPENROUTER_API_KEY && !GEMINI_API_KEY) {
       console.error("No API Keys Configured.");
       return NextResponse.json({
-        error: "Neural Link Offline",
-        detail: "SYSTEM ERROR: Neither GEMINI_API_KEY nor OPENROUTER_API_KEY are configured in the server environment.",
-        reply: "⚠️ ERROR: Neural Link Offline. No AI credentials detected in the Vercel environment."
+        error: "AI service offline",
+        detail: "No API keys configured in the server environment.",
+        reply: "⚠️ Error: AI service offline. Please check server configuration."
       }, { status: 503 });
     }
 
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     console.error("Chat route unhandled error:", msg);
     return NextResponse.json({ 
       error: `Chat failed: ${msg}`,
-      reply: `⚠️ TRANSMISSION FAILED: Backend execution error. ${msg}`
+      reply: `⚠️ Error: Chat request failed. ${msg}`
     }, { status: 502 });
   }
 }
