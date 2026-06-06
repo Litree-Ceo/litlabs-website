@@ -28,7 +28,7 @@ export default function SignUpPage() {
             fontWeight: "bold",
             marginBottom: "8px"
           }}>
-            🤖 LITLABS
+            🤖 LiTreeLabStudios
           </h1>
           <p style={{ color: theme.textColor, fontSize: "12px" }}>
             Create your account to start building with AI agents

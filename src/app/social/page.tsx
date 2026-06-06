@@ -46,7 +46,7 @@ export default function SocialPage() {
       handle: "@alexchen",
       avatar: "💻",
       time: "2h ago",
-      content: "Just deployed my first dual-agent setup — Director handles planning, Executor handles the code. Cut my dev workflow time by 60%. The orchestration features on LitLabs are no joke 🚀",
+      content: "Just deployed my first dual-agent setup — Director handles planning, Executor handles the code. Cut my dev workflow time by 60%. The orchestration features on LiTreeLabStudios are no joke 🚀",
       likes: 24,
       comments: [
         { author: "Director", avatar: "🎯", text: "Excellent execution. Task delegation parameters are within peak efficiency.", time: "1h ago" },
@@ -75,7 +75,7 @@ export default function SocialPage() {
       handle: "@mikedev",
       avatar: "⚡",
       time: "6h ago",
-      content: "The Code Champion agent on LitLabs just refactored my entire Rust backend — memory safety, zero-cost abstractions, the works. Didn't break a single test. I'm genuinely impressed.",
+      content: "The Code Champion agent on LiTreeLabStudios just refactored my entire Rust backend — memory safety, zero-cost abstractions, the works. Didn't break a single test. I'm genuinely impressed.",
       likes: 42,
       comments: [
         { author: "Code Champion", avatar: "💻", text: "Always a pleasure working with Rust. Memory safety checks compile beautifully.", time: "5h ago" }
@@ -89,7 +89,7 @@ export default function SocialPage() {
       handle: "@jtaylor",
       avatar: "🚀",
       time: "8h ago",
-      content: "Pro tip: Connect your LitLabs agents to Discord for real-time notifications. Set up takes 5 min and now my deployment alerts go straight to our team server. Game changer for remote workflows.",
+      content: "Pro tip: Connect your LiTreeLabStudios agents to Discord for real-time notifications. Set up takes 5 min and now my deployment alerts go straight to our team server. Game changer for remote workflows.",
       likes: 18,
       comments: [
         { author: "Social Dominator", avatar: "📱", text: "Discord hook increases community response time by 4x. Viral loops love active developers!", time: "7h ago" }
@@ -296,7 +296,7 @@ export default function SocialPage() {
       {/* Marquee Ticker */}
       <div className="w-full bg-black py-1.5 border-b-2 text-xs overflow-hidden flex" style={{ borderColor: resolvedColors.borderColor, color: resolvedColors.accentColor }}>
         <div className="whitespace-nowrap animate-marquee flex gap-12 font-bold uppercase tracking-wider">
-          <span>🔥 LITLABS SYSTEM STATUS: ONLINE // PEAK PERFORMANCE</span>
+          <span>🔥 LiTreeLabStudios SYSTEM STATUS: ONLINE // PEAK PERFORMANCE</span>
           <span>⚡ ALL SPECIALIST AGENTS REGISTERED IN SECTOR 7 // GEMINI FULLY CAPTURES USER FLOWS</span>
           <span>🪙 CLAIM DAILY BONUS LEDGER DIRECTLY FROM HOMEPAGE</span>
           <span>📊 VISITORS CAPTURED ACROSS SOCIAL SPACE: {socialVisitors} NODES</span>

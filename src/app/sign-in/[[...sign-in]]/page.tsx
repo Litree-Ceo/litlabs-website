@@ -28,7 +28,7 @@ export default function SignInPage() {
             fontWeight: "bold",
             marginBottom: "8px"
           }}>
-            🤖 LITLABS
+            🤖 LiTreeLabStudios
           </h1>
           <p style={{ color: theme.textColor, fontSize: "12px" }}>
             Sign in to access your AI agents

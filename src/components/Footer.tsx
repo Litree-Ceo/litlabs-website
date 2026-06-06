@@ -21,7 +21,7 @@ export default function Footer() {
           <div className="flex items-center gap-2">
             <span className="text-sm">🚀</span>
             <span className="font-bold" style={{ color: resolvedColors.headerColor }}>
-              LiTTree Lab Studios
+              LiTreeLabStudios
             </span>
             <span className="opacity-50">© 2026</span>
           </div>

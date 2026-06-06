@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cookie Policy | LiTTree Lab Studios",
-  description: "Cookie Policy for LiTTree Lab Studios AI Agent Platform.",
+  title: "Cookie Policy | LiTreeLabStudios",
+  description: "Cookie Policy for LiTreeLabStudios AI Agent Platform.",
 };
 
 export default function CookiesPage() {

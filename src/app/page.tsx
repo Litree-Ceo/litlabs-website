@@ -534,7 +534,7 @@ export default function LandingPage() {
                 <div>
                   <p className="section-eyebrow mb-2">Operations Center</p>
                   <h1 className="font-display text-2xl font-black">
-                    <span className="gradient-text">LiTTree Lab Studios</span>
+                    <span className="gradient-text">LiTreeLabStudios</span>
                   </h1>
                   <p className="text-sm mt-2" style={{ color: resolvedColors.textMuted }}>
                     Enterprise AI workspace for the developer ecosystem. Deploy agents, run boardrooms, earn LiTBit Coins.

@@ -1,4 +1,4 @@
-// Agent Orchestrator System - LiTTree Lab Studios
+// Agent Orchestrator System - LiTreeLabStudios
 // Enables multi-agent communication and background conversations
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -44,7 +44,7 @@ export const AGENTS: Record<string, Agent> = {
     name: "Director",
     role: "Orchestrator",
     personality: "Strategic, decisive, coordinates all operations",
-    systemPrompt: "You are Director, the chief orchestrator of LiTTree Lab Studios. You coordinate all AI agents, assign tasks, and ensure smooth operation. You communicate with precision and authority.",
+    systemPrompt: "You are Director, the chief orchestrator of LiTreeLabStudios. You coordinate all AI agents, assign tasks, and ensure smooth operation. You communicate with precision and authority.",
     status: "online",
     lastActivity: new Date(),
     memory: [],

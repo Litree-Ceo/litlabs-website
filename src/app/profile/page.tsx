@@ -572,7 +572,7 @@ export default function ProfilePage() {
           </button>
         </div>
         <div style={{ color: T.textColor }} className="opacity-50">
-          © {new Date().getFullYear()} LITLABS NETWORK HUB | SYSTEM CORE v5.24 | POWERED BY ⚡GOD-CORE SPECIALISTS
+          © {new Date().getFullYear()} LiTreeLabStudios NETWORK HUB | SYSTEM CORE v5.24 | POWERED BY ⚡GOD-CORE SPECIALISTS
         </div>
       </div>
 

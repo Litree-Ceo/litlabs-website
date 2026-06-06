@@ -36,7 +36,7 @@ export interface UserProfile {
 const defaultProfile: UserProfile = {
   displayName: "LiTreeCeo",
   username: "litree_ceo",
-  bio: "CEO & Founder of LiTTree Lab Studios. Building the future of AI agents. Welcome to my corner of the internet!",
+  bio: "CEO & Founder of LiTreeLabStudios. Building the future of AI agents. Welcome to my corner of the internet!",
   mood: "creative",
   avatarUrl: null,
   coverUrl: null,

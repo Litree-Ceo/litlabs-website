@@ -40,7 +40,7 @@ export default function Navbar() {
               className="font-bold text-lg hidden sm:inline"
               style={{ color: resolvedColors.headerColor }}
             >
-              LiTTree Lab
+              LiTreeLabStudios
             </span>
           </Link>
 

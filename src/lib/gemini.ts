@@ -87,7 +87,7 @@ Rules:
 export async function directorPlan(backlog: string, completed: string, projectContext: string): Promise<string> {
   const model = getModel("flash", "precise");
   
-  const prompt = `You are the LitLabs Hive Mind Director. Analyze the project state and plan the next task.
+  const prompt = `You are the LiTreeLabStudios Hive Mind Director. Analyze the project state and plan the next task.
 
 PROJECT CONTEXT:
 ${projectContext}
@@ -128,7 +128,7 @@ export async function executorCode(
 ): Promise<string> {
   const model = getModel("flash", "code");
   
-  let prompt = `You are the LitLabs Hive Mind Executor. Implement the code for: ${targetFile}
+  let prompt = `You are the LiTreeLabStudios Hive Mind Executor. Implement the code for: ${targetFile}
 
 DIRECTOR INSTRUCTIONS:
 ${instructions}
