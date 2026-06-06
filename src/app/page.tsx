@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
 import { useProfile } from "@/context/ProfileContext";
@@ -168,7 +168,13 @@ export default function LandingPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Track if this is initial mount to prevent scroll-to-bottom on page load
+  const isInitialMount = useRef(true);
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     telemetryEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [telemetry]);
 

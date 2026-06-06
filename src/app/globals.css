@@ -45,9 +45,7 @@
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+/* html scroll-behavior removed - was causing scroll-to-bottom on page refresh */
 
 body {
   background-color: var(--bg-color);
