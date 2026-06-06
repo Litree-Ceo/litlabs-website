@@ -57,12 +57,12 @@ export interface Theme {
 const darkSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkColor: string; headerColor: string; borderColor: string; accentColor: string; boxBg: string }> = {
   cyberpunk: {
     bgColor: "#0a0a0f",
-    textColor: "#00ff41",
-    linkColor: "#ff0080",
-    headerColor: "#00ffff",
-    borderColor: "#ff00ff",
-    accentColor: "#ffff00",
-    boxBg: "#1a0a2e",
+    textColor: "#c8e6c9",
+    linkColor: "#00d4ff",
+    headerColor: "#00e5ff",
+    borderColor: "#d946ef",
+    accentColor: "#fbbf24",
+    boxBg: "#0f172a",
   },
   retro: {
     bgColor: "#000000",
@@ -93,11 +93,11 @@ const darkSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkCo
   },
   matrix: {
     bgColor: "#000000",
-    textColor: "#00ff00",
-    linkColor: "#00cc00",
-    headerColor: "#008800",
-    borderColor: "#00ff00",
-    accentColor: "#00aa00",
+    textColor: "#86efac",
+    linkColor: "#22c55e",
+    headerColor: "#16a34a",
+    borderColor: "#15803d",
+    accentColor: "#4ade80",
     boxBg: "#0a1a0a",
   },
   pink: {
@@ -165,9 +165,9 @@ const darkSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkCo
   },
   neon: {
     bgColor: "#000000",
-    textColor: "#ffffff",
+    textColor: "#e0e0e0",
     linkColor: "#ff00ff",
-    headerColor: "#00ff00",
+    headerColor: "#22c55e",
     borderColor: "#ff00ff",
     accentColor: "#00ffff",
     boxBg: "#0a0a0a",
@@ -351,11 +351,11 @@ const lightSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkC
 
 // Accent color overrides
 const accentOverrides: Record<AccentColor, { linkColor: string; headerColor: string; accentColor: string }> = {
-  "neon-green": { linkColor: "#00ff41", headerColor: "#00ff41", accentColor: "#00ff41" },
+  "neon-green": { linkColor: "#22c55e", headerColor: "#22c55e", accentColor: "#34d399" },
   "hot-pink": { linkColor: "#ff0080", headerColor: "#ff0080", accentColor: "#ff1493" },
   "electric-blue": { linkColor: "#00aaff", headerColor: "#00aaff", accentColor: "#00ffff" },
   "cyber-yellow": { linkColor: "#ffff00", headerColor: "#ffff00", accentColor: "#ffcc00" },
-  "matrix-green": { linkColor: "#00ff00", headerColor: "#00ff00", accentColor: "#88ff88" },
+  "matrix-green": { linkColor: "#10b981", headerColor: "#10b981", accentColor: "#6ee7b7" },
   "sunset-orange": { linkColor: "#ff6b35", headerColor: "#ff6b35", accentColor: "#ff9500" },
   "ocean-blue": { linkColor: "#0088cc", headerColor: "#0088cc", accentColor: "#00bbff" },
   "purple-haze": { linkColor: "#aa00ff", headerColor: "#aa00ff", accentColor: "#dd44ff" },
@@ -365,7 +365,7 @@ const accentOverrides: Record<AccentColor, { linkColor: string; headerColor: str
 const defaultTheme: Theme = {
   mode: "dark",
   skin: "cyberpunk",
-  accent: "neon-green",
+  accent: "electric-blue",
   backgroundMode: "constellation",
 };
 

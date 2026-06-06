@@ -954,7 +954,7 @@ export default function LandingPage() {
                 {telemetry.map((log, i) => (
                   <div key={i} className="telemetry-row">
                     <span className="telemetry-time">{log.time}</span>
-                    <span className="telemetry-agent">{log.icon} {log.agent}:</span>
+                    <span className="telemetry-agent">{log.icon ? log.icon + ' ' : ''}{log.agent}:</span>
                     <span>{log.text}</span>
                   </div>
                 ))}
