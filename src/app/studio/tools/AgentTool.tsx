@@ -42,6 +42,12 @@ const CAPABILITIES: Record<string, string[]> = {
 };
 
 const STORAGE_KEY = "litlabs-agent-chat-v2";
+const PROVIDER_STORAGE_KEY = "litlabs-agent-tool-provider";
+
+const PROVIDER_OPTIONS = [
+  { id: "gemini", label: "Gemini 2.5", hint: "Primary, fast" },
+  { id: "openrouter-free", label: "OpenRouter Free", hint: "Fallback pool" },
+];
 
 /* ─── Markdown renderer (minimal inline) ───────────────────────────── */
 function renderMarkdown(text: string): React.ReactNode[] {
@@ -99,6 +105,9 @@ export default function AgentTool() {
   const [streaming, setStreaming] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [customAgents, setCustomAgents] = useState<Agent[]>([]);
+  const [provider, setProvider] = useState<"gemini" | "openrouter-free">(() => {
+    try { return (localStorage.getItem(PROVIDER_STORAGE_KEY) as "gemini" | "openrouter-free") || "gemini"; } catch { return "gemini"; }
+  });
 
   /* Panels */
   const [showCreate, setShowCreate] = useState(false);
@@ -124,6 +133,7 @@ export default function AgentTool() {
 
   useEffect(() => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chatMap)); } catch {} }, [chatMap]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, streaming]);
+  useEffect(() => { try { localStorage.setItem(PROVIDER_STORAGE_KEY, provider); } catch {} }, [provider]);
 
   /* Auto-resize textarea */
   useEffect(() => {
@@ -158,7 +168,7 @@ export default function AgentTool() {
       const history = [...(chatMap[selectedAgent.id] || []), userMsg].map(m => ({ role: m.role, content: m.content }));
       const res = await fetch("/api/gemini/chat", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, systemPrompt: selectedAgent.systemPrompt, stream: true }),
+        body: JSON.stringify({ messages: history, systemPrompt: selectedAgent.systemPrompt, stream: true, provider }),
       });
       if (!res.ok) throw new Error("API error");
       const reader = res.body?.getReader();
@@ -186,7 +196,7 @@ export default function AgentTool() {
       setStreaming("");
     }
     setIsLoading(false);
-  }, [input, isLoading, selectedAgent, chatMap]);
+  }, [input, isLoading, selectedAgent, chatMap, provider]);
 
   const handleKey = (e: React.KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
@@ -222,7 +232,7 @@ export default function AgentTool() {
       try {
         const res = await fetch("/api/gemini/chat", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: context, systemPrompt: `${speaker.systemPrompt} You are speaking with ${otherName}. Keep responses concise (2-3 sentences). Respond to what was just said.`, stream: false }),
+          body: JSON.stringify({ messages: context, systemPrompt: `${speaker.systemPrompt} You are speaking with ${otherName}. Keep responses concise (2-3 sentences). Respond to what was just said.`, stream: false, provider }),
         });
         const data = await res.json();
         const reply: string = data.response || data.text || "...";
@@ -308,11 +318,26 @@ export default function AgentTool() {
             <span className="text-xl">{selectedAgent.icon}</span>
             <div>
               <div className="text-xs font-bold leading-tight" style={{ color: selectedAgent.color }}>{selectedAgent.name}</div>
-              <div className="text-[9px] opacity-60" style={{ color: T.textMuted }}>{selectedAgent.role} · Gemini 2.5</div>
+              <div className="text-[9px] opacity-60" style={{ color: T.textMuted }}>
+                {selectedAgent.role} · {PROVIDER_OPTIONS.find(p => p.id === provider)?.label ?? "Gemini"}
+              </div>
             </div>
             <span className="w-1.5 h-1.5 rounded-full animate-pulse ml-1" style={{ backgroundColor: selectedAgent.color }} />
           </div>
           <div className="flex items-center gap-2">
+            {/* Provider toggle */}
+            {PROVIDER_OPTIONS.map(opt => (
+              <button key={opt.id} onClick={() => setProvider(opt.id as "gemini" | "openrouter-free")}
+                title={opt.hint}
+                className="text-[9px] px-2 py-0.5 rounded font-bold transition-all"
+                style={{
+                  backgroundColor: provider === opt.id ? T.accentColor + "20" : "transparent",
+                  color: provider === opt.id ? T.accentColor : T.textMuted + "60",
+                  border: `1px solid ${provider === opt.id ? T.accentColor + "40" : T.borderColor + "15"}`,
+                }}>
+                {opt.label}
+              </button>
+            ))}
             <span className="text-[9px] font-mono hidden sm:block" style={{ color: T.textMuted }}>
               <MessageSquare size={9} className="inline mr-1 opacity-50" />{messages.length} msgs
             </span>
@@ -408,7 +433,7 @@ export default function AgentTool() {
             </button>
           </div>
           <div className="flex items-center justify-between mt-1.5 px-0.5">
-            <span className="text-[9px] opacity-30" style={{ color: T.textMuted }}>Powered by Gemini 2.5 · Shift+Enter for new line</span>
+            <span className="text-[9px] opacity-30" style={{ color: T.textMuted }}>Powered by {PROVIDER_OPTIONS.find(p => p.id === provider)?.label ?? "Gemini"} · Shift+Enter for new line</span>
             {input.length > 0 && <span className="text-[9px] font-mono opacity-40" style={{ color: T.textMuted }}>{input.length}</span>}
           </div>
         </div>
@@ -460,7 +485,7 @@ export default function AgentTool() {
             </div>
             <div className="flex justify-between text-[9px] font-mono">
               <span style={{ color: T.textMuted }}>Model</span>
-              <span style={{ color: T.accentColor }}>Gemini 2.5</span>
+              <span style={{ color: T.accentColor }}>{PROVIDER_OPTIONS.find(p => p.id === provider)?.label ?? "Gemini"}</span>
             </div>
           </div>
 
