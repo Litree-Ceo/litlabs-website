@@ -42,7 +42,7 @@ export default function ImageTool() {
 
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
-  const [providerId, setProviderId] = useState<MediaProviderId>("pollinations");
+  const [providerId, setProviderId] = useState<MediaProviderId>("fal");
   const [seed, setSeed] = useState<number>(0);
 
   const [status, setStatus] = useState<GenerationStatus>("idle");

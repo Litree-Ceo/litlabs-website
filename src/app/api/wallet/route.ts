@@ -51,10 +51,43 @@ async function postHandler(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => null);
-    
-    if (!body || body.type !== "daily") {
+
+    if (!body || !body.type) {
       return NextResponse.json(
-        { error: "Invalid request. Use { type: 'daily' }" },
+        { error: "Invalid request. Use { type: 'daily' } or { type: 'spend', amount, reason }" },
+        { status: 400 }
+      );
+    }
+
+    /* Spend coins — called by AudioTool, VideoTool, etc. after generation */
+    if (body.type === "spend") {
+      const amount = typeof body.amount === "number" ? body.amount : 0;
+      if (amount <= 0) {
+        return NextResponse.json({ error: "amount must be a positive number" }, { status: 400 });
+      }
+      const currentWallet = await getUserWallet(clerkId);
+      if (!currentWallet) {
+        return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
+      }
+      const newBalance = currentWallet.balance - amount;
+      if (newBalance < 0) {
+        return NextResponse.json(
+          { error: "Insufficient balance", balance: currentWallet.balance },
+          { status: 400 }
+        );
+      }
+      const wallet = await updateWalletBalance(clerkId, newBalance);
+      return NextResponse.json({
+        message: `${amount} LiTBit Coins spent`,
+        balance: wallet.balance,
+        spent: amount,
+        reason: body.reason || "spend",
+      });
+    }
+
+    if (body.type !== "daily") {
+      return NextResponse.json(
+        { error: "Invalid type. Use 'daily' or 'spend'" },
         { status: 400 }
       );
     }

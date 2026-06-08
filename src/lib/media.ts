@@ -51,13 +51,13 @@ export const MEDIA_PROVIDERS: MediaProvider[] = [
   },
   {
     id: "fal",
-    label: "FAL.ai (FLUX)",
-    description: "FLUX Pro via FAL — generous free tier, fast inference.",
+    label: "FAL.ai (FLUX Pro)",
+    description: "FLUX.1 Pro via FAL — highest quality images, fast inference.",
     supportedFormats: ["image"],
     cost: () => 3,
     requiresKey: true,
     free: false,
-    tier: "cheap",
+    tier: "pro",
   },
   {
     id: "huggingface",
