@@ -211,6 +211,7 @@ export default function ChatTool() {
           <button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
+            aria-label="Send message"
             className="px-3 py-2 rounded-lg font-bold text-sm flex items-center gap-1 disabled:opacity-40 transition-all hover:scale-105"
             style={{ backgroundColor: T.accentColor, color: T.bgColor }}
           >

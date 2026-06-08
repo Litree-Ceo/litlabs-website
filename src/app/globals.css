@@ -430,10 +430,10 @@ a:hover {
   100% { transform: translateX(-50%); }
 }
 
-.animate-float { animation: float 4s ease-in-out infinite; }
-.animate-glow  { animation: glow 2.5s ease-in-out infinite; }
-.animate-marquee { animation: marquee 30s linear infinite; }
-.animate-pulse-opacity { animation: pulse-opacity 2s ease-in-out infinite; }
+.animate-float { animation: float 4s ease-in-out infinite; will-change: transform; transform: translateZ(0); }
+.animate-glow  { animation: glow 2.5s ease-in-out infinite; will-change: opacity; }
+.animate-marquee { animation: marquee 30s linear infinite; will-change: transform; transform: translateZ(0); }
+.animate-pulse-opacity { animation: pulse-opacity 2s ease-in-out infinite; will-change: opacity; }
 
 /* ============================================================
    AGENT TILES
@@ -977,8 +977,8 @@ a:hover {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fadeInUp { animation: fadeInUp 0.4s ease-out both; }
-.animate-slideInBottom { animation: slideInBottom 0.5s ease-out both; }
+.animate-fadeInUp { animation: fadeInUp 0.4s ease-out both; will-change: transform, opacity; }
+.animate-slideInBottom { animation: slideInBottom 0.5s ease-out both; will-change: transform, opacity; }
 
 /* Stagger children */
 .stagger-children > * { animation: fadeInUp 0.35s ease-out both; }
@@ -1246,8 +1246,8 @@ a:hover {
    SCANLINE ANIMATION
    ============================================================ */
 @keyframes scanlineMove {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 100%; }
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(4px); }
 }
 
 /* ============================================================

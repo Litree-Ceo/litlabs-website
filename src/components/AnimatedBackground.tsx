@@ -341,6 +341,7 @@ export default function AnimatedBackground({ mode = "holo" }: { mode?: Backgroun
           backgroundSize: "100% 4px",
           animation: "scanlineMove 8s linear infinite",
           opacity: 0.4,
+          willChange: "transform",
         }}
       />
       {/* Noise overlay */}

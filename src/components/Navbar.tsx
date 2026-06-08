@@ -186,6 +186,7 @@ export default function Navbar() {
             {/* Theme toggle */}
             <button
               onClick={() => setMode(theme.mode === "dark" ? "light" : "dark")}
+              aria-label={theme.mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               className="p-1.5 rounded-md transition-all duration-200 hover:scale-110"
               style={{
                 border: `1px solid ${resolvedColors.accentColor}30`,
@@ -201,6 +202,8 @@ export default function Navbar() {
             <div className="hidden md:block relative" ref={userRef}>
               <button
                 onClick={() => setUserOpen((v) => !v)}
+                aria-label="Navigation menu"
+                aria-expanded={userOpen}
                 className="flex items-center gap-1 p-1 rounded-md transition-all hover:opacity-70"
                 style={{
                   border: `1px solid ${resolvedColors.borderColor}40`,
@@ -243,6 +246,8 @@ export default function Navbar() {
             {/* Mobile hamburger */}
             <button
               onClick={() => setMobileOpen((v) => !v)}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileOpen}
               className="lg:hidden p-1.5 rounded-md"
               style={{ color: resolvedColors.linkColor }}
             >

@@ -14,7 +14,11 @@ const nextConfig: NextConfig = {
   },
 
   experimental: {
-    optimizePackageImports: ["@supabase/supabase-js"],
+    optimizePackageImports: [
+      "@supabase/supabase-js",
+      "lucide-react",
+      "@clerk/nextjs",
+    ],
   },
 
   // Externalize jose from middleware bundling (fixes NFT build error)
@@ -77,16 +81,33 @@ const nextConfig: NextConfig = {
             value: "geolocation=(), microphone=(), camera=()",
           },
           {
-            key: "Strict-Transport-Security",
-            value: "max-age=63072000; includeSubDomains; preload",
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
           },
           {
-            key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
+            key: "Cross-Origin-Embedder-Policy",
+            value: "unsafe-none",
           },
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.clerk.dev https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://images.unsplash.com https://**.supabase.co https://image.pollinations.ai; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.clerk.dev https://cloud.activepieces.com https://api.openai.com https://api.openrouter.ai https://api.stripe.com; frame-src 'self' https://open.spotify.com https://js.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://js.clerk.dev https://accounts.google.com https://www.googletagmanager.com https://challenges.cloudflare.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://image.pollinations.ai https://img.clerk.com https://images.clerk.dev https://fal.media https://storage.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "connect-src 'self' https://api.clerk.dev https://clerk.litlabs.net https://*.supabase.co https://api.openai.com https://openrouter.ai https://api.stripe.com https://fal.run https://fal.ai wss://*.fal.run",
+              "frame-src 'self' https://open.spotify.com https://js.stripe.com https://accounts.google.com https://challenges.cloudflare.com",
+              "worker-src 'self' blob:",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "upgrade-insecure-requests",
+            ].join("; "),
+          },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
           },
         ],
       },
@@ -120,7 +141,16 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      // Note: /_next/static is handled by Next.js automatically
+      // Cache Next.js static chunks for 1 year
+      {
+        source: "/_next/static/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
     ];
   },
 
