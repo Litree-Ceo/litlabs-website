@@ -1,10 +1,6 @@
 // Agent Orchestrator System - LiTreeLabStudios
 // Enables multi-agent communication and background conversations
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// Initialize Gemini API
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+import { generateText } from "@/lib/llm";
 
 export interface Agent {
   id: string;
@@ -234,7 +230,7 @@ export class AgentOrchestrator {
     };
   }
 
-  // Generate real AI agent response using Gemini
+// Generate real AI agent response using the unified LLM client with failover
   async simulateAgentResponse(agentId: string, incomingMessage: string, conversationContext?: string): Promise<string> {
     const agent = this.agents.get(agentId);
     if (!agent) return "Unknown agent";
@@ -246,17 +242,17 @@ Personality: ${agent.personality}
 Role: ${agent.role}
 
 ${conversationContext ? `Conversation context:\n${conversationContext}\n\n` : ""}
-Recent memory:\n${agent.memory.slice(-5).join("\n")}
+Recent memory:
+${agent.memory.slice(-5).join("\n")}
 
 You are responding to: "${incomingMessage}"
 
 Respond as ${agent.name} in character. Be concise (1-3 sentences), helpful, and stay true to your personality. Don't break character.`;
 
-      const result = await model.generateContent(prompt);
-      const response = result.response.text();
-      return response || "I'm processing that...";
-    } catch (error) {
-      console.error(`GenAI error for ${agentId}:`, error);
+      const r = await generateText(prompt, { task: "chat" });
+      return r.text || "I'm processing that...";
+} catch (error) {
+      console.error(`LLM error for ${agentId}:`, error);
       return `${agent.name} is thinking... (AI service temporarily unavailable)`;
     }
   }
@@ -281,8 +277,8 @@ Write a brief, natural opening message to kick off this discussion. Be conversat
 
     let initialContent: string;
     try {
-      const result = await model.generateContent(prompt);
-      initialContent = result.response.text() || `Hey ${agent2.name}, let's work on ${topic}!`;
+      const r = await generateText(prompt, { task: "creative" });
+      initialContent = r.text || `Hey ${agent2.name}, let's work on ${topic}!`;
     } catch {
       // Fallback to natural starters
       const fallbackStarters: Record<string, string> = {
