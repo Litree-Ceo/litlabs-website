@@ -103,6 +103,10 @@ interface TelemetryLog {
 export default function LandingPage() {
   const { theme, resolvedColors, setMode, setSkin } = useTheme();
   const { profile } = useProfile();
+  const { isLoaded, isSignedIn, userId } = useClerkAuth();
+  const mounted = useMounted();
+  const randomScales = useRef(UI_AGENTS.map(() => 0.8 + Math.random() * 0.5));
+  useScrollReveal(".reveal");
 
   const [showThemeEditor, setShowThemeEditor] = useState(false);
   const [crtEnabled, setCrtEnabled] = useState(false);
@@ -405,14 +409,6 @@ export default function LandingPage() {
   }).sort((a, b) => sortBy === "top" ? b.likes_count - a.likes_count : new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const skinPresets = ["cyberpunk", "retro", "ocean", "sunset", "matrix", "pink", "synthwave", "volcanic", "gold", "arctic", "emerald", "midnight", "neon", "blood", "cosmic", "miami"] as const;
-
-  const { isLoaded, isSignedIn, userId } = useClerkAuth();
-  const mounted = useMounted();
-  // Pre-generate random scales once to prevent background avatar jitter on re-render
-  const randomScales = useRef(UI_AGENTS.map(() => 0.8 + Math.random() * 0.5));
-
-  // Scroll reveal for landing page sections — MUST be before any conditional returns
-  useScrollReveal(".reveal");
 
   // ── LOADING STATE (prevents hydration mismatch with Clerk) ──
   if (!mounted || !isLoaded) {
