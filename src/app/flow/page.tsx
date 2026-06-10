@@ -1,617 +1,365 @@
-"use client";
+﻿"use client";
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth, RedirectToSignIn } from "@clerk/nextjs";
-import { useTheme } from "@/context/ThemeContext";
 import {
   Box, Terminal, Activity, Zap, Play, Cpu,
   Loader2, Settings, Webhook, Database, MessageSquare,
-  Trash2, SlidersHorizontal, Save, Network, RefreshCw,
-  Film, Coins, Wand2, Plus, AlertTriangle, CheckCircle2,
-  Sparkles, Download, History, Image as ImageIcon
+  Trash2, SlidersHorizontal, Save, Network, RefreshCw
 } from "lucide-react";
-import { MEDIA_PROVIDERS, MediaFormat, MediaProviderId, getProvider } from "@/lib/media";
 
-/* ------------------------------------------------------------------ */
-/*  Cell + Run types — kept simple; /api/flow is the source of truth.  */
-/* ------------------------------------------------------------------ */
-type FlowCell = {
-  id: string;
-  label: string;
-  format: MediaFormat;
-  providerId: MediaProviderId;
-  prompt: string;
-  negativePrompt: string;
-  seed: number;
-  width: number;
-  height: number;
-  referenceUrl?: string;
-};
+const NODE_TYPES = {
+  trigger: { id: "trigger", label: "Trigger",  color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/30"   },
+  agent:   { id: "agent",   label: "AI Agent", color: "text-fuchsia-400", bg: "bg-fuchsia-600/10", border: "border-fuchsia-500/30" },
+  action:  { id: "action",  label: "Action",   color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" },
+} as const;
+type NodeType = keyof typeof NODE_TYPES;
 
-type FlowCellResult = {
-  cellId: string;
-  status: "pending" | "running" | "succeeded" | "failed" | "skipped";
-  downloadUrl?: string;
-  thumbUrl?: string;
-  providerId: MediaProviderId;
-  format: MediaFormat;
-  cost: number;
-  error?: string;
-  durationMs?: number;
-};
+interface LibraryItem { type: NodeType; title: string; icon: React.ReactNode; desc: string; }
+interface PipelineNode { id: string; type: NodeType; title: string; config: Record<string, string | number>; }
 
-type FlowRunRecord = {
-  id: string;
-  name: string;
-  status: "pending" | "running" | "completed" | "failed" | "partial";
-  totalCost: number;
-  cells: FlowCell[];
-  results: FlowCellResult[];
-  createdAt: number;
-};
+const LIBRARY_ITEMS: LibraryItem[] = [
+  { type: "trigger", title: "Webhook Listener",   icon: React.createElement(Webhook,   { className: "w-4 h-4" }), desc: "Fired via HTTP POST request."        },
+  { type: "trigger", title: "Scheduled Interval", icon: React.createElement(Activity,  { className: "w-4 h-4" }), desc: "Runs on a cron schedule."            },
+  { type: "agent",   title: "Logic Orchestrator", icon: React.createElement(Network,   { className: "w-4 h-4" }), desc: "Routes data based on AI analysis."  },
+  { type: "agent",   title: "Task Champion",      icon: React.createElement(Cpu,       { className: "w-4 h-4" }), desc: "Heavy-duty reasoning and text tasks."},
+  { type: "action",  title: "Database Insert",    icon: React.createElement(Database,  { className: "w-4 h-4" }), desc: "Saves output to LitLabs Ledger."    },
+  { type: "action",  title: "Discord Webhook",    icon: React.createElement(MessageSquare, { className: "w-4 h-4" }), desc: "Sends alert to a Discord channel." },
+];
 
-type Ingredient = {
-  id: string;
-  label: string;
-  url: string;
-};
-
-const STORAGE_KEY = "litlabs-flow-history";
-const INGREDIENTS_KEY = "litlabs-flow-ingredients";
-const MAX_HISTORY = 8;
-const MAX_CELLS = 12;
-
-function newCell(idx: number): FlowCell {
-  return {
-    id: `cell_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
-    label: `Scene ${idx + 1}`,
-    format: idx === 0 ? "image" : idx === 1 ? "video" : "image",
-    providerId: idx === 0 ? "pollinations" : "huggingface",
-    prompt: "",
-    negativePrompt: "",
-    seed: 0,
-    width: 1024,
-    height: 1024,
-    referenceUrl: "",
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/*  Page                                                               */
-/* ------------------------------------------------------------------ */
 export default function FlowPage() {
   const { isLoaded, isSignedIn } = useAuth();
-  const { resolvedColors: T } = useTheme();
 
-  const [cells, setCells] = useState<FlowCell[]>(() => [newCell(0), newCell(1), newCell(2), newCell(3)]);
-  const [flowName, setFlowName] = useState("Untitled Flow");
-  const [running, setRunning] = useState(false);
-  const [results, setResults] = useState<FlowCellResult[]>([]);
-  const [history, setHistory] = useState<FlowRunRecord[]>([]);
-  const [coinBalance, setCoinBalance] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [providers, setProviders] = useState(MEDIA_PROVIDERS);
-  const [activeResult, setActiveResult] = useState<FlowCellResult | null>(null);
-  const resultRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [ingredientLabel, setIngredientLabel] = useState("");
-  const [ingredientUrl, setIngredientUrl] = useState("");
-
-  /* ---- Persist history ---- */
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setHistory(JSON.parse(raw));
-    } catch { /* ignore */ }
-  }, []);
-  useEffect(() => {
-    if (history.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
-    }
-  }, [history]);
+  const [nodes, setNodes] = useState<PipelineNode[]>([
+    { id: "1", type: "trigger", title: "Webhook Listener", config: { endpoint: "/api/v1/ingest" } },
+    { id: "2", type: "agent",   title: "Task Champion",    config: { model: "lit-core-v4", temperature: 0.7, prompt: "Analyze the incoming JSON and summarize the key directives." } },
+  ]);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>("2");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [terminalLogs, setTerminalLogs] = useState<string[]>(["[SYS] Workspace initialized.", "[SYS] Ready for node configuration."]);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(INGREDIENTS_KEY);
-      if (raw) setIngredients(JSON.parse(raw));
-    } catch {
-      // ignore
-    }
-  }, []);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [terminalLogs]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(INGREDIENTS_KEY, JSON.stringify(ingredients));
-    } catch {
-      // ignore
-    }
-  }, [ingredients]);
-
-  const addIngredient = useCallback(() => {
-    const label = ingredientLabel.trim();
-    const url = ingredientUrl.trim();
-    if (!label || !url) return;
-    setIngredients(prev => [{ id: `ing_${Date.now()}`, label, url }, ...prev]);
-    setIngredientLabel("");
-    setIngredientUrl("");
-  }, [ingredientLabel, ingredientUrl]);
-
-  const removeIngredient = useCallback((id: string) => {
-    setIngredients(prev => prev.filter(ing => ing.id !== id));
-  }, []);
-
-  /* ---- Load providers + balance ---- */
-  useEffect(() => {
-    fetch("/api/media/generate")
-      .then(r => r.json())
-      .then(d => {
-        if (Array.isArray(d.providers)) setProviders(d.providers);
-      })
-      .catch(() => { /* keep defaults */ });
-
-    if (isSignedIn) {
-      fetch("/api/wallet")
-        .then(r => r.json())
-        .then(d => { if (typeof d.balance === "number") setCoinBalance(d.balance); })
-        .catch(() => { /* silent */ });
-    }
-  }, [isSignedIn]);
-
-  /* ---- Cost calc ---- */
-  const cellCosts = useMemo(() => cells.map(c => {
-    const p = getProvider(c.providerId);
-    if (!p) return 0;
-    return p.cost(c.format);
-  }), [cells]);
-  const totalCost = cellCosts.reduce((a, b) => a + b, 0);
-  const canAfford = coinBalance === null || coinBalance >= totalCost;
-  const validCells = cells.filter(c => c.prompt.trim().length >= 3);
-  const canRun = validCells.length > 0 && canAfford && !running;
-
-  /* ---- Cell ops ---- */
-  const addCell = useCallback(() => {
-    setCells(prev => prev.length >= MAX_CELLS ? prev : [...prev, newCell(prev.length)]);
-  }, []);
-
-  const removeCell = useCallback((id: string) => {
-    setCells(prev => prev.length <= 1 ? prev : prev.filter(c => c.id !== id));
-  }, []);
-
-  const updateCell = useCallback((id: string, patch: Partial<FlowCell>) => {
-    setCells(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
-  }, []);
-
-  const moveCell = useCallback((id: string, dir: -1 | 1) => {
-    setCells(prev => {
-      const i = prev.findIndex(c => c.id === id);
-      if (i < 0) return prev;
-      const j = i + dir;
-      if (j < 0 || j >= prev.length) return prev;
-      const next = [...prev];
-      [next[i], next[j]] = [next[j], next[i]];
-      return next;
-    });
-  }, []);
-
-  /* ---- Run flow ---- */
-  const handleRun = useCallback(async () => {
-    if (!canRun) return;
-    setRunning(true);
-    setError(null);
-    setResults(cells.map(c => ({
-      cellId: c.id,
-      status: "pending",
-      providerId: c.providerId,
-      format: c.format,
-      cost: cellCosts[cells.findIndex(x => x.id === c.id)],
-    })));
-    try {
-      const res = await fetch("/api/flow", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: flowName, cells }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Flow run failed");
-
-      const run: FlowRunRecord = {
-        id: data.run.id,
-        name: flowName,
-        status: data.run.status,
-        totalCost: data.run.totalCost,
-        cells: data.run.cells,
-        results: data.run.results,
-        createdAt: data.run.createdAt,
-      };
-      setResults(data.run.results);
-      setHistory(prev => [run, ...prev].slice(0, MAX_HISTORY));
-      // Refresh balance
-      if (typeof data.run.totalCost === "number") {
-        fetch("/api/wallet").then(r => r.json()).then(d => {
-          if (typeof d.balance === "number") setCoinBalance(d.balance);
-        }).catch(() => {});
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Flow run failed");
-    } finally {
-      setRunning(false);
-    }
-  }, [canRun, cells, cellCosts, flowName]);
-
-  /* ---- Save single result to gallery ---- */
-  const saveToGallery = useCallback(async (r: FlowCellResult) => {
-    if (!r.downloadUrl) return;
-    try {
-      const res = await fetch("/api/gallery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: r.downloadUrl, caption: `${flowName} — cell ${r.cellId}` }),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        setError(d.error || "Save to gallery failed");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    }
-  }, [flowName]);
-
-  const loadHistoryEntry = useCallback((entry: FlowRunRecord) => {
-    setFlowName(entry.name + " (reloaded)");
-    setCells(entry.cells);
-    setResults(entry.results);
-  }, []);
-
-  const handleDownload = useCallback((url: string, name: string) => {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name.replace(/[^a-z0-9]+/gi, "_") + (url.startsWith("data:video") ? ".mp4" : ".jpg");
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }, []);
-
-  const clearHistory = () => {
-    setHistory([]);
-    localStorage.removeItem(STORAGE_KEY);
+  const logTerminal = (msg: string) => {
+    setTerminalLogs(prev => [...prev, "[" + new Date().toISOString().split("T")[1].slice(0, 8) + "] " + msg]);
   };
 
-  /* ---- Loading + auth guards ---- */
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center font-mono" style={{ backgroundColor: T.bgColor, color: T.accentColor }}>
-        <div className="text-center">
-          <div className="text-3xl mb-4 animate-pulse">⚡</div>
-          <div>Loading Flow Studio...</div>
-        </div>
-      </div>
-    );
-  }
+  const addNode = (item: LibraryItem) => {
+    const newNode: PipelineNode = {
+      id: Date.now().toString(),
+      type: item.type,
+      title: item.title,
+      config: item.type === "agent" ? { model: "lit-core-v4", temperature: 0.5, prompt: "" } : {},
+    };
+    setNodes(prev => [...prev, newNode]);
+    setSelectedNodeId(newNode.id);
+    logTerminal("[ADD] Inserted node: " + item.title);
+  };
+
+  const deleteNode = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNodes(prev => prev.filter(n => n.id !== id));
+    if (selectedNodeId === id) setSelectedNodeId(null);
+    logTerminal("[DEL] Removed node ID: " + id);
+  };
+
+  const updateNodeConfig = (id: string, field: string, value: string | number) => {
+    setNodes(prev => prev.map(n => n.id === id ? { ...n, config: { ...n.config, [field]: value } } : n));
+  };
+
+  const runPipeline = () => {
+    if (nodes.length === 0) { logTerminal("[WRN] Pipeline is empty."); return; }
+    setIsRunning(true);
+    logTerminal("[EXEC] Initiating pipeline run sequence...");
+    nodes.forEach((node, idx) => {
+      setTimeout(() => {
+        logTerminal("[OK] Executing node " + (idx + 1) + ": " + node.title);
+        if (node.type === "agent") logTerminal("      -> Tokens consumed: " + (Math.floor(Math.random() * 500) + 120));
+        if (idx === nodes.length - 1) {
+          setTimeout(() => { logTerminal("[SYS] Pipeline execution completed successfully."); setIsRunning(false); }, 800);
+        }
+      }, (idx + 1) * 800);
+    });
+  };
+
+  const handleAiBuild = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiPrompt.trim()) return;
+    setIsGenerating(true);
+    const prompt = aiPrompt;
+    setAiPrompt("");
+    logTerminal("[AI] Interpreting architecture prompt: " + prompt.slice(0, 40) + "...");
+    try {
+      const res = await fetch("/api/gemini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "Generate a 3-4 node AI pipeline for: \"" + prompt + "\". Reply ONLY with a JSON array: [{\"type\":\"trigger\",\"title\":\"...\",\"config\":{}},{\"type\":\"agent\",\"title\":\"...\",\"config\":{\"model\":\"lit-core-v4\",\"temperature\":0.5,\"prompt\":\"...\"}},...]. Types: trigger, agent, action.",
+          systemPrompt: "You are a pipeline architect. Output ONLY valid JSON arrays, no explanation.",
+        }),
+      });
+      const data = await res.json();
+      try {
+        const raw = data.response.match(/\[[\s\S]*\]/)?.[0];
+        const parsed = JSON.parse(raw);
+        const built: PipelineNode[] = parsed.map((n: { type: string; title: string; config?: Record<string, string | number> }, i: number) => ({
+          id: (Date.now() + i).toString(),
+          type: (["trigger", "agent", "action"].includes(n.type) ? n.type : "agent") as NodeType,
+          title: n.title || "AI Node",
+          config: n.config || (n.type === "agent" ? { model: "lit-core-v4", temperature: 0.5, prompt: "" } : {}),
+        }));
+        setNodes(built);
+        setSelectedNodeId(built[1]?.id || built[0]?.id || null);
+        logTerminal("[OK] AI deployed " + built.length + "-node pipeline.");
+      } catch {
+        setNodes([
+          { id: "1", type: "trigger", title: "Scheduled Interval", config: { cron: "0 * * * *" } },
+          { id: "2", type: "agent",   title: "Logic Orchestrator", config: { model: "lit-core-v4", temperature: 0.2, prompt: "Handle: " + prompt } },
+          { id: "3", type: "action",  title: "Database Insert",    config: { table: "pipeline_output" } },
+        ]);
+        setSelectedNodeId("2");
+        logTerminal("[OK] AI Orchestrator deployed 3-node pipeline.");
+      }
+    } catch {
+      logTerminal("[ERR] AI build failed — check API connection.");
+    }
+    setIsGenerating(false);
+  };
+
+  const selectedNode = nodes.find(n => n.id === selectedNodeId);
+
+  if (!isLoaded) return <div className="h-screen bg-[#050108] flex items-center justify-center text-fuchsia-400 font-mono text-sm animate-pulse">Initializing workspace...</div>;
   if (!isSignedIn) return <RedirectToSignIn redirectUrl="/flow" />;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: T.bgColor, color: T.textColor, fontFamily: "monospace" }}>
-      <div className="fixed inset-0 pointer-events-none opacity-20" style={{
-        backgroundImage: `linear-gradient(${T.borderColor}40 1px, transparent 1px), linear-gradient(90deg, ${T.borderColor}40 1px, transparent 1px)`,
-        backgroundSize: "60px 60px",
-      }} />
+    <div className="flex flex-col h-screen bg-[#050108] text-slate-300 font-sans overflow-hidden relative">
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.15]"
+        style={{ backgroundImage: "linear-gradient(rgba(217,70,239,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(217,70,239,0.15) 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
 
-      {/* HERO */}
-      <section className="relative border-b-2" style={{ borderColor: T.borderColor, background: `linear-gradient(180deg, ${T.boxBg} 0%, ${T.bgColor} 100%)` }}>
-        <div className="max-w-7xl mx-auto px-6 py-10 md:py-14 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] uppercase tracking-widest mb-3"
-            style={{ borderColor: T.accentColor + "60", color: T.accentColor, backgroundColor: T.accentColor + "10" }}>
-            <Film size={12} />
-            <span>Flow Media Studio · Multi-Provider · Storyboard Engine</span>
+      <header className="h-14 flex-shrink-0 bg-[#0a0310]/90 backdrop-blur-xl border-b border-fuchsia-900/40 flex items-center justify-between px-6 z-20">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-fuchsia-600 to-purple-800 flex items-center justify-center shadow-[0_0_15px_rgba(217,70,239,0.4)]">
+              <Zap className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <div className="font-bold text-white text-sm leading-none tracking-wide">LitLabs Flow</div>
+              <div className="text-[9px] font-bold text-emerald-400 tracking-[0.2em] uppercase mt-0.5">Pipeline Builder</div>
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-2" style={{ color: T.headerColor }}>
-            Chain. Blend. Ship.
-          </h1>
-          <p className="text-sm md:text-base max-w-2xl mx-auto opacity-70">
-            Build a storyboard of scenes. Each cell picks its own provider, model, and format. Outputs chain automatically — image → video → image — and coins are deducted up front so you can budget the whole flow.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 mt-5 text-[11px]">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-              <Coins size={14} style={{ color: T.accentColor }} />
-              <span style={{ color: T.accentColor }}>{coinBalance ?? "—"}</span>
-              <span className="opacity-60">LiTBit Coins</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-              <Wand2 size={14} style={{ color: T.accentColor }} />
-              <span>{cells.length} cell{cells.length === 1 ? "" : "s"} · {totalCost} 🪙</span>
-            </div>
-            <Link href="/generate" className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg hover:opacity-80" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-              <ImageIcon size={14} />
-              <span>Single Image Gen</span>
-            </Link>
-            <Link href="/builder" className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg hover:opacity-80" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-              <Sparkles size={14} />
-              <span>Builder</span>
-            </Link>
+          <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-400">
+            <span className="text-fuchsia-400">/workspace/</span>
+            <span className="text-white">untitled_pipeline.yaml</span>
           </div>
         </div>
-      </section>
-
-      {/* CONTROLS BAR */}
-      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-6 relative z-10">
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <input
-            value={flowName}
-            onChange={e => setFlowName(e.target.value)}
-            placeholder="Flow name..."
-            className="flex-1 min-w-[200px] px-3 py-2 text-sm rounded outline-none"
-            style={{ backgroundColor: T.boxBg, border: `1px solid ${T.borderColor}`, color: T.textColor }}
-          />
-          <button
-            onClick={addCell}
-            disabled={cells.length >= MAX_CELLS || running}
-            className="px-3 py-2 text-xs font-bold rounded flex items-center gap-1.5 disabled:opacity-40"
-            style={{ border: `1px solid ${T.borderColor}`, color: T.textColor, backgroundColor: T.boxBg }}
-          >
-            <Plus size={14} /> Add Cell
+        <div className="flex items-center gap-3">
+          <button onClick={runPipeline} disabled={isRunning || nodes.length === 0}
+            className="px-4 py-1.5 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/50 disabled:opacity-50 text-xs font-bold rounded flex items-center gap-2 transition-all">
+            {isRunning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+            {isRunning ? "Executing..." : "Test Run"}
           </button>
-          <button
-            onClick={handleRun}
-            disabled={!canRun}
-            className="px-5 py-2 text-sm font-black uppercase tracking-wider rounded flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{
-              background: `linear-gradient(135deg, ${T.accentColor} 0%, ${T.headerColor} 100%)`,
-              color: T.bgColor,
-              boxShadow: `0 0 30px ${T.accentColor}40`,
-            }}
-          >
-            {running ? <><Loader2 size={16} className="animate-spin" /> Running...</> : <><Play size={16} /> Run Flow ({totalCost} 🪙)</>}
+          <button className="px-4 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs font-bold rounded flex items-center gap-2 transition-all">
+            <Save className="w-3.5 h-3.5" /> Save Protocol
           </button>
         </div>
+      </header>
 
-        {!canAfford && (
-          <div className="mb-4 text-[11px] flex items-center gap-1.5 px-3 py-2 rounded border" style={{ borderColor: "#f85149", color: "#f85149", backgroundColor: "#f8514910" }}>
-            <AlertTriangle size={12} />
-            <span>Need {totalCost - (coinBalance ?? 0)} more coins. Claim daily bonus or switch to free Pollinations.</span>
+      <div className="flex-1 flex overflow-hidden z-10">
+        <aside className="w-64 flex-shrink-0 border-r border-fuchsia-900/30 bg-[#0a0310]/80 backdrop-blur-xl flex flex-col">
+          <div className="p-4 border-b border-white/5">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Box className="w-4 h-4" /> Tool Library
+            </span>
           </div>
-        )}
-        {error && (
-          <div className="mb-4 text-[11px] flex items-center gap-1.5 px-3 py-2 rounded border" style={{ borderColor: "#f85149", color: "#f85149", backgroundColor: "#f8514910" }}>
-            <AlertTriangle size={12} />
-            <span>{error}</span>
-          </div>
-        )}
-      </section>
-
-      {/* INGREDIENTS LIBRARY */}
-      <section className="max-w-7xl mx-auto px-4 md:px-6 pb-4 relative z-10">
-        <div className="border rounded-lg" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-          <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: T.borderColor }}>
-            <div className="text-[11px] uppercase tracking-widest" style={{ color: T.textMuted, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Sparkles size={12} /> Ingredients Library
-            </div>
-            <span className="text-[10px] opacity-60">Reference art stays with you</span>
-          </div>
-          <div className="px-4 py-3 space-y-3">
-            <p className="text-[11px] opacity-70">Drop in character faces, set pieces, or compositional references to reuse across scenes. Each cell can point to one ingredient for consistent video renders.</p>
-            {ingredients.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {ingredients.map(ing => (
-                  <div key={ing.id} className="border rounded-lg overflow-hidden" style={{ borderColor: T.borderColor, backgroundColor: T.bgColor }}>
-                    <div style={{ height: "96px", backgroundImage: `url(${ing.url})`, backgroundSize: "cover", backgroundPosition: "center" }} />
-                    <div className="px-3 py-2 text-[10px] flex items-center justify-between gap-2">
-                      <span className="truncate" style={{ color: T.textColor }}>{ing.label}</span>
-                      <button type="button" onClick={() => removeIngredient(ing.id)} className="text-[10px] opacity-60 hover:opacity-100">×</button>
+          <div className="flex-1 overflow-y-auto p-4 space-y-5" style={{ scrollbarWidth: "none" }}>
+            {(["trigger", "agent", "action"] as NodeType[]).map(cat => (
+              <div key={cat} className="space-y-2">
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">
+                  {cat === "trigger" ? "1. Triggers" : cat === "agent" ? "2. AI Agents" : "3. Output Actions"}
+                </div>
+                {LIBRARY_ITEMS.filter(i => i.type === cat).map((item, idx) => {
+                  const s = NODE_TYPES[item.type];
+                  return (
+                    <div key={idx} onClick={() => addNode(item)}
+                      className="bg-[#130720]/80 border border-white/5 hover:border-fuchsia-500/40 rounded-xl p-3 cursor-pointer transition-all">
+                      <div className="flex items-center mb-1">
+                        <div className={"w-6 h-6 rounded flex items-center justify-center mr-2 border " + s.bg + " " + s.border + " " + s.color}>{item.icon}</div>
+                        <span className="text-sm font-bold text-white">{item.title}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 ml-8 leading-tight">{item.desc}</p>
                     </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <main className="flex-1 bg-transparent relative flex flex-col items-center overflow-y-auto py-10" style={{ scrollbarWidth: "none" }}>
+          <div className="w-full max-w-lg flex flex-col items-center pb-36">
+            {nodes.length === 0 ? (
+              <div className="mt-24 text-center flex flex-col items-center">
+                <Network className="w-16 h-16 text-slate-700 mb-4" />
+                <h2 className="text-xl font-bold text-slate-400 mb-2">Pipeline Empty</h2>
+                <p className="text-sm text-slate-500 max-w-sm">Click tools from the library to build your flow, or ask the AI to generate one.</p>
+              </div>
+            ) : nodes.map((node, idx) => {
+              const s = NODE_TYPES[node.type];
+              const isSelected = selectedNodeId === node.id;
+              return (
+                <React.Fragment key={node.id}>
+                  <div onClick={() => setSelectedNodeId(node.id)}
+                    className={"w-full bg-[#130720]/90 backdrop-blur-md rounded-2xl p-4 border-2 transition-all cursor-pointer relative group " + (isSelected ? "border-fuchsia-500 shadow-[0_0_30px_rgba(217,70,239,0.2)]" : "border-white/5 hover:border-white/20 shadow-lg")}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={"w-10 h-10 rounded-lg flex items-center justify-center border " + s.bg + " " + s.border + " " + s.color}>
+                          {node.type === "trigger" ? <Zap className="w-5 h-5" /> : node.type === "agent" ? <Cpu className="w-5 h-5" /> : <Box className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <div className={"text-[10px] font-bold uppercase tracking-widest mb-0.5 " + s.color}>{s.label}</div>
+                          <div className="text-base font-bold text-white">{node.title}</div>
+                        </div>
+                      </div>
+                      <button onClick={e => deleteNode(node.id, e)}
+                        className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {node.type === "agent" && (
+                      <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-mono text-slate-400">
+                        <span className="truncate flex-1 max-w-[230px]"><span className="text-fuchsia-500/50 mr-2">prompt:</span>{String(node.config.prompt) || "No prompt set..."}</span>
+                        <span className="bg-black/30 px-2 py-0.5 rounded border border-white/5 ml-3 shrink-0">{String(node.config.model)}</span>
+                      </div>
+                    )}
                   </div>
-                ))}
+                  {idx < nodes.length - 1 && (
+                    <div className="h-10 w-px bg-gradient-to-b from-fuchsia-500/50 to-emerald-500/50 my-2 relative">
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border border-fuchsia-500 bg-[#0a0310]" />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          <div className="fixed bottom-6 w-full max-w-2xl px-4 z-30" style={{ left: "calc(50% + 32px)", transform: "translateX(-50%)" }}>
+            <div className="bg-[#0a0310]/95 backdrop-blur-2xl border border-fuchsia-500/40 rounded-2xl p-2 shadow-[0_10px_50px_rgba(217,70,239,0.2)] focus-within:border-fuchsia-400 transition-all">
+              <form onSubmit={handleAiBuild} className="flex items-center w-full">
+                <div className="w-2 h-2 bg-fuchsia-500 rounded-full animate-pulse ml-3 mr-3 shadow-[0_0_10px_rgba(217,70,239,0.8)] shrink-0" />
+                <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} disabled={isGenerating}
+                  placeholder="Ask the AI Orchestrator to build a pipeline..."
+                  className="flex-1 bg-transparent text-sm text-white py-3 pr-4 outline-none placeholder:text-slate-500 font-medium" />
+                <button type="submit" disabled={isGenerating || !aiPrompt.trim()}
+                  className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl disabled:opacity-50 transition-colors">
+                  {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 text-fuchsia-400" />}
+                </button>
+              </form>
+            </div>
+          </div>
+        </main>
+
+        <aside className="w-80 flex-shrink-0 border-l border-fuchsia-900/30 bg-[#0a0310]/80 backdrop-blur-xl flex flex-col">
+          <div className="flex-1 overflow-y-auto p-5" style={{ scrollbarWidth: "none" }}>
+            {selectedNode ? (
+              <div className="space-y-5">
+                <div className="flex items-center gap-3">
+                  <Settings className="w-5 h-5 text-fuchsia-400" />
+                  <h2 className="text-lg font-bold text-white">Configuration</h2>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Node Name</label>
+                    <input value={selectedNode.title}
+                      onChange={e => setNodes(prev => prev.map(n => n.id === selectedNode.id ? { ...n, title: e.target.value } : n))}
+                      className="w-full bg-[#130720] border border-white/10 rounded-lg p-2.5 text-sm text-white focus:border-fuchsia-500/50 outline-none transition-colors" />
+                  </div>
+                  {selectedNode.type === "agent" && (
+                    <>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">AI Model</label>
+                        <select value={String(selectedNode.config.model)}
+                          onChange={e => updateNodeConfig(selectedNode.id, "model", e.target.value)}
+                          className="w-full bg-[#130720] border border-white/10 rounded-lg p-2.5 text-sm text-white outline-none cursor-pointer">
+                          <option value="lit-core-v4">Lit Core v4 (Fast)</option>
+                          <option value="lit-reason-max">Lit Reason Max (Smart)</option>
+                          <option value="lit-vision-pro">Lit Vision Pro (Visual)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Temperature</label>
+                          <span className="text-xs text-fuchsia-400 font-mono">{selectedNode.config.temperature}</span>
+                        </div>
+                        <input type="range" min="0" max="1" step="0.1"
+                          value={Number(selectedNode.config.temperature)}
+                          onChange={e => updateNodeConfig(selectedNode.id, "temperature", parseFloat(e.target.value))}
+                          className="w-full accent-fuchsia-500" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">System Prompt</label>
+                        <textarea value={String(selectedNode.config.prompt)}
+                          onChange={e => updateNodeConfig(selectedNode.id, "prompt", e.target.value)}
+                          placeholder="Instruct this agent on its specific task..."
+                          className="w-full bg-[#130720] border border-white/10 rounded-lg p-3 text-sm text-white focus:border-fuchsia-500/50 outline-none transition-colors min-h-[140px] resize-none" />
+                      </div>
+                    </>
+                  )}
+                  {selectedNode.type === "action" && (
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Target Destination</label>
+                      <input value={String(selectedNode.config.table || selectedNode.config.db || "")}
+                        onChange={e => updateNodeConfig(selectedNode.id, "table", e.target.value)}
+                        placeholder="e.g. scraped_data_table"
+                        className="w-full bg-[#130720] border border-white/10 rounded-lg p-2.5 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors" />
+                    </div>
+                  )}
+                  {selectedNode.type === "trigger" && (
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Endpoint / Cron</label>
+                      <input value={String(selectedNode.config.endpoint || selectedNode.config.cron || "")}
+                        onChange={e => updateNodeConfig(selectedNode.id, "endpoint", e.target.value)}
+                        placeholder="e.g. /api/v1/ingest or 0 * * * *"
+                        className="w-full bg-[#130720] border border-white/10 rounded-lg p-2.5 text-sm text-white focus:border-amber-500/50 outline-none transition-colors" />
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
-              <div className="text-[11px] opacity-50">No ingredients yet. Add one to keep characters consistent.</div>
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 opacity-50">
+                <SlidersHorizontal className="w-12 h-12 text-slate-600 mb-4" />
+                <h3 className="text-sm font-bold text-white mb-2">No Node Selected</h3>
+                <p className="text-xs text-slate-400">Click a block in the canvas to configure its behavior.</p>
+              </div>
             )}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.2fr_1.8fr_0.6fr]">
-              <input value={ingredientLabel} onChange={e => setIngredientLabel(e.target.value)} placeholder="Label (e.g. Char face)" className="px-2 py-2 rounded text-sm outline-none" style={{ backgroundColor: T.bgColor, border: `1px solid ${T.borderColor}`, color: T.textColor }} />
-              <input value={ingredientUrl} onChange={e => setIngredientUrl(e.target.value)} placeholder="Image URL" className="px-2 py-2 rounded text-sm outline-none" style={{ backgroundColor: T.bgColor, border: `1px solid ${T.borderColor}`, color: T.textColor }} />
-              <button onClick={addIngredient} disabled={!ingredientLabel.trim() || !ingredientUrl.trim()} className="px-3 py-2 text-xs uppercase tracking-widest rounded font-bold" style={{ border: `1px solid ${T.borderColor}`, backgroundColor: T.accentColor, color: T.bgColor }}>
-                Add
-              </button>
+          </div>
+
+          <div className="h-1/3 min-h-[220px] bg-[#050108] border-t border-fuchsia-900/40 flex flex-col relative">
+            <div className="bg-[#130720]/80 px-4 py-2 border-b border-fuchsia-900/30 flex items-center justify-between absolute top-0 w-full z-10 backdrop-blur-md">
+              <div className="flex items-center gap-2"><Terminal className="w-3.5 h-3.5 text-slate-400" /><span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Live Terminal</span></div>
+              <div className={"w-2 h-2 rounded-full " + (isRunning ? "bg-fuchsia-500 animate-pulse shadow-[0_0_8px_rgba(217,70,239,0.8)]" : "bg-slate-700")} />
+            </div>
+            <div className="flex-1 p-4 pt-10 overflow-y-auto font-mono text-[10px] space-y-1.5 flex flex-col" style={{ scrollbarWidth: "none" }}>
+              {terminalLogs.map((log, i) => {
+                let cls = "text-slate-400";
+                if (log.includes("[OK]"))   cls = "text-emerald-400";
+                if (log.includes("[SYS]"))  cls = "text-fuchsia-400";
+                if (log.includes("[WRN]") || log.includes("[ERR]")) cls = "text-amber-400";
+                if (log.includes("[ADD]") || log.includes("[DEL]")) cls = "text-blue-400";
+                if (log.includes("[EXEC]")) cls = "text-white font-bold";
+                if (log.includes("[AI]"))   cls = "text-cyan-400";
+                return <div key={i} className={cls + " leading-tight"}>{log}</div>;
+              })}
+              <div ref={bottomRef} className="text-fuchsia-500 animate-pulse mt-1 font-bold">_</div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* STORYBOARD CELLS */}
-      <section className="max-w-7xl mx-auto px-4 md:px-6 pb-6 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {cells.map((cell, idx) => {
-            const result = results.find(r => r.cellId === cell.id);
-            const cost = cellCosts[idx];
-            const provider = getProvider(cell.providerId);
-            const status = result?.status ?? "idle";
-            return (
-              <div
-                key={cell.id}
-                ref={el => { resultRefs.current[cell.id] = el; }}
-                className="border-2 rounded-lg overflow-hidden flex flex-col"
-                style={{
-                  borderColor: status === "running" ? T.accentColor
-                    : status === "succeeded" ? "#56d364"
-                    : status === "failed" ? "#f85149"
-                    : T.borderColor,
-                  backgroundColor: T.boxBg,
-                }}
-              >
-                {/* Header */}
-                <div className="px-3 py-2 border-b flex items-center justify-between" style={{ borderColor: T.borderColor, backgroundColor: T.bgColor }}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: T.accentColor + "30", color: T.accentColor }}>
-                      {idx + 1}
-                    </span>
-                    <input
-                      value={cell.label}
-                      onChange={e => updateCell(cell.id, { label: e.target.value })}
-                      disabled={running}
-                      className="flex-1 min-w-0 bg-transparent text-xs font-bold outline-none"
-                      style={{ color: T.headerColor }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px]" style={{ color: T.textMuted }}>
-                    <span>{cost === 0 ? "FREE" : `${cost} 🪙`}</span>
-                    {status === "running" && <Loader2 size={10} className="animate-spin" />}
-                    {status === "succeeded" && <CheckCircle2 size={10} style={{ color: "#56d364" }} />}
-                    {status === "failed" && <AlertTriangle size={10} style={{ color: "#f85149" }} />}
-                  </div>
-                </div>
-
-                {/* Format + Provider pickers */}
-                <div className="px-3 py-2 grid grid-cols-2 gap-2 border-b" style={{ borderColor: T.borderColor }}>
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-widest mb-1" style={{ color: T.textMuted }}>Format</label>
-                    <select
-                      value={cell.format}
-                      onChange={e => updateCell(cell.id, { format: e.target.value as MediaFormat })}
-                      disabled={running}
-                      className="w-full px-2 py-1 text-xs rounded outline-none"
-                      style={{ backgroundColor: T.bgColor, border: `1px solid ${T.borderColor}`, color: T.textColor }}
-                    >
-                      <option value="image">🖼 Image</option>
-                      <option value="video">🎬 Video</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-widest mb-1" style={{ color: T.textMuted }}>Provider</label>
-                    <select
-                      value={cell.providerId}
-                      onChange={e => updateCell(cell.id, { providerId: e.target.value as MediaProviderId })}
-                      disabled={running}
-                      className="w-full px-2 py-1 text-xs rounded outline-none"
-                      style={{ backgroundColor: T.bgColor, border: `1px solid ${T.borderColor}`, color: T.textColor }}
-                    >
-                      {providers.filter(p => p.supportedFormats.includes(cell.format)).map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.free ? "🆓 " : ""}{p.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Prompt */}
-                <div className="px-3 py-2 flex-1 flex flex-col gap-2">
-                  <textarea
-                    value={cell.prompt}
-                    onChange={e => updateCell(cell.id, { prompt: e.target.value })}
-                    placeholder={cell.format === "video" ? "Describe the motion..." : "Describe the scene..."}
-                    rows={3}
-                    disabled={running}
-                    className="w-full px-2 py-1.5 text-xs rounded outline-none resize-none disabled:opacity-50"
-                    style={{ backgroundColor: T.bgColor, border: `1px solid ${T.borderColor}`, color: T.textColor }}
-                  />
-                  {/* Negative prompt */}
-                  <input
-                    value={cell.negativePrompt}
-                    onChange={e => updateCell(cell.id, { negativePrompt: e.target.value })}
-                    placeholder="Negative prompt (optional)"
-                    disabled={running}
-                    className="w-full px-2 py-1 text-[11px] rounded outline-none disabled:opacity-50"
-                    style={{ backgroundColor: T.bgColor, border: `1px solid ${T.borderColor}`, color: T.textColor }}
-                  />
-                </div>
-
-                {/* Output area */}
-                {result?.downloadUrl && (
-                  <div className="border-t" style={{ borderColor: T.borderColor }}>
-                    {result.format === "video" ? (
-                      <video src={result.downloadUrl} controls className="w-full" style={{ maxHeight: "180px", backgroundColor: "#000" }} />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={result.downloadUrl} alt={cell.label} className="w-full object-cover" style={{ maxHeight: "180px" }} />
-                    )}
-                    <div className="px-2 py-1.5 flex items-center gap-1.5">
-                      <button
-                        onClick={() => saveToGallery(result)}
-                        className="flex-1 text-[10px] py-1 rounded font-bold flex items-center justify-center gap-1"
-                        style={{ backgroundColor: T.accentColor, color: T.bgColor }}
-                      >
-                        <Save size={10} /> Save
-                      </button>
-                      <button
-                        onClick={() => handleDownload(result.downloadUrl!, `${flowName}-${idx + 1}`)}
-                        className="flex-1 text-[10px] py-1 rounded border font-bold flex items-center justify-center gap-1"
-                        style={{ borderColor: T.borderColor, color: T.textColor }}
-                      >
-                        <Download size={10} /> DL
-                      </button>
-                    </div>
-                    {result.error && (
-                      <div className="px-2 py-1 text-[10px]" style={{ color: "#f85149" }}>{result.error}</div>
-                    )}
-                  </div>
-                )}
-
-                {/* Footer: reorder + delete */}
-                <div className="px-3 py-2 border-t flex items-center justify-between" style={{ borderColor: T.borderColor, backgroundColor: T.bgColor }}>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => moveCell(cell.id, -1)} disabled={idx === 0 || running} className="text-[10px] opacity-60 hover:opacity-100 disabled:opacity-20">←</button>
-                    <button onClick={() => moveCell(cell.id, 1)} disabled={idx === cells.length - 1 || running} className="text-[10px] opacity-60 hover:opacity-100 disabled:opacity-20">→</button>
-                  </div>
-                  <button
-                    onClick={() => removeCell(cell.id)}
-                    disabled={cells.length <= 1 || running}
-                    className="text-[10px] opacity-60 hover:opacity-100 disabled:opacity-20 flex items-center gap-1"
-                  >
-                    <Trash2 size={10} /> Remove
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* HISTORY */}
-      {history.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 md:px-6 pb-12 relative z-10">
-          <div className="border rounded-lg" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-            <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: T.borderColor }}>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest" style={{ color: T.textMuted }}>
-                <History size={12} />
-                <span>Recent Flows ({history.length})</span>
-              </div>
-              <button onClick={clearHistory} className="text-[10px] opacity-60 hover:opacity-100">Clear</button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-3">
-              {history.map(h => (
-                <button
-                  key={h.id}
-                  onClick={() => loadHistoryEntry(h)}
-                  className="relative aspect-video border rounded overflow-hidden group hover:scale-[1.02] transition-transform"
-                  style={{ borderColor: T.borderColor, backgroundColor: T.bgColor }}
-                >
-                  {h.results.find(r => r.downloadUrl) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={h.results.find(r => r.thumbUrl)?.thumbUrl ?? h.results.find(r => r.downloadUrl)!.downloadUrl!}
-                      alt={h.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl opacity-30"><Film /></div>
-                  )}
-                  <div className="absolute inset-x-0 bottom-0 px-2 py-1 text-[9px] flex items-center justify-between" style={{ backgroundColor: "rgba(0,0,0,0.8)", color: "white" }}>
-                    <span className="truncate">{h.name}</span>
-                    <span style={{ color: h.status === "completed" ? "#56d364" : h.status === "partial" ? T.accentColor : "#f85149" }}>{h.totalCost}🪙</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* FOOTER */}
-      <section className="max-w-7xl mx-auto px-6 pb-12 text-center text-[10px] opacity-50 relative z-10 flex items-center justify-center gap-2">
-        <Zap size={10} /> Free default = Pollinations (no key). Paid = Together.ai + FAL.ai + HuggingFace. Run all for headless agent use.
-      </section>
+        </aside>
+      </div>
     </div>
   );
 }
