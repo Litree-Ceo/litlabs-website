@@ -91,10 +91,16 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased min-h-screen" style={{ backgroundColor: "#0a0a0f" }}>
         {clerkReady ? (
-          <ClerkProvider publishableKey={clerkKey}>{inner}</ClerkProvider>
-        ) : (
-          inner
-        )}
+          <ClerkProvider
+            publishableKey={clerkKey}
+            signInUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL ?? "/sign-in"}
+            signUpUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL ?? "/sign-up"}
+            signInFallbackRedirectUrl={process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL ?? "/builder"}
+            signUpFallbackRedirectUrl={process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL ?? "/builder"}
+          >
+            {inner}
+          </ClerkProvider>
+        ) : inner}
       </body>
     </html>
   );
