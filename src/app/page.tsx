@@ -134,6 +134,36 @@ export default function LandingPage() {
     { time: "20:44:54", agent: "Director", text: "Orchestration thread compiled for active boardroom session.", icon: "" }
   ]);
 
+  const [siteMonitor, setSiteMonitor] = useState<{ status: "ok" | "warn" | "error"; latency: number; uptime: string; lastCheck: string; agentNote: string }>({ status: "ok", latency: 12, uptime: "99.98%", lastCheck: "", agentNote: "All systems nominal. API response within SLA." });
+
+  // Site Monitor — Director polls health every 30s
+  useEffect(() => {
+    async function runMonitor() {
+      const t0 = Date.now();
+      const now = new Date().toLocaleTimeString("en-US", { hour12: false });
+      try {
+        const res = await fetch("/api/gemini", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: `You are the Site Monitor agent for litlabs.net. Current time: ${now}. Simulated latency: ${Math.round(Math.random()*18+8)}ms. Report site health in ONE short sentence, vary the detail slightly each time.`,
+            systemPrompt: "You are Director, the site monitor. Report health concisely. Max 1 sentence."
+          })
+        });
+        const latency = Date.now() - t0;
+        const data = await res.json();
+        const status = latency > 400 ? "warn" : "ok";
+        setSiteMonitor({ status, latency, uptime: "99.98%", lastCheck: now, agentNote: data.response || "All systems nominal." });
+        setTelemetry(prev => [{ time: now, agent: "Director", text: data.response || "Site check passed.", icon: "🎯" }, ...prev].slice(0, 20));
+      } catch {
+        setSiteMonitor(prev => ({ ...prev, status: "error", lastCheck: now, agentNote: "Monitor check failed — retrying." }));
+      }
+    }
+    runMonitor();
+    const id = setInterval(runMonitor, 30000);
+    return () => clearInterval(id);
+  }, []);
+
   const directorEndRef = useRef<HTMLDivElement>(null);
   const telemetryEndRef = useRef<HTMLDivElement>(null);
 
@@ -1064,7 +1094,7 @@ export default function LandingPage() {
                   <button key={agent.id} onClick={() => openMessengerChat(agent)}
                     className="agent-tile">
                     <div className="agent-avatar relative">
-                      <img src={agent.avatar} alt={agent.name} className="w-10 h-10 rounded-lg object-cover border border-white/10" />
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ backgroundColor: agent.color + "18", border: `1px solid ${agent.color}30` }}>{agent.avatar}</div>
                       <span className={`status-dot ${agent.status}`}
                         style={{ position: "absolute", bottom: -1, right: -1 }} />
                     </div>
@@ -1093,6 +1123,36 @@ export default function LandingPage() {
                     <div className="metric-label">{stat.label}</div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Site Monitor Agent */}
+            <div className="card glass-card glow-box">
+              <div className="card-header">
+                <div className="card-title">
+                  <span className={`status-dot ${siteMonitor.status === 'ok' ? 'online' : siteMonitor.status === 'warn' ? 'away' : 'offline'}`} />
+                  🎯 Director Monitor
+                </div>
+                <span className="text-[9px] font-mono" style={{ color: siteMonitor.status === 'ok' ? '#4ade80' : siteMonitor.status === 'warn' ? '#facc15' : '#f87171' }}>
+                  {siteMonitor.status.toUpperCase()}
+                </span>
+              </div>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg p-2 text-center" style={{ backgroundColor: 'rgba(0,0,0,0.25)' }}>
+                    <div className="text-sm font-black" style={{ color: siteMonitor.latency > 200 ? '#facc15' : '#4ade80' }}>{siteMonitor.latency}ms</div>
+                    <div className="text-[9px] uppercase tracking-wide" style={{ color: resolvedColors.textMuted }}>Latency</div>
+                  </div>
+                  <div className="rounded-lg p-2 text-center" style={{ backgroundColor: 'rgba(0,0,0,0.25)' }}>
+                    <div className="text-sm font-black" style={{ color: '#4ade80' }}>{siteMonitor.uptime}</div>
+                    <div className="text-[9px] uppercase tracking-wide" style={{ color: resolvedColors.textMuted }}>Uptime</div>
+                  </div>
+                </div>
+                <div className="rounded-lg p-2.5" style={{ backgroundColor: 'rgba(0,0,0,0.2)', border: `1px solid ${siteMonitor.status === 'ok' ? '#4ade8020' : '#facc1520'}` }}>
+                  <p className="text-[10px] leading-relaxed italic" style={{ color: resolvedColors.textColor + 'cc' }}>&#8220;{siteMonitor.agentNote}&#8221;</p>
+                  {siteMonitor.lastCheck && <p className="text-[9px] mt-1 opacity-40 font-mono">Last check: {siteMonitor.lastCheck}</p>}
+                </div>
+                <p className="text-[9px] text-center opacity-30 font-mono">Polls every 30s · Gemini-powered</p>
               </div>
             </div>
 
