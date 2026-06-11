@@ -75,7 +75,7 @@ export default function ImageTool() {
       .catch(() => { /* silent */ });
   }, []);
 
-  const providerCost = providerId === "pollinations" ? 0 : providerId === "gemini" ? 1 : providerId === "together" ? 2 : providerId === "fal" ? 3 : 0;
+  const providerCost = providerId === "pollinations" ? 0 : providerId === "gemini" ? 1 : providerId === "fal" ? 3 : 0;
   const canAfford = coinBalance === null || coinBalance >= providerCost;
   const promptValid = prompt.trim().length >= 3;
 
@@ -255,7 +255,6 @@ export default function ImageTool() {
               {([
                 { id: "gemini" as const, label: "Gemini (Imagen)", desc: "Google Imagen 3", cost: 1 },
                 { id: "pollinations" as const, label: "Pollinations (Free)", desc: "FLUX + SDXL", cost: 0 },
-                { id: "together" as const, label: "Together.ai (FLUX)", desc: "FLUX.1 Schnell", cost: 2 },
                 { id: "fal" as const, label: "FAL.ai (FLUX)", desc: "FLUX Pro", cost: 3 },
               ]).map(p => (
                 <button key={p.id} type="button" onClick={() => setProviderId(p.id)} disabled={isWorking}

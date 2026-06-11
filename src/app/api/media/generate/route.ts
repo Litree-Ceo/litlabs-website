@@ -319,8 +319,6 @@ async function handler(req: NextRequest) {
   try {
     if (providerId === "gemini") {
       result = await handleGeminiImage(prompt, body.width ?? 1024, body.height ?? 1024);
-    } else if (providerId === "together") {
-      result = await handleTogetherImage(prompt, body.negativePrompt ?? "", body.width ?? 1024, body.height ?? 1024);
     } else if (providerId === "fal") {
       result = await handleFalImage(prompt, body.width ?? 1024, body.height ?? 1024);
     } else if (providerId === "huggingface") {
