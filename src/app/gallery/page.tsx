@@ -64,7 +64,6 @@ export default function Gallery() {
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<"grid" | "masonry">("masonry");
-  const [crtEnabled, setCrtEnabled] = useState(true);
   const [userItems, setUserItems] = useState<GalleryItem[]>([]);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadForm, setUploadForm] = useState({
@@ -102,10 +101,6 @@ export default function Gallery() {
         // silent fail — demo items still show
       });
 
-    const val = localStorage.getItem("crt_global_scanlines");
-    if (val !== null) {
-      setCrtEnabled(val === "true");
-    }
     const storedUserItems = localStorage.getItem("litlabs-gallery-user");
     if (storedUserItems) {
       try { setUserItems(JSON.parse(storedUserItems)); } catch { /* ignore */ }
@@ -114,7 +109,7 @@ export default function Gallery() {
 
   if (!isLoaded) {
     return (
-      <div style={{ backgroundColor: T?.bgColor || "#0a0a0f", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: T?.textColor || "#00ff41", fontFamily: "monospace" }}>
+      <div style={{ backgroundColor: T?.bgColor || "#0f0f14", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: T?.textColor || "#e2e8f0" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "32px", marginBottom: "16px" }}>⏳</div>
           <div>Loading gallery...</div>
@@ -253,16 +248,7 @@ export default function Gallery() {
   };
 
   return (
-    <PageShell title="Gallery" subtitle="AI-generated art, worlds, and creative works" className="font-mono">
-      
-      {/* CRT Scanline Filter */}
-      {crtEnabled && (
-        <div className="fixed inset-0 pointer-events-none z-40 opacity-[0.06]" style={{
-          background: "repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 1px, transparent 1px, transparent 2px)",
-          boxShadow: "inset 0 0 80px rgba(0, 255, 0, 0.3)"
-        }} />
-      )}
-
+    <PageShell title="Gallery" subtitle="AI-generated art, worlds, and creative works">
       {/* Retro Ticker */}
       <div className="w-full bg-black py-1 border-b-2 overflow-hidden flex" style={{ borderColor: T.borderColor, color: T.accentColor }}>
         <div className="whitespace-nowrap animate-marquee flex gap-12 font-bold uppercase tracking-wider text-[10px]">

@@ -9,7 +9,7 @@ import dynamic from "next/dynamic";
 import {
   Home, ShoppingBag, Sparkles,
   Settings, Sun, Moon, Zap,
-  ChevronDown, X, Menu, Bell, Coins, User
+  ChevronDown, X, Menu, Bell, Coins, User, MessageCircle
 } from "lucide-react";
 
 const NavAuth = dynamic(
@@ -24,6 +24,8 @@ const navLinks = [
   { href: "/", label: "Home", icon: Home },
   { href: "/studio", label: "Studio", icon: Zap },
   { href: "/marketplace", label: "Market", icon: ShoppingBag },
+  { href: "/social", label: "Social", icon: MessageCircle },
+  { href: "/gallery", label: "Gallery", icon: Sparkles },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -57,14 +59,21 @@ export default function Navbar() {
   const notifRef = useRef<HTMLDivElement>(null);
   const litcoins = useLocalStorageNumber("litcoins", 500);
 
-  /* Close dropdowns on outside click */
+  /* Close dropdowns on outside click + close mobile drawer on desktop resize */
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
     };
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setMobileOpen(false);
+    };
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   /* Close mobile menu on route change */

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useAuth, RedirectToSignIn } from "@clerk/nextjs";
 
 interface Message {
   role: "user" | "assistant";
@@ -14,6 +15,7 @@ interface GeneratedFile {
 }
 
 export default function AIBuilder() {
+  const { isLoaded, isSignedIn } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isBuilding, setIsBuilding] = useState(false);
@@ -132,6 +134,21 @@ Be technically precise. Think like a senior full-stack developer.`;
     "Build a real-time activity feed component",
     "Create a settings page with toggle switches and form inputs",
   ];
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0f0f14", color: "#e2e8f0" }}>
+        <div className="text-center">
+          <div className="text-3xl mb-4 animate-pulse">⚡</div>
+          <div className="text-xs font-bold tracking-wider uppercase animate-pulse" style={{ color: "#94a3b8" }}>Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <RedirectToSignIn redirectUrl="/ai-builder" />;
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col">

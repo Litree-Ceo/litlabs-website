@@ -15,8 +15,6 @@ export default function ProfilePage() {
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [visitorCount, setVisitorCount] = useState(133742);
   const [newInterest, setNewInterest] = useState("");
-  const [crtEnabled, setCrtEnabled] = useState(true);
-  
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,13 +26,6 @@ export default function ProfilePage() {
   ]);
   const [newCommentText, setNewCommentText] = useState("");
 
-  useEffect(() => {
-    // Check local storage for persistent CRT configuration
-    const val = localStorage.getItem("crt_global_scanlines");
-    if (val !== null) {
-      setCrtEnabled(val === "true");
-    }
-  }, []);
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,15 +96,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <PageShell title="Profile" className="font-mono text-xs relative">
-      {/* CRT Scanline Filter */}
-      {crtEnabled && (
-        <div className="fixed inset-0 pointer-events-none z-40 opacity-[0.06]" style={{
-          background: "repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 1px, transparent 1px, transparent 2px)",
-          boxShadow: "inset 0 0 80px rgba(0, 255, 0, 0.3)"
-        }} />
-      )}
-
+    <PageShell title="Profile" className="text-xs relative">
       {/* Marquee Ticker */}
       <div className="w-full bg-black py-1.5 border-b-2 overflow-hidden flex" style={{ borderColor: T.borderColor, color: T.accentColor }}>
         <div className="whitespace-nowrap animate-marquee flex gap-12 font-bold uppercase tracking-wider text-[10px]">
@@ -439,7 +422,7 @@ export default function ProfilePage() {
                     type="text"
                     value={newInterest}
                     onChange={(e) => setNewInterest(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && addInterest()}
+                    onKeyDown={(e) => e.key === "Enter" && addInterest()}
                     placeholder="E.g. Rust, LLM, Synthwave..."
                     className="flex-1 p-2 text-xs border outline-none font-mono"
                     style={{ backgroundColor: T.bgColor, color: T.textColor, borderColor: T.borderColor }}

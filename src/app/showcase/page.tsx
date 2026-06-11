@@ -10,12 +10,6 @@ export default function ShowcasePage() {
   const { resolvedColors: T } = useTheme();
   const [activeTab, setActiveTab] = useState<"images" | "architecture" | "case-study">("images");
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
-  const [crtEnabled, setCrtEnabled] = useState(true);
-
-  useEffect(() => {
-    const val = localStorage.getItem("crt_global_scanlines");
-    if (val !== null) setCrtEnabled(val === "true");
-  }, []);
 
   const showcaseImages = [
     {
@@ -45,14 +39,7 @@ export default function ShowcasePage() {
   ];
 
   return (
-    <PageShell title="Showcase" subtitle="Featured projects and architecture" className="font-mono relative">
-      {crtEnabled && (
-        <div className="fixed inset-0 pointer-events-none z-40 opacity-[0.06]" style={{
-          background: "repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 1px, transparent 1px, transparent 2px)",
-          boxShadow: "inset 0 0 80px rgba(0, 255, 0, 0.3)"
-        }} />
-      )}
-
+    <PageShell title="Showcase" subtitle="Featured projects and architecture" className="relative">
       <div className="w-full bg-black py-1.5 border-b-2 overflow-hidden flex" style={{ borderColor: T.borderColor, color: T.accentColor }}>
         <div className="whitespace-nowrap animate-marquee flex gap-12 font-bold uppercase tracking-wider text-[10px]">
           <span>AUTOMATION SHOWCASE // PORTFOLIO &amp; PROOF</span>

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useAuth, RedirectToSignIn } from "@clerk/nextjs";
 import { useTheme } from "@/context/ThemeContext";
 
 // ─── Agents that can generate worlds ──────────────────────────────────────────
@@ -33,6 +34,7 @@ type GeneratedWorld = {
 };
 
 export default function AgentChat() {
+  const { isLoaded, isSignedIn } = useAuth();
   const { resolvedColors: T } = useTheme();
   const [selectedAgent, setSelectedAgent] = useState(WORLD_AGENTS[0]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -41,16 +43,6 @@ export default function AgentChat() {
   const [worlds, setWorlds] = useState<GeneratedWorld[]>([]);
   const [activeTab, setActiveTab] = useState<"chat" | "gallery">("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const [crtEnabled, setCrtEnabled] = useState(true);
-
-  useEffect(() => {
-    // Check local storage for persistent CRT configuration
-    const val = localStorage.getItem("crt_global_scanlines");
-    if (val !== null) {
-      setCrtEnabled(val === "true");
-    }
-  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -161,15 +153,23 @@ export default function AgentChat() {
     }
   };
 
+  if (!isLoaded) {
+    return (
+      <div style={{ backgroundColor: T?.bgColor || "#0f0f14", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: T?.textColor || "#e2e8f0" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "32px", marginBottom: "16px" }}>⚡</div>
+          <div>Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <RedirectToSignIn redirectUrl="/agent-chat" />;
+  }
+
   return (
-    <div style={{ backgroundColor: T.bgColor, minHeight: "100vh", display: "flex", flexDirection: "column", color: T.textColor, fontFamily: "monospace", position: "relative" }}>
-      {/* CRT Scanline Filter */}
-      {crtEnabled && (
-        <div className="fixed inset-0 pointer-events-none z-40 opacity-[0.06]" style={{
-          background: "repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 1px, transparent 1px, transparent 2px)",
-          boxShadow: "inset 0 0 80px rgba(0, 255, 0, 0.3)"
-        }} />
-      )}
+    <div style={{ backgroundColor: T.bgColor, minHeight: "100vh", display: "flex", flexDirection: "column", color: T.textColor, position: "relative" }}>
       {/* Tab bar */}
       <div style={{ backgroundColor: T.boxBg, borderBottom: `2px solid ${T.borderColor}`, padding: "8px 16px", display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
         <span style={{ color: T.accentColor, fontSize: "10px" }}>● ONLINE</span>

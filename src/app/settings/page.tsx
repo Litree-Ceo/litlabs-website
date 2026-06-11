@@ -15,7 +15,6 @@ export default function SettingsPage() {
 
   const [activeTab, setActiveTab] = useState<"theme" | "profile" | "agents" | "advanced" | "interface">("theme");
   const [saved, setSaved] = useState(false);
-  const [crtEnabled, setCrtEnabled] = useState(false);
 
   // Interface settings
   const [animSpeed, setAnimSpeed] = useState<string>("normal");
@@ -35,10 +34,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     // Check local storage for persistent CRT configuration
-    const val = localStorage.getItem("crt_global_scanlines");
-    if (val !== null) {
-      setCrtEnabled(val === "true");
-    }
     // Load interface settings
     setAnimSpeed(localStorage.getItem("litlabs-anim-speed") || "normal");
     setCompactMode(localStorage.getItem("litlabs-compact") === "true");
@@ -62,15 +57,6 @@ export default function SettingsPage() {
   if (!isSignedIn) {
     return <RedirectToSignIn redirectUrl="/settings" />;
   }
-
-  const toggleCrtGlobally = () => {
-    const next = !crtEnabled;
-    setCrtEnabled(next);
-    localStorage.setItem("crt_global_scanlines", String(next));
-    // Trigger storage event to notify other tabs
-    window.dispatchEvent(new Event("storage"));
-    showSaved();
-  };
 
   const showSaved = () => {
     setSaved(true);
@@ -98,16 +84,7 @@ export default function SettingsPage() {
   const T = resolvedColors;
 
   return (
-    <PageShell title="Settings" className="font-mono text-xs relative">
-      
-      {/* Local CRT Filter */}
-      {crtEnabled && (
-        <div className="fixed inset-0 pointer-events-none z-40 opacity-[0.06]" style={{
-          background: "repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 1px, transparent 1px, transparent 2px)",
-          boxShadow: "inset 0 0 80px rgba(0, 255, 0, 0.3)"
-        }} />
-      )}
-
+    <PageShell title="Settings" className="text-xs relative">
       {/* Status Ticker */}
       <div className="w-full bg-black py-1 border-b-2 overflow-hidden flex" style={{ borderColor: T.borderColor, color: T.accentColor }}>
         <div className="whitespace-nowrap animate-marquee flex gap-12 font-bold uppercase tracking-wider text-[10px]">
@@ -147,7 +124,7 @@ export default function SettingsPage() {
 
         {/* Theme Tab */}
         {activeTab === "theme" && (
-          <div className="space-y-6 animate-fadeIn">
+          <div className="space-y-6 animate-fadeInUp">
             
             {/* Global Monitor Setting */}
             <div className="lit-box p-4" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
@@ -170,26 +147,6 @@ export default function SettingsPage() {
                     {bm.label}
                   </button>
                 ))}
-              </div>
-            </div>
-
-            <div className="lit-box p-4" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-              <div className="lit-header -mx-4 -mt-4 mb-3" style={{ color: "white" }}>Display Options</div>
-              <p className="text-[11px] mb-3 opacity-80 leading-normal">
-                Toggle the CRT scanline overlay effect.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={toggleCrtGlobally}
-                  className="px-4 py-2 border-2 font-bold text-xs hover:scale-105 transition-transform"
-                  style={{
-                    borderColor: T.borderColor,
-                    backgroundColor: crtEnabled ? T.linkColor : "transparent",
-                    color: crtEnabled ? "black" : T.textColor
-                  }}
-                >
-                  CRT Overlay: {crtEnabled ? "ON" : "OFF"}
-                </button>
               </div>
             </div>
 
@@ -253,7 +210,7 @@ export default function SettingsPage() {
 
         {/* Profile Tab */}
         {activeTab === "profile" && (
-          <div className="space-y-4 animate-fadeIn">
+          <div className="space-y-4 animate-fadeInUp">
             <div className="lit-box p-4" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
               <div className="lit-header -mx-4 -mt-4 mb-3" style={{ color: "white" }}>Display Name</div>
               <input
@@ -304,7 +261,7 @@ export default function SettingsPage() {
 
         {/* Agents Tab */}
         {activeTab === "agents" && (
-          <div className="space-y-4 animate-fadeIn">
+          <div className="space-y-4 animate-fadeInUp">
             <div className="lit-box p-4" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
               <div className="lit-header -mx-4 -mt-4 mb-3" style={{ color: "white" }}>ActivePieces Webhook</div>
               <p className="text-[11px] mb-2 opacity-80 leading-normal">Your multi-agent flow is fully linked. The Director plans, and specialists execute.</p>
@@ -338,7 +295,7 @@ export default function SettingsPage() {
 
         {/* Interface Tab */}
         {activeTab === "interface" && (
-          <div className="space-y-4 animate-fadeIn">
+          <div className="space-y-4 animate-fadeInUp">
             <div className="lit-box p-4" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
               <div className="lit-header -mx-4 -mt-4 mb-3" style={{ color: "white" }}>Animation Speed</div>
               <p className="text-[11px] mb-3 opacity-80">Control the pacing of page transitions and micro-interactions.</p>
@@ -434,7 +391,7 @@ export default function SettingsPage() {
 
         {/* Advanced Tab */}
         {activeTab === "advanced" && (
-          <div className="space-y-4 animate-fadeIn">
+          <div className="space-y-4 animate-fadeInUp">
             <div className="lit-box p-4" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
               <div className="lit-header -mx-4 -mt-4 mb-3" style={{ color: "white" }}>Environment Registers</div>
               <p className="text-[11px] mb-3 opacity-80">Static credentials loaded in deployment environments.</p>

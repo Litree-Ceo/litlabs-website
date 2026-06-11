@@ -89,8 +89,6 @@ export default function Marketplace() {
   const [sellPrice, setSellPrice] = useState('');
   const [listedAgents, setListedAgents] = useState<Set<string>>(new Set());
 
-  const [crtEnabled, setCrtEnabled] = useState(true);
-
   // Fetch wallet from API (source of truth)
   const fetchWallet = async () => {
     try {
@@ -106,9 +104,6 @@ export default function Marketplace() {
 
   useEffect(() => {
     fetchWallet();
-
-    const val = localStorage.getItem("crt_global_scanlines");
-    if (val !== null) setCrtEnabled(val === "true");
 
     // Stripe return detection
     const success = searchParams.get('success');
@@ -273,14 +268,7 @@ export default function Marketplace() {
   };
 
   return (
-    <div style={{ backgroundColor: T.bgColor, minHeight: '100vh', color: T.textColor, fontFamily: 'monospace', position: 'relative' }}>
-      {/* CRT Scanline Filter */}
-      {crtEnabled && (
-        <div className="fixed inset-0 pointer-events-none z-40 opacity-[0.06]" style={{
-          background: "repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 1px, transparent 1px, transparent 2px)",
-          boxShadow: "inset 0 0 80px rgba(0, 255, 0, 0.3)"
-        }} />
-      )}
+    <div style={{ backgroundColor: T.bgColor, minHeight: '100vh', color: T.textColor, position: 'relative' }}>
       {/* Toast notification */}
       {toast && (
         <div style={{ position: 'fixed', top: '80px', right: '20px', zIndex: 200, padding: '12px 20px', backgroundColor: toast.type === 'success' ? '#0a2e0a' : toast.type === 'error' ? '#2e0a0a' : '#0a1a2e', border: '2px solid ' + (toast.type === 'success' ? T.accentColor : toast.type === 'error' ? '#ff4444' : T.linkColor), color: toast.type === 'success' ? T.accentColor : toast.type === 'error' ? '#ff4444' : T.linkColor, fontSize: '12px', fontWeight: 'bold', maxWidth: '320px' }}>
@@ -295,15 +283,15 @@ export default function Marketplace() {
         </div>
         <p style={{ color: T.textColor, fontSize: '13px', opacity: 0.7, maxWidth: '500px', margin: '0 auto 12px' }}>Discover, install, and deploy AI agents to your workspace</p>
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '16px' }}>
-          <button onClick={earnCoins} disabled={claimLoading} style={{ padding: '6px 14px', backgroundColor: 'rgba(255,215,0,0.15)', border: '1px solid gold', color: 'gold', fontSize: '11px', cursor: claimLoading ? 'not-allowed' : 'pointer', fontFamily: 'monospace', fontWeight: 'bold', opacity: claimLoading ? 0.6 : 1 }}>{claimLoading ? '⏳ Claiming...' : '🪙 Daily Bonus'}</button>
-          <button onClick={() => showToast('Buy LiTBit Coins: connect wallet coming soon!', 'info')} style={{ padding: '6px 14px', backgroundColor: 'rgba(255,215,0,0.1)', border: '1px solid ' + T.borderColor, color: T.textColor, fontSize: '11px', cursor: 'pointer', fontFamily: 'monospace' }}>💳 Buy LiTBit Coins</button>
+          <button onClick={earnCoins} disabled={claimLoading} style={{ padding: '6px 14px', backgroundColor: `${T.accentColor}15`, border: `1px solid ${T.accentColor}`, color: T.accentColor, fontSize: '11px', cursor: claimLoading ? 'not-allowed' : 'pointer', fontWeight: 'bold', opacity: claimLoading ? 0.6 : 1 }}>{claimLoading ? '⏳ Claiming...' : '🪙 Daily Bonus'}</button>
+          <button onClick={() => showToast('Buy LiTBit Coins: connect wallet coming soon!', 'info')} style={{ padding: '6px 14px', backgroundColor: `${T.accentColor}10`, border: '1px solid ' + T.borderColor, color: T.textColor, fontSize: '11px', cursor: 'pointer' }}>💳 Buy LiTBit Coins</button>
         </div>
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
           {[
             { label: 'Total Agents', value: stats.total, accent: T.accentColor },
             { label: 'Free', value: stats.free, accent: T.accentColor },
             { label: 'Installed', value: stats.installed, accent: T.accentColor },
-            { label: 'Your Wallet', value: stats.coins, accent: 'gold', bg: 'rgba(255,215,0,0.08)', border: 'gold' },
+            { label: 'Your Wallet', value: stats.coins, accent: T.accentColor, bg: T.accentColor + '08', border: T.accentColor },
           ].map(stat => (
             <div key={stat.label} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid ' + (stat.border || T.borderColor), backgroundColor: stat.bg || 'rgba(0,0,0,0.3)', minWidth: '100px' }}>
               <div style={{ color: stat.accent, fontSize: '20px', fontWeight: 'bold', textAlign: 'center' }}>{stat.value}</div>

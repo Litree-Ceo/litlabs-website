@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
-import { Zap, MessageCircle, Radio, Globe } from "lucide-react";
+import { Zap, Radio, Globe } from "lucide-react";
 
 const productLinks = [
   { href: "/studio", label: "Studio" },
@@ -105,14 +105,8 @@ export default function Footer() {
               Connect
             </h4>
             <div className="flex items-center gap-3 mb-3">
-              <a href="https://github.com/litbit" target="_blank" rel="noopener noreferrer" className="hover:opacity-100 opacity-60 transition-opacity flex items-center gap-1 text-[11px]" style={{ color: resolvedColors.linkColor }}>
+              <a href="https://github.com/Litree-Ceo/litlabs-website" target="_blank" rel="noopener noreferrer" className="hover:opacity-100 opacity-60 transition-opacity flex items-center gap-1 text-[11px]" style={{ color: resolvedColors.linkColor }}>
                 <Globe size={14} /> GitHub
-              </a>
-              <a href="https://twitter.com/litlabs" target="_blank" rel="noopener noreferrer" className="hover:opacity-100 opacity-60 transition-opacity flex items-center gap-1 text-[11px]" style={{ color: resolvedColors.linkColor }}>
-                <Globe size={14} /> X
-              </a>
-              <a href="https://discord.gg/litlabs" target="_blank" rel="noopener noreferrer" className="hover:opacity-100 opacity-60 transition-opacity flex items-center gap-1 text-[11px]" style={{ color: resolvedColors.linkColor }}>
-                <MessageCircle size={14} /> Discord
               </a>
             </div>
             <div className="flex items-center gap-2 text-[10px]" style={{ color: resolvedColors.textMuted }}>
