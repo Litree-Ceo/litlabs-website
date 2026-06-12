@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
 import { useClerkAuth } from '@/hooks/useClerkAuth';
+import SocialFeed from '@/components/SocialFeed';
 import { Zap, ShoppingBag, Bot, Sparkles, Shield, BarChart3 } from 'lucide-react';
 
 const FEATURES = [
@@ -32,23 +33,7 @@ export default function LandingPage() {
   }
 
   if (isSignedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: C.bgColor }}>
-        <div className="text-center space-y-5">
-          <div className="text-4xl">🚀</div>
-          <h1 className="text-2xl font-black" style={{ color: C.headerColor }}>Welcome Back</h1>
-          <p className="text-sm opacity-60" style={{ color: C.textColor }}>Your studio is ready.</p>
-          <div className="flex gap-3 justify-center">
-            <Link href="/studio" className="px-6 py-3 rounded-lg text-sm font-bold" style={{ background: C.linkColor, color: '#000' }}>
-              Open Studio →
-            </Link>
-            <Link href="/marketplace" className="px-6 py-3 rounded-lg text-sm font-bold border" style={{ borderColor: C.borderColor, color: C.textColor }}>
-              Marketplace
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
+    return <SocialFeed />;
   }
 
   return (
