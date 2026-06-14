@@ -34,33 +34,50 @@ function getVideoThumbnailUrl(rawUrl: string): string | null {
   return null;
 }
 
+// Demo gallery items when DB is not configured
+const DEMO_GALLERY = [
+  { id: "demo_1", title: "Neon Cyber City", artist: "Pixel Forge", category: "360-worlds", imageUrl: "https://images.unsplash.com/photo-1515630278258-407f66498911?w=400&h=300&fit=crop", likes: 234, createdAt: "2026-06-01", mediaType: "image" as const },
+  { id: "demo_2", title: "Ethereal Dreamscape", artist: "DreamWeaver", category: "abstract", imageUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&h=500&fit=crop", likes: 189, createdAt: "2026-06-02", mediaType: "image" as const },
+  { id: "demo_3", title: "Lost Temple Ruins", artist: "Explorer-X", category: "landscape", imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&h=300&fit=crop", likes: 312, createdAt: "2026-05-28", mediaType: "image" as const },
+  { id: "demo_4", title: "Quantum Warrior", artist: "Pixel Forge", category: "character", imageUrl: "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?w=400&h=500&fit=crop", likes: 156, createdAt: "2026-06-03", mediaType: "image" as const },
+  { id: "demo_5", title: "Crystal Cavern", artist: "GeoMancer", category: "360-worlds", imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop", likes: 278, createdAt: "2026-05-30", mediaType: "image" as const },
+  { id: "demo_6", title: "Void Entity", artist: "ShadowNet", category: "character", imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=500&fit=crop", likes: 421, createdAt: "2026-06-04", mediaType: "image" as const },
+  { id: "demo_7", title: "Sunset Megacity", artist: "Pixel Forge", category: "landscape", imageUrl: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=300&fit=crop", likes: 198, createdAt: "2026-05-25", mediaType: "image" as const },
+  { id: "demo_8", title: "Fractal Mind", artist: "DreamWeaver", category: "abstract", imageUrl: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400&h=400&fit=crop", likes: 267, createdAt: "2026-05-29", mediaType: "image" as const },
+  { id: "demo_9", title: "Underwater Utopia", artist: "AquaBot", category: "360-worlds", imageUrl: "https://images.unsplash.com/photo-1582967788606-a171f1080ca8?w=400&h=300&fit=crop", likes: 345, createdAt: "2026-06-01", mediaType: "image" as const },
+  { id: "demo_10", title: "Cyber Samurai", artist: "Pixel Forge", category: "character", imageUrl: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=500&fit=crop", likes: 189, createdAt: "2026-05-27", mediaType: "image" as const },
+  { id: "demo_11", title: "Starfield Station", artist: "StarWalker", category: "landscape", imageUrl: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=400&h=300&fit=crop", likes: 567, createdAt: "2026-06-04", mediaType: "image" as const },
+  { id: "demo_12", title: "Neural Network", artist: "DataMancer", category: "abstract", imageUrl: "https://images.unsplash.com/photo-1635070041078-e363dbe00518?w=400&h=400&fit=crop", likes: 234, createdAt: "2026-05-26", mediaType: "image" as const },
+];
+
+function isSupabaseConfigured() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  return !!(url && key && !url.includes("your-project") && !key.includes("your-anon") && !url.includes("placeholder"));
+}
+
 async function getHandler(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
     const mine = searchParams.get("mine") === "true";
 
-    // Require auth for all gallery access (public list still needs auth
-    // until user_media has an is_public column)
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({ items: DEMO_GALLERY, mock: true });
     }
+
+    // Require auth for DB-backed gallery to avoid leaking private uploads
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { data: user } = await supabaseAdmin.from("users").select("id").eq("clerk_id", clerkId).single();
+    if (!user) return NextResponse.json({ items: [] });
 
     let query = supabaseAdmin
       .from("user_media")
       .select("id, url, type, caption, created_at, users:user_id (name, username)")
       .in("type", ["image", "video"])
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-
-    if (mine) {
-      const { data: user } = await supabaseAdmin.from("users").select("id").eq("clerk_id", clerkId).single();
-      if (!user) return NextResponse.json({ items: [] });
-      query = query.eq("user_id", user.id);
-    }
-    // NOTE: When mine=false, we return all media. This is fine for now
-    // but consider adding an is_public column to user_media for a true
-    // public gallery that doesn't expose private uploads.
 
     if (category) {
       query = query.ilike("caption", `%${category}%`);
@@ -69,7 +86,7 @@ async function getHandler(req: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      return NextResponse.json({ error: "Failed to fetch gallery" }, { status: 500 });
+      return NextResponse.json({ items: DEMO_GALLERY, mock: true });
     }
 
     const items = (data || []).map((item: { id: string; url: string; type: string; caption: string | null; created_at: string; users: Array<{ name: string | null; username: string | null }> | null }) => {
@@ -92,8 +109,7 @@ async function getHandler(req: NextRequest) {
 
     return NextResponse.json({ items });
   } catch (err) {
-    // Gallery error:
-    return NextResponse.json({ error: "Failed to fetch gallery" }, { status: 500 });
+    return NextResponse.json({ items: DEMO_GALLERY, mock: true });
   }
 }
 
@@ -109,6 +125,10 @@ async function postHandler(req: NextRequest) {
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
+    }
+
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({ success: true, id: `mock_${Date.now()}`, mock: true });
     }
 
     const { data: user } = await supabaseAdmin.from("users").select("id").eq("clerk_id", clerkId).single();
@@ -131,13 +151,11 @@ async function postHandler(req: NextRequest) {
       .single();
 
     if (error) {
-      // Gallery insert error:
       return NextResponse.json({ error: "Failed to save image" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, item }, { status: 201 });
   } catch (err) {
-    // Gallery save error:
     return NextResponse.json({ error: "Failed to save image" }, { status: 500 });
   }
 }

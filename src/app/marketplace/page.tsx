@@ -268,7 +268,7 @@ export default function Marketplace() {
   };
 
   return (
-    <div style={{ backgroundColor: T.bgColor, minHeight: '100vh', color: T.textColor, position: 'relative' }}>
+    <div style={{ backgroundColor: T.bgColor, color: T.textColor, position: 'relative' }}>
       {/* Toast notification */}
       {toast && (
         <div style={{ position: 'fixed', top: '80px', right: '20px', zIndex: 200, padding: '12px 20px', backgroundColor: toast.type === 'success' ? '#0a2e0a' : toast.type === 'error' ? '#2e0a0a' : '#0a1a2e', border: '2px solid ' + (toast.type === 'success' ? T.accentColor : toast.type === 'error' ? '#ff4444' : T.linkColor), color: toast.type === 'success' ? T.accentColor : toast.type === 'error' ? '#ff4444' : T.linkColor, fontSize: '12px', fontWeight: 'bold', maxWidth: '320px' }}>

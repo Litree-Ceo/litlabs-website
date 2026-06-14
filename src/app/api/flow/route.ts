@@ -77,15 +77,11 @@ function computeTotalCost(cells: FlowCell[]): number {
 /* ------------------------------------------------------------------ */
 const HF_API_KEY = process.env.HUGGING_FACE_API_KEY;
 const POLLINATIONS_BASE = "https://image.pollinations.ai/prompt";
-const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY;
 const FAL_API_KEY = process.env.FAL_KEY;
 const FLOW_SERVICE_TOKEN = process.env.FLOW_SERVICE_TOKEN;
 
 function arrayBufferToBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return Buffer.from(binary, "binary").toString("base64");
+  return Buffer.from(buffer).toString("base64");
 }
 
 async function dispatchCell(
@@ -111,29 +107,6 @@ async function dispatchCell(
       providerId: "pollinations",
       format: "image",
     };
-  }
-
-  if (cell.providerId === "together") {
-    if (!TOGETHER_API_KEY) throw new Error("TOGETHER_API_KEY not configured");
-    const res = await fetch("https://api.together.xyz/v1/images/generations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOGETHER_API_KEY}` },
-      body: JSON.stringify({
-        model: "black-forest-labs/FLUX.1-schnell-Free",
-        prompt: cell.prompt.trim(),
-        negative_prompt: (cell.negativePrompt ?? "").trim() || undefined,
-        width: Math.min(cell.width ?? 1024, 1440),
-        height: Math.min(cell.height ?? 1024, 1440),
-        steps: 4,
-        n: 1,
-        response_format: "b64_json",
-      }),
-    });
-    if (!res.ok) throw new Error(`Together.ai: ${(await res.text()).slice(0, 200)}`);
-    const data = await res.json();
-    const b64 = data.data?.[0]?.b64_json;
-    if (!b64) throw new Error("Together.ai returned no image");
-    return { downloadUrl: `data:image/png;base64,${b64}`, providerId: "together", format: "image" };
   }
 
   if (cell.providerId === "fal") {
@@ -227,9 +200,7 @@ async function runFlow(
     if (wallet.balance < totalCost) {
       throw new Error(`Insufficient LiTBit Coins. Need ${totalCost}, have ${wallet.balance}`);
     }
-    if (totalCost > 0) {
-      await updateWalletBalance(userId, wallet.balance - totalCost);
-    }
+    await updateWalletBalance(userId, -totalCost);
   }
 
   // Sequential execution. Image/video chaining: each cell's output becomes

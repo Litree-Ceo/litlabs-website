@@ -53,6 +53,7 @@ export default function Navbar() {
   const { profile } = useProfile();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
   const [userOpen, setUserOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const userRef = useRef<HTMLDivElement>(null);
@@ -64,6 +65,7 @@ export default function Navbar() {
     const handleClick = (e: MouseEvent) => {
       if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+      if (mobileOpen && !hamburgerRef.current?.contains(e.target as Node)) setMobileOpen(false);
     };
     const handleResize = () => {
       if (window.innerWidth >= 1024) setMobileOpen(false);
@@ -256,7 +258,8 @@ export default function Navbar() {
 
             {/* Mobile hamburger */}
             <button
-              onClick={() => setMobileOpen((v) => !v)}
+              ref={hamburgerRef}
+              onClick={(e) => { e.stopPropagation(); setMobileOpen((v) => !v); }}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
               className="lg:hidden p-1.5 rounded-md"
@@ -268,67 +271,87 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile full-screen overlay */}
+      {/* Mobile drawer — slide down from nav bottom */}
       {mobileOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-40 flex flex-col"
-          style={{
-            backgroundColor: resolvedColors.bgColor + "f0",
-            backdropFilter: "blur(24px)",
-            top: "48px",
-          }}
-        >
-          <div className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const active = isActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-lg transition-all"
-                  style={{
-                    color: active ? resolvedColors.headerColor : resolvedColors.textColor,
-                    backgroundColor: active ? resolvedColors.accentColor + "12" : "transparent",
-                    borderLeft: active ? `3px solid ${resolvedColors.accentColor}` : "3px solid transparent",
-                  }}
-                >
-                  <Icon size={18} />
-                  {link.label}
-                </Link>
-              );
-            })}
-
-            <div className="border-t my-3" style={{ borderColor: resolvedColors.borderColor + "20" }} />
-
-            {userLinks.map((link) => {
-              const Icon = link.icon;
-              const active = isActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-lg transition-all"
-                  style={{
-                    color: active ? resolvedColors.headerColor : resolvedColors.textColor,
-                    backgroundColor: active ? resolvedColors.accentColor + "12" : "transparent",
-                  }}
-                >
-                  <Icon size={18} />
-                  {link.label}
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="px-4 py-4 border-t" style={{ borderColor: resolvedColors.borderColor + "20" }}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold" style={{ color: resolvedColors.textMuted }}>LiTBit Coins</span>
-              <span className="text-xs font-bold" style={{ color: resolvedColors.accentColor }}>∞ FREE</span>
+        <>
+          {/* Tap-outside scrim */}
+          <div
+            className="lg:hidden fixed inset-0 z-[48]"
+            style={{ top: "56px", backgroundColor: "rgba(0,0,0,0.6)" }}
+            onClick={() => setMobileOpen(false)}
+            onTouchStart={() => setMobileOpen(false)}
+          />
+          {/* Drawer panel */}
+          <div
+            className="lg:hidden fixed left-0 right-0 z-[49] flex flex-col overflow-y-auto"
+            style={{
+              top: "56px",
+              maxHeight: "calc(100dvh - 56px)",
+              backgroundColor: resolvedColors.bgColor,
+              borderBottom: `2px solid ${resolvedColors.accentColor}30`,
+              boxShadow: `0 8px 32px rgba(0,0,0,0.5)`,
+            }}
+          >
+            <div className="px-4 pt-5 pb-2 space-y-1">
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                const active = isActive(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="flex items-center gap-3 px-4 py-3.5 text-sm font-bold rounded-xl transition-all active:scale-95"
+                    style={{
+                      color: active ? resolvedColors.bgColor : resolvedColors.textColor,
+                      backgroundColor: active ? resolvedColors.accentColor : resolvedColors.boxBg + "80",
+                      boxShadow: active ? `0 0 12px ${resolvedColors.accentColor}40` : "none",
+                    }}
+                  >
+                    <Icon size={18} />
+                    {link.label}
+                  </Link>
+                );
+              })}
             </div>
-            <NavAuth linkColor={resolvedColors.linkColor} />
+
+            <div className="px-4 pb-2 space-y-1">
+              <div className="text-[10px] font-bold uppercase tracking-widest px-4 py-2 opacity-50" style={{ color: resolvedColors.textMuted }}>Account</div>
+              {userLinks.map((link) => {
+                const Icon = link.icon;
+                const active = isActive(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all active:scale-95"
+                    style={{
+                      color: active ? resolvedColors.headerColor : resolvedColors.textColor,
+                      backgroundColor: active ? resolvedColors.accentColor + "15" : resolvedColors.boxBg + "80",
+                    }}
+                  >
+                    <Icon size={18} />
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="px-4 py-4 mt-2 border-t flex items-center justify-between" style={{ borderColor: resolvedColors.borderColor + "30" }}>
+              <div className="flex items-center gap-2">
+                <Coins size={12} style={{ color: resolvedColors.accentColor }} />
+                <span className="text-xs font-bold" style={{ color: resolvedColors.accentColor }}>∞ FREE</span>
+              </div>
+              <button
+                onClick={() => setMode(theme.mode === "dark" ? "light" : "dark")}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border"
+                style={{ borderColor: resolvedColors.borderColor + "40", color: resolvedColors.textMuted }}
+              >
+                {theme.mode === "dark" ? <Sun size={13} /> : <Moon size={13} />}
+                {theme.mode === "dark" ? "Light Mode" : "Dark Mode"}
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </nav>
   );

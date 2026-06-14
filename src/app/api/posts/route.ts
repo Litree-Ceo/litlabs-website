@@ -58,11 +58,11 @@ const MOCK_FEED = [
   },
 ];
 
-async function getHandler() {
-  if (!isAdminSupabaseConfigured()) {
-    return NextResponse.json({ posts: MOCK_FEED, mock: true });
-  }
+async function getHandler(req: NextRequest) {
   try {
+    if (!isAdminSupabaseConfigured()) {
+      return NextResponse.json({ posts: MOCK_FEED, mock: true });
+    }
     const sb = getAdminSupabase();
     const { data: posts, error } = await sb
       .from("posts")
@@ -74,8 +74,7 @@ async function getHandler() {
       .limit(50);
     if (error) throw error;
     return NextResponse.json({ posts: posts || [] });
-  } catch (err) {
-    // GET posts error:
+  } catch {
     return NextResponse.json({ posts: MOCK_FEED, mock: true });
   }
 }

@@ -162,13 +162,26 @@ export async function getUserWallet(clerkId: string): Promise<Wallet | null> {
   return created as Wallet;
 }
 
-/** Update wallet balance */
-export async function updateWalletBalance(clerkId: string, newBalance: number, lastClaimDate?: string) {
+/** Update wallet balance. Pass `absolute: true` to set a fixed value; otherwise amount is treated as a delta. */
+export async function updateWalletBalance(
+  clerkId: string,
+  amount: number,
+  options?: { absolute?: boolean; lastClaimDate?: string }
+) {
+  const { absolute = false, lastClaimDate } = options || {};
   const db = getDb();
   if (!db) throw new Error("Database not configured");
   const user = await getUserByClerkId(clerkId);
   if (!user) throw new Error("User not found");
-  const { data, error } = await db.from("wallets").update({ balance: newBalance, ...(lastClaimDate && { last_claim_date: lastClaimDate }), updated_at: new Date().toISOString() }).eq("user_id", user.id).select().single();
+
+  let targetBalance = amount;
+  if (!absolute) {
+    const { data: wallet } = await db.from("wallets").select("balance").eq("user_id", user.id).single();
+    targetBalance = (wallet?.balance ?? 0) + amount;
+    if (targetBalance < 0) throw new Error("Insufficient balance");
+  }
+
+  const { data, error } = await db.from("wallets").update({ balance: targetBalance, ...(lastClaimDate && { last_claim_date: lastClaimDate }), updated_at: new Date().toISOString() }).eq("user_id", user.id).select().single();
   if (error) throw new Error(`Failed to update wallet: ${error.message}`);
   return data as Wallet;
 }
@@ -179,5 +192,5 @@ export async function claimDailyBonus(clerkId: string, bonusAmount: number = 50)
   if (!wallet) throw new Error("Wallet not found");
   const today = new Date().toISOString().split("T")[0];
   if (wallet.last_claim_date === today) throw new Error("Daily bonus already claimed");
-  return updateWalletBalance(clerkId, wallet.balance + bonusAmount, today);
+  return updateWalletBalance(clerkId, wallet.balance + bonusAmount, { absolute: true, lastClaimDate: today });
 }

@@ -52,7 +52,7 @@ export default function AgentsPage() {
     setInputs(p => ({ ...p, [agentId]: "" }));
     setLoading(p => ({ ...p, [agentId]: true }));
     const userMsg: Msg = { role: "user", text: content.trim() };
-    setChats(p => ({ ...p, [agentId]: [...(p[agentId] || [{ role: "agent", text: `Hi! I''m ${agent.name}. ${agent.desc} Ask me anything!` }]), userMsg] }));
+    setChats(p => ({ ...p, [agentId]: [...(p[agentId] || [{ role: "agent", text: `Hi! I'm ${agent.name}. ${agent.desc} Ask me anything!` }]), userMsg] }));
     try {
       const res = await fetch("/api/gemini", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -70,12 +70,12 @@ export default function AgentsPage() {
     setActiveId(id);
     if (!chats[id]) {
       const agent = AGENTS.find(a => a.id === id)!;
-      setChats(p => ({ ...p, [id]: [{ role: "agent", text: `Hi! I''m ${agent.name}, your ${agent.role}. ${agent.desc} What can I help you with?` }] }));
+      setChats(p => ({ ...p, [id]: [{ role: "agent", text: `Hi! I'm ${agent.name}, your ${agent.role}. ${agent.desc} What can I help you with?` }] }));
     }
   };
 
   return (
-    <div className="min-h-screen font-mono" style={{ backgroundColor: T.bgColor, color: T.textColor }}>
+    <div className="font-mono" style={{ backgroundColor: T.bgColor, color: T.textColor }}>
 
       {/* Header */}
       <div className="border-b px-6 py-5" style={{ borderColor: T.borderColor + "20", backgroundColor: T.boxBg + "60" }}>

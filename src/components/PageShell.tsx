@@ -36,8 +36,8 @@ export default function PageShell({
   const { resolvedColors } = useTheme();
 
   return (
-    <main
-      className={`min-h-screen pt-16 pb-12 ${animate ? "animate-fadeInUp" : ""} ${className}`}
+    <div
+      className={`min-h-[calc(100vh-4rem)] pt-16 pb-12 ${animate ? "animate-fadeInUp" : ""} ${className}`}
       style={{ color: resolvedColors.textColor }}
     >
       <div className={fullWidth ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"}>
@@ -91,6 +91,6 @@ export default function PageShell({
 
         {children}
       </div>
-    </main>
+    </div>
   );
 }

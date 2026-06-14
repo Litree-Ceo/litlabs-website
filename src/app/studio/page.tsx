@@ -162,7 +162,7 @@ function StudioInner() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ backgroundColor: T.bgColor, color: T.textColor, fontFamily: "monospace" }}>
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] overflow-hidden" style={{ backgroundColor: T.bgColor, color: T.textColor, fontFamily: "monospace" }}>
       {/* CRT overlay */}
       {crtEnabled && (
         <div className="fixed inset-0 pointer-events-none z-40 opacity-[0.05]" style={crtStyle} />

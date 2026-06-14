@@ -83,7 +83,7 @@ async function postHandler(req: NextRequest) {
           { status: 400 }
         );
       }
-      const wallet = await updateWalletBalance(clerkId, newBalance);
+      const wallet = await updateWalletBalance(clerkId, newBalance, { absolute: true });
       return NextResponse.json({
         message: `${amount} LiTBit Coins spent`,
         balance: wallet.balance,
@@ -174,7 +174,7 @@ async function putHandler(req: NextRequest) {
       );
     }
 
-    const wallet = await updateWalletBalance(clerkId, newBalance);
+    const wallet = await updateWalletBalance(clerkId, newBalance, { absolute: true });
 
     return NextResponse.json({
       message: body.amount > 0 

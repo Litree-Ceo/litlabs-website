@@ -7,7 +7,6 @@ export type MediaFormat = "image" | "video";
 export type MediaProviderId =
   | "pollinations"
   | "gemini"
-  | "together"
   | "fal"
   | "huggingface"
   | "luma"
@@ -49,16 +48,6 @@ export const MEDIA_PROVIDERS: MediaProvider[] = [
     requiresKey: false,
     free: true,
     tier: "free",
-  },
-  {
-    id: "together",
-    label: "Together.ai (FLUX)",
-    description: "FLUX.1 Schnell — fast, high-quality images. Very cheap.",
-    supportedFormats: ["image"],
-    cost: () => 2,
-    requiresKey: true,
-    free: false,
-    tier: "cheap",
   },
   {
     id: "fal",

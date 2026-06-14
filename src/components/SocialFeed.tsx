@@ -142,7 +142,7 @@ export default function SocialFeed() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: T.bgColor, color: T.textColor }}>
+    <div style={{ backgroundColor: T.bgColor, color: T.textColor }}>
       {/* Toast */}
       {toast && (
         <div className="fixed top-20 right-5 z-[200] px-5 py-3 text-xs font-bold max-w-xs border-2 rounded"

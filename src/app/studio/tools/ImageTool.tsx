@@ -4,9 +4,28 @@ import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import {
   Wand2, Save, Download, RefreshCw, Coins, AlertTriangle,
-  CheckCircle2, Loader2, History, Sparkles, Gift
+  CheckCircle2, Loader2, History, Sparkles, Gift,
+  Terminal, Layers, Plus, X, Trash2, Copy, Zap, Maximize2
 } from "lucide-react";
 import { MediaProviderId } from "@/lib/media";
+
+type Workspace = {
+  id: string;
+  name: string;
+  prompt: string;
+  negativePrompt: string;
+  providerId: MediaProviderId;
+  aspectRatio: string;
+  imageSize: string;
+  seed: number;
+};
+
+type LogEntry = {
+  id: string;
+  time: string;
+  level: "info" | "success" | "error" | "warn";
+  message: string;
+};
 
 const PROMPT_PRESETS = [
   "A neon-lit cyberpunk city at midnight, rain-slicked streets reflecting holographic billboards, flying cars streaking through fog",
@@ -44,6 +63,17 @@ export default function ImageTool() {
   const [negativePrompt, setNegativePrompt] = useState("");
   const [providerId, setProviderId] = useState<MediaProviderId>("gemini");
   const [seed, setSeed] = useState<number>(0);
+  const [aspectRatio, setAspectRatio] = useState<"1:1" | "4:3" | "3:4" | "16:9" | "9:16">("1:1");
+  const [imageSize, setImageSize] = useState<"1K" | "2K">("1K");
+
+  const ASPECT_OPTIONS = [
+    { label: "Square", value: "1:1" as const, width: 1024, height: 1024 },
+    { label: "Wide",   value: "16:9" as const, width: 1344, height: 768 },
+    { label: "Tall",   value: "9:16" as const, width: 768,  height: 1344 },
+    { label: "Wide HD", value: "4:3" as const, width: 1024, height: 768 },
+    { label: "Tall HD", value: "3:4" as const, width: 768,  height: 1024 },
+  ];
+  const currentAspect = ASPECT_OPTIONS.find(a => a.value === aspectRatio)!;
 
   const [status, setStatus] = useState<GenerationStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +82,15 @@ export default function ImageTool() {
   const [coinBalance, setCoinBalance] = useState<number | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  const [batchSize, setBatchSize] = useState<1 | 2 | 4>(1);
+  const [showLogs, setShowLogs] = useState(false);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([
+    { id: "ws_default", name: "Default", prompt: "", negativePrompt: "", providerId: "gemini", aspectRatio: "1:1", imageSize: "1K", seed: 0 },
+  ]);
+  const [activeWsId, setActiveWsId] = useState("ws_default");
+  const [editingWsName, setEditingWsName] = useState<string | null>(null);
+  const [wsNameInput, setWsNameInput] = useState("");
 
   /* Persist history */
   useEffect(() => {
@@ -75,65 +114,140 @@ export default function ImageTool() {
       .catch(() => { /* silent */ });
   }, []);
 
+  /* Load workspaces */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("litlabs-workspaces");
+      if (raw) { const parsed = JSON.parse(raw); if (parsed.length) { setWorkspaces(parsed); setActiveWsId(parsed[0].id); } }
+    } catch { /* ignore */ }
+  }, []);
+
+  /* Save workspaces */
+  useEffect(() => { try { localStorage.setItem("litlabs-workspaces", JSON.stringify(workspaces)); } catch { /* ignore */ } }, [workspaces]);
+
+  /* Sync current inputs to active workspace */
+  useEffect(() => {
+    setWorkspaces(prev => prev.map(w => w.id === activeWsId
+      ? { ...w, prompt, negativePrompt, providerId, aspectRatio, imageSize, seed }
+      : w
+    ));
+  }, [prompt, negativePrompt, providerId, aspectRatio, imageSize, seed, activeWsId]);
+
+  const addLog = useCallback((level: LogEntry["level"], message: string) => {
+    const now = new Date();
+    const time = `${now.getHours().toString().padStart(2,"0")}:${now.getMinutes().toString().padStart(2,"0")}:${now.getSeconds().toString().padStart(2,"0")}`;
+    setLogs(prev => [{ id: `log_${Date.now()}_${Math.random()}`, time, level, message }, ...prev].slice(0, 50));
+  }, []);
+
+  const enhancePrompt = useCallback(() => {
+    if (!prompt.trim()) return;
+    const enhancers = [
+      ", highly detailed, 8k resolution, cinematic lighting",
+      ", ultra realistic, professional photography, sharp focus",
+      ", digital art, concept art, trending on artstation",
+      ", octane render, unreal engine 5, volumetric fog",
+    ];
+    const pick = enhancers[Math.floor(Math.random() * enhancers.length)];
+    setPrompt(prev => prev + pick);
+    addLog("info", `Prompt enhanced with: ${pick.slice(2, 40)}...`);
+  }, [prompt, addLog]);
+
+  const createWorkspace = useCallback(() => {
+    const id = `ws_${Date.now()}`;
+    const name = `Session ${workspaces.length + 1}`;
+    const ws: Workspace = { id, name, prompt, negativePrompt, providerId, aspectRatio, imageSize, seed };
+    setWorkspaces(prev => [...prev, ws]);
+    setActiveWsId(id);
+    addLog("info", `Workspace "${name}" created from current settings`);
+  }, [workspaces.length, prompt, negativePrompt, providerId, aspectRatio, imageSize, seed, addLog]);
+
+  const deleteWorkspace = useCallback((id: string) => {
+    if (workspaces.length <= 1) { addLog("warn", "Cannot delete last workspace"); return; }
+    const next = workspaces.filter(w => w.id !== id);
+    setWorkspaces(next);
+    if (activeWsId === id) { setActiveWsId(next[0].id); loadWorkspace(next[0]); }
+    addLog("info", "Workspace deleted");
+  }, [workspaces, activeWsId, addLog]);
+
+  function loadWorkspace(ws: Workspace) {
+    setPrompt(ws.prompt); setNegativePrompt(ws.negativePrompt); setProviderId(ws.providerId);
+    setAspectRatio(ws.aspectRatio as any); setImageSize(ws.imageSize as any); setSeed(ws.seed);
+  }
+
   const providerCost = providerId === "pollinations" ? 0 : providerId === "gemini" ? 1 : providerId === "fal" ? 3 : 0;
-  const canAfford = coinBalance === null || coinBalance >= providerCost;
+  const canAfford = coinBalance === null || coinBalance >= providerCost * batchSize;
   const promptValid = prompt.trim().length >= 3;
 
   const handleGenerate = useCallback(async () => {
     if (!promptValid) { setError("Prompt must be at least 3 characters."); return; }
-    if (!canAfford) { setError(`Not enough LiTBit Coins. Need ${providerCost}, have ${coinBalance}.`); return; }
+    const totalCost = providerCost * batchSize;
+    if (!canAfford) { setError(`Not enough LiTBit Coins. Need ${totalCost}, have ${coinBalance}.`); return; }
 
     setError(null);
     setStatus("submitting");
-    const localId = `gen_${Date.now()}`;
-    const newGen: Generation = {
-      id: localId,
-      prompt: prompt.trim(),
-      negativePrompt: negativePrompt.trim(),
-      provider: providerId,
-      status: "submitting",
-      createdAt: Date.now(),
-      cost: providerCost,
-    };
-    setCurrentResult(newGen);
-    setHistory(prev => [newGen, ...prev].slice(0, MAX_HISTORY));
+    addLog("info", `Starting batch of ${batchSize} image(s) via ${providerId}...`);
 
-    try {
-      const res = await fetch("/api/media/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: prompt.trim(),
-          negativePrompt: negativePrompt.trim(),
-          seed: seed || Math.floor(Math.random() * 1000000),
-          providerId,
-          format: "image",
-          width: 1024,
-          height: 1024,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Generation request failed");
+    const results: Generation[] = [];
+    for (let i = 0; i < batchSize; i++) {
+      const localId = `gen_${Date.now()}_${i}`;
+      const newGen: Generation = {
+        id: localId,
+        prompt: prompt.trim(),
+        negativePrompt: negativePrompt.trim(),
+        provider: providerId,
+        status: "submitting",
+        createdAt: Date.now(),
+        cost: providerCost,
+      };
+      results.push(newGen);
+      setHistory(prev => [newGen, ...prev].slice(0, MAX_HISTORY));
+      if (i === 0) setCurrentResult(newGen);
 
-      setStatus("succeeded");
-      setHistory(prev => prev.map(g => g.id === localId
-        ? { ...g, status: "succeeded", fileUrl: data.downloadUrl, thumbUrl: data.thumbUrl }
-        : g
-      ));
-      setCurrentResult(prev => prev?.id === localId
-        ? { ...prev, status: "succeeded", fileUrl: data.downloadUrl, thumbUrl: data.thumbUrl }
-        : prev
-      );
-      if (typeof data.balance === "number") setCoinBalance(data.balance);
-    } catch (err) {
-      setStatus("failed");
-      setError(err instanceof Error ? err.message : "Generation failed");
-      setHistory(prev => prev.map(g => g.id === localId
-        ? { ...g, status: "failed", error: err instanceof Error ? err.message : "failed" }
-        : g
-      ));
+      try {
+        addLog("info", `[${i + 1}/${batchSize}] Dispatching to ${providerId}...`);
+        const res = await fetch("/api/media/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: prompt.trim(),
+            negativePrompt: negativePrompt.trim(),
+            seed: seed || Math.floor(Math.random() * 1000000),
+            providerId,
+            format: "image",
+            width: currentAspect.width,
+            height: currentAspect.height,
+            aspectRatio: currentAspect.value,
+            imageSize: providerId === "gemini" ? imageSize : undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Generation request failed");
+
+        setHistory(prev => prev.map(g => g.id === localId
+          ? { ...g, status: "succeeded", fileUrl: data.downloadUrl, thumbUrl: data.thumbUrl }
+          : g
+        ));
+        if (i === 0) {
+          setCurrentResult(prev => prev?.id === localId
+            ? { ...prev, status: "succeeded", fileUrl: data.downloadUrl, thumbUrl: data.thumbUrl }
+            : prev
+          );
+        }
+        addLog("success", `[${i + 1}/${batchSize}] Image generated · ${data.providerId} · ${data.free ? "FREE" : data.cost + " 🪙"}`);
+        if (typeof data.balance === "number") setCoinBalance(data.balance);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Generation failed";
+        addLog("error", `[${i + 1}/${batchSize}] ${msg}`);
+        setHistory(prev => prev.map(g => g.id === localId
+          ? { ...g, status: "failed", error: msg }
+          : g
+        ));
+        if (i === 0) setError(msg);
+      }
     }
-  }, [prompt, negativePrompt, providerId, seed, promptValid, canAfford, coinBalance, providerCost]);
+    setStatus(results.every(r => r.status === "succeeded") ? "succeeded" : "failed");
+    addLog("info", `Batch complete — ${results.filter(r => r.status === "succeeded").length}/${batchSize} succeeded`);
+  }, [prompt, negativePrompt, providerId, seed, aspectRatio, currentAspect, imageSize, batchSize, promptValid, canAfford, coinBalance, providerCost, addLog]);
 
   const handleSaveToGallery = useCallback(async (gen: Generation) => {
     if (!gen.fileUrl) return;
@@ -203,26 +317,68 @@ export default function ImageTool() {
 
   return (
     <div className="p-4 space-y-4 max-w-6xl mx-auto">
-      {/* Top bar: coins + heading */}
-      <div className="flex items-center justify-between">
+      {/* Top bar */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Sparkles size={14} style={{ color: T.accentColor }} />
-          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textMuted }}>Image Generator</span>
+          <span className="text-xs font-black uppercase tracking-widest" style={{ color: T.headerColor }}>Neural Imaging Studio</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => setShowLogs(v => !v)}
+            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold border transition-all hover:scale-105"
+            style={{ borderColor: T.borderColor, color: T.textMuted, backgroundColor: T.boxBg }}>
+            <Terminal size={10} /> {showLogs ? "Hide" : "Show"} Log
+          </button>
           <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border" style={{ borderColor: T.borderColor, color: T.accentColor, backgroundColor: T.boxBg }}>
             <Coins size={11} /> {coinBalance ?? "—"} LiTBit
           </div>
-          <button
-            onClick={handleClaimBonus}
-            disabled={claiming}
+          <button onClick={handleClaimBonus} disabled={claiming}
             className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold border transition-all hover:scale-105 disabled:opacity-50"
             style={{ borderColor: T.accentColor, color: T.bgColor, backgroundColor: T.accentColor }}
-            title="Claim 50 free LiTBit Coins daily"
-          >
+            title="Claim 50 free LiTBit Coins daily">
             <Gift size={11} /> {claiming ? "..." : "Claim"}
           </button>
         </div>
+      </div>
+
+      {/* Workspace Tabs */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 select-none">
+        {workspaces.map(ws => (
+          <div key={ws.id} className="flex items-center shrink-0 relative group">
+            {editingWsName === ws.id ? (
+              <input autoFocus value={wsNameInput} onChange={e => setWsNameInput(e.target.value)}
+                onBlur={() => { setWorkspaces(prev => prev.map(w => w.id === ws.id ? { ...w, name: wsNameInput || w.name } : w)); setEditingWsName(null); }}
+                onKeyDown={e => { if (e.key === "Enter") { setWorkspaces(prev => prev.map(w => w.id === ws.id ? { ...w, name: wsNameInput || w.name } : w)); setEditingWsName(null); } }}
+                className="px-2 py-1 text-[10px] font-bold rounded outline-none w-24"
+                style={{ backgroundColor: T.bgColor, border: `1px solid ${T.accentColor}`, color: T.textColor }} />
+            ) : (
+              <div
+                onClick={() => { if (activeWsId !== ws.id) { setActiveWsId(ws.id); loadWorkspace(ws); } }}
+                onDoubleClick={() => { setEditingWsName(ws.id); setWsNameInput(ws.name); }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-bold border transition-all cursor-pointer"
+                style={{
+                  backgroundColor: activeWsId === ws.id ? T.accentColor + "18" : T.bgColor,
+                  borderColor: activeWsId === ws.id ? T.accentColor : T.borderColor + "40",
+                  color: activeWsId === ws.id ? T.accentColor : T.textMuted,
+                }}>
+                <Layers size={9} /> {ws.name}
+                {workspaces.length > 1 && (
+                  <span
+                    onClick={(e) => { e.stopPropagation(); deleteWorkspace(ws.id); }}
+                    className="ml-0.5 opacity-0 group-hover:opacity-40 hover:!opacity-100 cursor-pointer flex items-center"
+                    role="button" aria-label="Delete workspace">
+                    <X size={9} />
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+        <button onClick={createWorkspace}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold border transition-all hover:scale-105"
+          style={{ borderColor: T.accentColor + "40", color: T.accentColor }}>
+          <Plus size={10} /> New
+        </button>
       </div>
 
       <div className="grid lg:grid-cols-5 gap-4">
@@ -230,7 +386,14 @@ export default function ImageTool() {
         <div className="lg:col-span-2 space-y-3">
           {/* Prompt */}
           <div className="border rounded-lg p-3" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-            <label className="block text-[10px] uppercase tracking-widest mb-1.5" style={{ color: T.textMuted }}>Your Vision</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[10px] uppercase tracking-widest" style={{ color: T.textMuted }}>Your Vision</label>
+              <button onClick={enhancePrompt} disabled={!prompt.trim() || isWorking}
+                className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded border transition-all hover:scale-105 disabled:opacity-30"
+                style={{ borderColor: T.accentColor + "30", color: T.accentColor }}>
+                <Zap size={9} /> Enhance
+              </button>
+            </div>
             <textarea
               value={prompt}
               onChange={e => { setPrompt(e.target.value); setError(null); }}
@@ -266,6 +429,37 @@ export default function ImageTool() {
               ))}
             </div>
           </div>
+
+          {/* Aspect Ratio */}
+          <div className="border rounded-lg p-3" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
+            <label className="block text-[10px] uppercase tracking-widest mb-2" style={{ color: T.textMuted }}>Aspect Ratio</label>
+            <div className="grid grid-cols-5 gap-1.5">
+              {ASPECT_OPTIONS.map(opt => (
+                <button key={opt.value} type="button" onClick={() => setAspectRatio(opt.value)} disabled={isWorking}
+                  className="py-2 text-[10px] font-bold rounded border transition-all hover:scale-[1.02] disabled:opacity-50"
+                  style={{ backgroundColor: aspectRatio === opt.value ? T.accentColor + "20" : T.bgColor, borderColor: aspectRatio === opt.value ? T.accentColor : T.borderColor, color: aspectRatio === opt.value ? T.accentColor : T.textColor }}>
+                  <div>{opt.label}</div>
+                  <div className="text-[8px] opacity-60">{opt.value}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Image Size (Gemini only) */}
+          {providerId === "gemini" && (
+            <div className="border rounded-lg p-3" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
+              <label className="block text-[10px] uppercase tracking-widest mb-2" style={{ color: T.textMuted }}>Resolution</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(["1K", "2K"] as const).map(s => (
+                  <button key={s} type="button" onClick={() => setImageSize(s)} disabled={isWorking}
+                    className="py-2 text-[10px] font-bold rounded border transition-all hover:scale-[1.02] disabled:opacity-50"
+                    style={{ backgroundColor: imageSize === s ? T.accentColor + "20" : T.bgColor, borderColor: imageSize === s ? T.accentColor : T.borderColor, color: imageSize === s ? T.accentColor : T.textColor }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Advanced */}
           <div className="border rounded-lg" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
@@ -305,13 +499,30 @@ export default function ImageTool() {
             </div>
           </div>
 
+          {/* Batch Size */}
+          <div className="border rounded-lg p-3" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
+            <label className="block text-[10px] uppercase tracking-widest mb-2" style={{ color: T.textMuted }}>Batch Size</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {([1, 2, 4] as const).map(n => (
+                <button key={n} type="button" onClick={() => setBatchSize(n)} disabled={isWorking}
+                  className="py-2 text-[10px] font-bold rounded border transition-all hover:scale-[1.02] disabled:opacity-50"
+                  style={{ backgroundColor: batchSize === n ? T.accentColor + "20" : T.bgColor, borderColor: batchSize === n ? T.accentColor : T.borderColor, color: batchSize === n ? T.accentColor : T.textColor }}>
+                  {n}x
+                </button>
+              ))}
+            </div>
+            <div className="text-[9px] mt-1.5 opacity-40" style={{ color: T.textMuted }}>
+              Total: {providerCost * batchSize} 🪙 · {batchSize} image{batchSize > 1 ? "s" : ""}
+            </div>
+          </div>
+
           {/* Generate button */}
           <button type="button" onClick={handleGenerate}
             disabled={!promptValid || !canAfford || isWorking}
             className="w-full py-3 rounded-lg font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
             style={{ background: `linear-gradient(135deg, ${T.accentColor} 0%, ${T.headerColor} 100%)`, color: T.bgColor, boxShadow: `0 0 20px ${T.accentColor}30` }}>
             {isWorking ? <><Loader2 size={16} className="animate-spin" /> Generating...</>
-              : <><Wand2 size={16} /> Generate ({providerCost === 0 ? "FREE" : `${providerCost} 🪙`})</>}
+              : <><Wand2 size={16} /> Generate {batchSize > 1 ? `${batchSize}x` : ""} ({providerCost * batchSize === 0 ? "FREE" : `${providerCost * batchSize} 🪙`})</>}
           </button>
 
           {error && (
@@ -330,9 +541,16 @@ export default function ImageTool() {
               {currentResult?.status === "succeeded" && <div className="flex items-center gap-1 text-[10px]" style={{ color: T.accentColor }}><CheckCircle2 size={10} /> Ready</div>}
               {isWorking && <div className="flex items-center gap-1 text-[10px]" style={{ color: T.accentColor }}><Loader2 size={10} className="animate-spin" /> Working...</div>}
             </div>
-            <div className="aspect-video relative flex items-center justify-center" style={{ backgroundColor: T.bgColor }}>
+            <div
+              className="relative flex items-center justify-center w-full"
+              style={{
+                backgroundColor: T.bgColor,
+                aspectRatio: aspectRatio === "1:1" ? "1/1" : aspectRatio === "4:3" ? "4/3" : aspectRatio === "3:4" ? "3/4" : aspectRatio === "16:9" ? "16/9" : "9/16",
+                maxHeight: "70vh",
+              }}
+            >
               {currentResult?.fileUrl ? (
-                <img src={currentResult.fileUrl} alt={currentResult.prompt} className="w-full h-full object-cover" />
+                <img src={currentResult.fileUrl} alt={currentResult.prompt} className="w-full h-full object-contain" />
               ) : isWorking ? (
                 <div className="text-center">
                   <div className="relative w-20 h-20 mx-auto mb-3">
@@ -358,19 +576,21 @@ export default function ImageTool() {
             </div>
             {currentResult?.fileUrl && (
               <div className="px-3 py-2 border-t flex flex-wrap items-center gap-2" style={{ borderColor: T.borderColor, backgroundColor: T.bgColor }}>
-                <button onClick={() => handleSaveToGallery(currentResult)} disabled={status === "saving"}
-                  className="px-2.5 py-1 text-[10px] font-bold rounded flex items-center gap-1 disabled:opacity-50" style={{ backgroundColor: T.accentColor, color: T.bgColor }}>
-                  {status === "saving" ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} Save
-                </button>
                 <button onClick={() => handleDownload(currentResult.fileUrl!, currentResult.prompt)}
-                  className="px-2.5 py-1 text-[10px] font-bold rounded border flex items-center gap-1" style={{ borderColor: T.borderColor, color: T.textColor }}>
-                  <Download size={10} /> Download
+                  className="px-3 py-1.5 text-[11px] font-black rounded flex items-center gap-1.5"
+                  style={{ backgroundColor: T.accentColor, color: T.bgColor, boxShadow: `0 0 12px ${T.accentColor}40` }}>
+                  <Download size={13} /> Download
+                </button>
+                <button onClick={() => handleSaveToGallery(currentResult)} disabled={status === "saving"}
+                  className="px-3 py-1.5 text-[11px] font-bold rounded border flex items-center gap-1.5 disabled:opacity-50"
+                  style={{ borderColor: T.accentColor, color: T.accentColor, backgroundColor: T.accentColor + "10" }}>
+                  {status === "saving" ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Save to Gallery
                 </button>
                 <button onClick={handleGenerate}
-                  className="px-2.5 py-1 text-[10px] font-bold rounded border flex items-center gap-1" style={{ borderColor: T.borderColor, color: T.textColor }}>
-                  <RefreshCw size={10} /> Regen
+                  className="px-3 py-1.5 text-[11px] font-bold rounded border flex items-center gap-1.5" style={{ borderColor: T.borderColor, color: T.textMuted }}>
+                  <RefreshCw size={12} /> Regen
                 </button>
-                <div className="ml-auto text-[9px] opacity-60">{currentResult.provider} · {currentResult.cost === 0 ? "FREE" : `${currentResult.cost} 🪙`}</div>
+                <div className="ml-auto text-[9px] opacity-60">{currentResult.provider} · {currentResult.cost === 0 ? "FREE" : `${currentResult.cost} 🪙`} · {aspectRatio}</div>
               </div>
             )}
           </div>
@@ -402,6 +622,34 @@ export default function ImageTool() {
           </div>
         </div>
       </div>
+
+      {/* CLI Log Panel */}
+      {showLogs && (
+        <div className="border rounded-lg overflow-hidden" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg, fontFamily: "'JetBrains Mono', monospace" }}>
+          <div className="px-3 py-1.5 border-b flex items-center justify-between" style={{ borderColor: T.borderColor, backgroundColor: T.bgColor }}>
+            <div className="flex items-center gap-2">
+              <Terminal size={10} style={{ color: T.accentColor }} />
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: T.accentColor }}>Neural Log</span>
+            </div>
+            <button onClick={() => setLogs([])} className="text-[9px] opacity-40 hover:opacity-100" style={{ color: T.textMuted }}>Clear</button>
+          </div>
+          <div className="max-h-40 overflow-y-auto p-2 space-y-1 text-[10px]">
+            {logs.length === 0 ? (
+              <div className="opacity-30 italic px-1" style={{ color: T.textMuted }}>// No events logged yet...</div>
+            ) : (
+              logs.map(log => (
+                <div key={log.id} className="flex gap-2 px-1">
+                  <span className="opacity-30 shrink-0" style={{ color: T.textMuted }}>{log.time}</span>
+                  <span className="shrink-0 font-bold" style={{
+                    color: log.level === "success" ? "#3fb950" : log.level === "error" ? "#f85149" : log.level === "warn" ? "#d29922" : T.accentColor,
+                  }}>{log.level.toUpperCase()}</span>
+                  <span style={{ color: T.textColor }}>{log.message}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

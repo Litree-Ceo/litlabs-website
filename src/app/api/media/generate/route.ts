@@ -7,7 +7,6 @@ import { MEDIA_PROVIDERS, MediaFormat, MediaProviderId, getProvider, defaultProv
 const HF_API_KEY = process.env.HUGGING_FACE_API_KEY;
 const HF_VIDEO_URL = "https://api-inference.huggingface.co/models/damo-vilab/text-to-video-ms-1.7";
 const POLLINATIONS_BASE = "https://image.pollinations.ai/prompt";
-const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY;
 const FAL_API_KEY = process.env.FAL_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -15,10 +14,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 /*  Helpers                                                             */
 /* ------------------------------------------------------------------ */
 function arrayBufferToBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return Buffer.from(binary, "binary").toString("base64");
+  return Buffer.from(buffer).toString("base64");
 }
 
 type MediaRequest = {
@@ -29,6 +25,8 @@ type MediaRequest = {
   format?: MediaFormat;
   width?: number;
   height?: number;
+  aspectRatio?: string;
+  imageSize?: "1K" | "2K" | "4K";
   /** Optional reference image URL (for image2video / style transfer flows). */
   referenceUrl?: string;
 };
@@ -45,80 +43,90 @@ type MediaResult = {
 /* ------------------------------------------------------------------ */
 /*  Provider implementations                                            */
 /* ------------------------------------------------------------------ */
-async function handleTogetherImage(
-  prompt: string,
-  negativePrompt: string,
-  width: number,
-  height: number,
-): Promise<MediaResult> {
-  if (!TOGETHER_API_KEY) throw new Error("Together.ai key missing — set TOGETHER_API_KEY");
-
-  const res = await fetch("https://api.together.xyz/v1/images/generations", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${TOGETHER_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "black-forest-labs/FLUX.1-schnell-Free",
-      prompt: prompt.trim(),
-      negative_prompt: negativePrompt.trim() || undefined,
-      width: Math.min(width, 1440),
-      height: Math.min(height, 1440),
-      steps: 4,
-      n: 1,
-      response_format: "b64_json",
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text().catch(() => "");
-    throw new Error(`Together.ai error: ${err.slice(0, 200) || res.statusText}`);
-  }
-
-  const data = await res.json();
-  const b64 = data.data?.[0]?.b64_json;
-  if (!b64) throw new Error("Together.ai returned no image data");
-
-  return {
-    downloadUrl: `data:image/png;base64,${b64}`,
-    id: `together_${Date.now()}`,
-    status: "complete",
-    title: prompt.slice(0, 60),
-    format: "image",
-  };
+function resolveGeminiAspect(width: number, height: number, explicitRatio?: string): string {
+  const VALID = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+  if (explicitRatio && VALID.includes(explicitRatio)) return explicitRatio;
+  // Infer from dimensions
+  const r = width / height;
+  if (r > 1.7) return "16:9";
+  if (r > 1.2) return "4:3";
+  if (r < 0.6) return "9:16";
+  if (r < 0.85) return "3:4";
+  return "1:1";
 }
 
 async function handleGeminiImage(
   prompt: string,
   width: number,
   height: number,
+  aspectRatio?: string,
+  imageSize: "1K" | "2K" | "4K" = "1K",
 ): Promise<MediaResult> {
   if (!GEMINI_API_KEY) throw new Error("Gemini key missing — set GEMINI_API_KEY");
 
-  // Use Imagen 3 via Google AI Studio predict endpoint
+  const finalAspect = resolveGeminiAspect(width, height, aspectRatio);
+  const finalSize = (imageSize === "2K" || imageSize === "4K") ? imageSize : "1K";
+
+  // Use gemini-3.1-flash-image via generateContent (returns inlineData)
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "User-Agent": "litlabs-studio" },
       body: JSON.stringify({
-        instances: [{ prompt: prompt.trim() }],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: width === height ? "1:1" : width > height ? "16:9" : "9:16",
+        contents: [{ parts: [{ text: prompt.trim() }] }],
+        config: {
+          imageConfig: {
+            aspectRatio: finalAspect,
+            imageSize: finalSize,
+          },
         },
       }),
     }
   );
 
+  // Fall back to Imagen 3 predict endpoint if flash-image model errors (quota / region)
   if (!res.ok) {
-    const err = await res.text().catch(() => "");
-    throw new Error(`Gemini error: ${err.slice(0, 200) || res.statusText}`);
+    const errText = await res.text().catch(() => "");
+    // Try Imagen 3 predict as fallback
+    const fallbackRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instances: [{ prompt: prompt.trim() }],
+          parameters: { sampleCount: 1, aspectRatio: finalAspect },
+        }),
+      }
+    );
+    if (!fallbackRes.ok) {
+      const fbErr = await fallbackRes.text().catch(() => "");
+      throw new Error(`Gemini error: ${errText.slice(0, 150) || fbErr.slice(0, 150) || res.statusText}`);
+    }
+    const fbData = await fallbackRes.json();
+    const b64fb = fbData.predictions?.[0]?.bytesBase64Encoded;
+    if (!b64fb) throw new Error("Gemini Imagen 3 returned no image data");
+    return {
+      downloadUrl: `data:image/png;base64,${b64fb}`,
+      id: `gemini_${Date.now()}`,
+      status: "complete",
+      title: prompt.slice(0, 60),
+      format: "image",
+    };
   }
 
   const data = await res.json();
-  const b64 = data.predictions?.[0]?.bytesBase64Encoded;
+
+  // Extract inline image from generateContent response
+  let b64: string | null = null;
+  for (const part of (data.candidates?.[0]?.content?.parts ?? [])) {
+    if (part.inlineData?.data) { b64 = part.inlineData.data; break; }
+  }
+
+  // Also try predictions array (Imagen 3 fallback shape)
+  if (!b64) b64 = data.predictions?.[0]?.bytesBase64Encoded ?? null;
+
   if (!b64) throw new Error("Gemini returned no image data");
 
   return {
@@ -245,15 +253,44 @@ async function handlePollinationsImage(
   width: number,
   height: number,
 ): Promise<MediaResult> {
+  const fixedSeed = seed ?? Math.floor(Math.random() * 1000000);
   const params = new URLSearchParams({
-    width: String(width),
-    height: String(height),
-    seed: String(seed || Math.floor(Math.random() * 1000000)),
+    width: String(Math.min(width, 1024)),
+    height: String(Math.min(height, 1024)),
+    seed: String(fixedSeed),
     nologo: "true",
-    enhance: "true",
+    enhance: "false",  // enhance adds latency — skip it
+    model: "flux",
   });
   if (negativePrompt.trim()) params.set("negative", negativePrompt.trim());
   const url = `${POLLINATIONS_BASE}/${encodeURIComponent(prompt.trim())}?${params}`;
+
+  // Try to fetch + convert to base64 so client doesn't need to hit Pollinations
+  // Use 25s timeout; on timeout fall back to direct URL (browser loads it lazily)
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25_000);
+  try {
+    const res = await fetch(url, { signal: controller.signal, cache: "no-store" });
+    clearTimeout(timer);
+    if (res.ok) {
+      const ct = res.headers.get("content-type") || "image/jpeg";
+      const buf = await res.arrayBuffer();
+      const b64 = arrayBufferToBase64(buf);
+      return {
+        downloadUrl: `data:${ct};base64,${b64}`,
+        id: `pollinations_${Date.now()}`,
+        status: "complete",
+        title: prompt.slice(0, 60),
+        format: "image",
+      };
+    }
+    // Non-OK — fall through to direct URL
+  } catch {
+    clearTimeout(timer);
+    // Timeout or network error — fall back to direct URL
+  }
+
+  // Fallback: return the direct URL, browser loads it
   return {
     downloadUrl: url,
     id: `pollinations_${Date.now()}`,
@@ -300,9 +337,10 @@ async function handler(req: NextRequest) {
   // Compute cost (free for pollinations, paid for others)
   const cost = provider.cost(format);
 
-  // Free providers skip wallet entirely
+  // Check wallet and deduct up-front (free providers skip)
+  let wallet = null;
   if (!provider.free) {
-    const wallet = await getUserWallet(userId);
+    wallet = await getUserWallet(userId);
     if (!wallet) {
       return NextResponse.json({ error: "Wallet not initialized — claim your daily bonus first" }, { status: 500 });
     }
@@ -318,7 +356,9 @@ async function handler(req: NextRequest) {
   let result: MediaResult;
   try {
     if (providerId === "gemini") {
-      result = await handleGeminiImage(prompt, body.width ?? 1024, body.height ?? 1024);
+      result = await handleGeminiImage(
+        prompt, body.width ?? 1024, body.height ?? 1024, body.aspectRatio, body.imageSize ?? "1K"
+      );
     } else if (providerId === "fal") {
       result = await handleFalImage(prompt, body.width ?? 1024, body.height ?? 1024);
     } else if (providerId === "huggingface") {
@@ -346,15 +386,12 @@ async function handler(req: NextRequest) {
 
   // Deduct coins (skip for free providers)
   let newBalance: number | null = null;
-  if (!provider.free && cost > 0) {
-    const wallet = await getUserWallet(userId);
-    if (wallet) {
-      const updated = await updateWalletBalance(userId, wallet.balance - cost);
-      newBalance = updated.balance;
-    }
+  if (!provider.free && cost > 0 && wallet) {
+    const updated = await updateWalletBalance(userId, -cost);
+    newBalance = updated.balance;
   } else {
-    const wallet = await getUserWallet(userId);
-    newBalance = wallet?.balance ?? null;
+    const currentWallet = await getUserWallet(userId);
+    newBalance = currentWallet?.balance ?? null;
   }
 
   return NextResponse.json({
