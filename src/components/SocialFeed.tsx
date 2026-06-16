@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@clerk/nextjs';
+import { useClerkAuth } from '@/hooks/useClerkAuth';
 import { useTheme } from '@/context/ThemeContext';
 import { Heart, MessageCircle, Send, ImageIcon, Film, Video, X, Loader2, Clapperboard } from 'lucide-react';
 
@@ -21,7 +21,7 @@ type Post = {
 };
 
 export default function SocialFeed({ embedded = false }: { embedded?: boolean }) {
-  const { isLoaded, isSignedIn, userId: clerkUserId } = useAuth();
+  const { isLoaded, isSignedIn, userId: clerkUserId } = useClerkAuth();
   const { resolvedColors: T } = useTheme();
   const [posts, setPosts] = useState<Post[]>([]);
   const [postContent, setPostContent] = useState('');

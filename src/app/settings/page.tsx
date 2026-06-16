@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import { useTheme, darkSkins, lightSkins, type SkinPreset, type AccentColor } from "@/context/ThemeContext";
 import type { BackgroundMode } from "@/components/AnimatedBackground";
 import { useProfile } from "@/context/ProfileContext";
-import { useAuth, RedirectToSignIn } from "@clerk/nextjs";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
+import Link from "next/link";
 import PageShell from "@/components/PageShell";
 import { WALLPAPERS } from "@/lib/wallpapers";
 import {
@@ -87,7 +88,7 @@ function ImageGenField({ label, value, onChange, onGenerate, placeholder, genera
 }
 
 export default function SettingsPage() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useClerkAuth();
   const { theme, resolvedColors, setMode, setSkin, setAccent, setBackgroundMode, resetTheme } = useTheme();
   const { profile, updateProfile, resetProfile } = useProfile();
 
@@ -132,7 +133,16 @@ export default function SettingsPage() {
   }
 
   if (!isSignedIn) {
-    return <RedirectToSignIn redirectUrl="/settings" />;
+    return (
+      <PageShell title="Sign In">
+        <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+          <p className="text-sm opacity-60">Please sign in to view settings.</p>
+          <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
+            Sign In
+          </Link>
+        </div>
+      </PageShell>
+    );
   }
 
   const showSaved = () => {

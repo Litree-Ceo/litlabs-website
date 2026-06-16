@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { useState, useCallback, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
-import { useAuth, RedirectToSignIn } from '@clerk/nextjs';
+import { useClerkAuth } from '@/hooks/useClerkAuth';
 import { useSearchParams } from 'next/navigation';
 import { AGENT_AVATARS, AGENT_AVATAR_META, type AgentAvatarMeta } from '@/lib/avatars';
 import { Check } from 'lucide-react';
@@ -92,7 +92,7 @@ const DEMO_AGENTS: Agent[] = [
 ];
 
 function MarketplaceInner() {
-  const { isLoaded, isSignedIn, userId } = useAuth();
+  const { isLoaded, isSignedIn, userId } = useClerkAuth();
   const { resolvedColors: T } = useTheme();
   const searchParams = useSearchParams();
   const [agents] = useState<Agent[]>(DEMO_AGENTS);
@@ -276,7 +276,14 @@ function MarketplaceInner() {
   }
 
   if (!isSignedIn) {
-    return <RedirectToSignIn redirectUrl="/marketplace" />;
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <p className="text-sm opacity-60">Please sign in to view the marketplace.</p>
+        <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
+          Sign In
+        </Link>
+      </div>
+    );
   }
 
   const stats: Record<string, number | string> = {

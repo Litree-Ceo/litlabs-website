@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { useAuth, RedirectToSignIn } from "@clerk/nextjs";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
+import Link from "next/link";
 
 interface Message {
   role: "user" | "assistant";
@@ -15,7 +16,7 @@ interface GeneratedFile {
 }
 
 export default function AIBuilder() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useClerkAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isBuilding, setIsBuilding] = useState(false);
@@ -147,7 +148,14 @@ Be technically precise. Think like a senior full-stack developer.`;
   }
 
   if (!isSignedIn) {
-    return <RedirectToSignIn redirectUrl="/ai-builder" />;
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <p className="text-sm opacity-60">Please sign in to use the AI Builder.</p>
+        <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
+          Sign In
+        </Link>
+      </div>
+    );
   }
 
   return (

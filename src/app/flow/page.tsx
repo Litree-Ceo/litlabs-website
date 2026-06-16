@@ -1,7 +1,8 @@
 ﻿"use client";
 export const dynamic = "force-dynamic";
 
-import { useAuth, RedirectToSignIn } from "@clerk/nextjs";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
+import Link from "next/link";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
@@ -250,7 +251,7 @@ export default function FlowPage() {
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId);
 
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useClerkAuth();
   if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center font-mono bg-[#050108] text-fuchsia-400">
@@ -258,7 +259,16 @@ export default function FlowPage() {
       </div>
     );
   }
-  if (!isSignedIn) return <RedirectToSignIn />;
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <p className="text-sm opacity-60">Please sign in to view flows.</p>
+        <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
+          Sign In
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full bg-[#050108] text-slate-300 font-sans overflow-hidden relative">

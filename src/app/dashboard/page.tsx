@@ -2,9 +2,9 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import { useAuth, RedirectToSignIn } from "@clerk/nextjs";
-import { useTheme } from "@/context/ThemeContext";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
 import Link from "next/link";
+import { useTheme } from "@/context/ThemeContext";
 import {
   Zap, Activity, Bot, Eye, Clock, MessageSquare, Heart,
   TrendingUp, ArrowRight, RefreshCw, Loader2, Users,
@@ -120,7 +120,7 @@ function formatTime(iso: string) {
 }
 
 function DashboardInner() {
-  const { isLoaded, isSignedIn, sessionClaims } = useAuth();
+  const { isLoaded, isSignedIn, sessionClaims } = useClerkAuth();
   const { resolvedColors: T } = useTheme();
   const [stats, setStats] = useState<Stats | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -163,7 +163,16 @@ function DashboardInner() {
       <Loader2 size={24} className="animate-spin opacity-40" />
     </div>
   );
-  if (!isSignedIn) return <RedirectToSignIn redirectUrl="/dashboard" />;
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <p className="text-sm opacity-60">Please sign in to view your dashboard.</p>
+        <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
+          Sign In
+        </Link>
+      </div>
+    );
+  }
 
   const displayName = (sessionClaims?.name as string) || (sessionClaims?.username as string) || "Builder";
 

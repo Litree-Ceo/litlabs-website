@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useAuth, RedirectToSignIn } from "@clerk/nextjs";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
 import { useTheme } from "@/context/ThemeContext";
 
 // ─── Agents that can generate worlds ──────────────────────────────────────────
@@ -52,7 +52,7 @@ type GeneratedWorld = {
 };
 
 export default function AgentChat() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useClerkAuth();
   const { resolvedColors: T } = useTheme();
   const [selectedAgent, setSelectedAgent] = useState(WORLD_AGENTS[0]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -220,7 +220,14 @@ export default function AgentChat() {
   }
 
   if (!isSignedIn) {
-    return <RedirectToSignIn redirectUrl="/agent-chat" />;
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <p className="text-sm opacity-60">Please sign in to chat with agents.</p>
+        <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
+          Sign In
+        </Link>
+      </div>
+    );
   }
 
   return (

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTheme } from "@/context/ThemeContext";
-import { useAuth } from "@clerk/nextjs";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
 import { Send, Plus, Trash2, Loader2, X, Swords, MessageSquare, ChevronRight, Zap } from "lucide-react";
 
 const ACTIVEPIECES_WEBHOOK = "https://cloud.activepieces.com/api/v1/webhooks/VoccE3SEr4bciLvkThTlO";
@@ -98,7 +98,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
 /* ─── Main Component ─────────────────────────────────────────────────── */
 export default function AgentTool() {
   const { resolvedColors: T } = useTheme();
-  const { userId } = useAuth();
+  const { userId } = useClerkAuth();
   const [selectedAgent, setSelectedAgent] = useState<Agent>(AGENTS[0]);
   const [chatMap, setChatMap] = useState<Record<string, Message[]>>(() => {
     try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : {}; } catch { return {}; }

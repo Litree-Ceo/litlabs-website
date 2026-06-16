@@ -4,7 +4,8 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState, Suspense, memo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
-import { useAuth, RedirectToSignIn } from "@clerk/nextjs";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
+import Link from "next/link";
 import lazyLoad from "next/dynamic";
 import { Zap, Command, Monitor, Coins } from "lucide-react";
 import StudioSidebar, { StudioTool } from "./components/StudioSidebar";
@@ -136,7 +137,7 @@ function StudioInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { resolvedColors: T } = useTheme();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useClerkAuth();
   const { crtEnabled, toggleCrt } = useCrtToggle();
   const [litcoins, setLitcoins] = useState(500);
   useEffect(() => { try { const raw = localStorage.getItem("litcoins"); if (raw) setLitcoins(Number(raw)); } catch {} }, []);
@@ -183,7 +184,14 @@ function StudioInner() {
   }
 
   if (!isSignedIn) {
-    return <RedirectToSignIn />;
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <p className="text-sm opacity-60">Please sign in to use the Studio.</p>
+        <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
+          Sign In
+        </Link>
+      </div>
+    );
   }
 
   return (

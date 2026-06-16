@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
 import { useTheme } from "@/context/ThemeContext";
-import { useAuth } from "@clerk/nextjs";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageShell from "@/components/PageShell";
@@ -80,7 +80,7 @@ function generateUserProfile(username: string) {
 }
 
 export default function UserProfilePage({ params }: { params: { username: string } }) {
-  const { isLoaded, isSignedIn, userId } = useAuth();
+  const { isLoaded, isSignedIn, userId } = useClerkAuth();
   const { resolvedColors: T } = useTheme();
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<any>(null);
