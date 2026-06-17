@@ -13,7 +13,7 @@ import {
   Home, ShoppingBag, Sparkles,
   Settings, Sun, Moon, Zap,
   ChevronDown, X, Menu, Bell, Coins, User,
-  Gamepad as GamepadIcon, Code2, Hammer
+  Gamepad as GamepadIcon, Code2
 } from "lucide-react";
 
 const NavAuth = dynamic(
@@ -26,7 +26,6 @@ const NavAuth = dynamic(
 /* ------------------------------------------------------------------ */
 const navLinks = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/builder", label: "Builder", icon: Hammer },
   { href: "/studio", label: "Studio", icon: Zap },
   { href: "/gallery", label: "Gallery", icon: Sparkles },
   { href: "/games", label: "Games", icon: GamepadIcon },

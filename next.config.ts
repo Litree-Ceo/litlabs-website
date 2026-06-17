@@ -167,6 +167,7 @@ const nextConfig: NextConfig = {
 
   async redirects() {
     return [
+      { source: "/builder", destination: "/studio", permanent: true },
       { source: "/generate", destination: "/studio?tool=image", permanent: false },
       { source: "/flow", destination: "/studio?tool=flow", permanent: false },
     ];

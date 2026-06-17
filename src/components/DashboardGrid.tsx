@@ -16,7 +16,7 @@ const actions: QuickAction[] = [
   { id: 'neural-link', title: 'Neural Chat', subtitle: 'Chat with AI agents', icon: '⚡', color: 'from-amber-500 to-orange-600', href: '/agent-chat' },
   { id: 'bot-forge', title: 'Bot Forge', subtitle: 'Browse & acquire agents', icon: '🔧', color: 'from-blue-500 to-indigo-600', href: '/marketplace' },
   { id: 'the-matrix', title: 'The Feed', subtitle: 'Builder social network', icon: '👥', color: 'from-cyan-500 to-blue-600', href: '/social' },
-  { id: 'forge-agent', title: 'Forge Agent', subtitle: 'Build custom AI agents', icon: '🛠️', color: 'from-emerald-500 to-teal-600', href: '/builder' },
+  { id: 'forge-agent', title: 'Studio', subtitle: 'Create images, music & more', icon: '🎨', color: 'from-emerald-500 to-teal-600', href: '/studio' },
   { id: 'champions', title: 'Gallery', subtitle: 'Explore top agents', icon: '🏛️', color: 'from-purple-500 to-fuchsia-600', href: '/gallery' },
   { id: 'system-config', title: 'Settings', subtitle: 'Account & workspace', icon: '⚙️', color: 'from-slate-500 to-slate-700', href: '/settings' },
 ];
