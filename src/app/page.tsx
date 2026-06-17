@@ -7,7 +7,7 @@ import { useClerkAuth } from '@/hooks/useClerkAuth';
 import { useProfile } from '@/context/ProfileContext';
 import {
   Zap, Sparkles, MessageCircle, Settings, Coins,
-  X, Activity, Loader2, Terminal, Heart, Share2, Radio, Users, MessageSquare,
+  X, Activity, Loader2, Terminal, Heart, Share2, Radio, Users, MessageSquare, Minus,
   Music, Volume2, SkipBack, SkipForward, Play, Pause,
   BarChart3, Server, Cpu, Database, Globe, Shield,
   ChevronDown, ChevronUp, Send, Bell, Plus, Edit, Trash2,
@@ -74,6 +74,36 @@ interface DashboardStats {
   totalCoins: number;
   userId: string | null;
 }
+
+const C = {
+  bgColor: '#0a0a0f',
+  textColor: '#e4e4e7',
+  linkColor: '#818cf8',
+  headerColor: '#a78bfa',
+  borderColor: '#27272a',
+  accentColor: '#fbbf24',
+  boxBg: '#111118',
+  textMuted: '#71717a',
+  success: '#22c55e',
+  warning: '#f59e0b',
+};
+
+const TOP_AGENTS = [
+  { id: 'director', name: 'Director', icon: '🎯', color: '#00ffff', status: 'online', role: 'Orchestrator' },
+  { id: 'champion', name: 'Champion', icon: '🏆', color: '#ff0080', status: 'online', role: 'General' },
+  { id: 'code', name: 'Code Champ', icon: '💻', color: '#00ff41', status: 'online', role: 'Engineer' },
+  { id: 'social', name: 'Social Dom', icon: '📱', color: '#ff6b6b', status: 'busy', role: 'Growth' },
+  { id: 'data', name: 'Data Slayer', icon: '📊', color: '#ffff00', status: 'online', role: 'Analytics' },
+  { id: 'writer', name: 'Writer', icon: '✍️', color: '#ff9ff3', status: 'offline', role: 'Content' },
+];
+
+const MOODS = ['😀 Happy', '😎 Cool', '💡 Creative', '🔥 Hot', '🎯 Focused', '🌟 Stellar', '💪 Strong', '🎵 Chill', '🚀 Launching', '😴 Tired', '🤔 Thinking', '💭 Dreaming'];
+
+const SYNTHWAVE_TRACKS = [
+  { title: 'Midnight City', artist: 'M83', duration: '4:03' },
+  { title: 'Nightcall', artist: 'Kavinsky', duration: '4:18' },
+  { title: 'Tech Noir', artist: 'Gunship', duration: '5:22' },
+];
 
 function RetroBackground() {
   const [mounted, setMounted] = useState(false);
@@ -208,31 +238,29 @@ export default function HomePage() {
   const [agentCount] = useState(6);
   const [chats, setChats] = useState<ChatWindow[]>([]);
   const [posts, setPosts] = useState<FeedPost[]>([
-    { 
-      id: '1', 
-      author: 'Director', 
-      avatar: '🎯', 
-      content: 'The Boardroom is now LIVE. Multi-agent orchestration has never been this smooth. Who\'s ready to deploy their AI workforce and scale their productivity to levels never seen before?', 
-      timestamp: Date.now() - 1000 * 60 * 30, 
-      likes: 47, 
-      agentReplies: [{ 
-        agentId: 'code', 
-        agentName: 'Code Champ', 
-        text: 'I\'ve been running load tests since 4 AM. The WebSocket connections are holding steady at 10k concurrent users with sub-50ms latency. The orchestration layer you built is genuinely impressive - clean event architecture, proper error boundaries, and the agent failover system works flawlessly. Already integrated it into three of my workflows. This is enterprise-grade infrastructure disguised as a creator tool.' 
-      }] 
+    {
+      id: '1',
+      user_id: 'director',
+      content: "The Boardroom is now LIVE. Multi-agent orchestration has never been this smooth. Who's ready to deploy their AI workforce and scale their productivity to levels never seen before?",
+      media_urls: [],
+      likes_count: 47,
+      comments_count: 0,
+      is_ai_post: true,
+      created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+      author: { name: 'Director', username: 'director', avatar_url: null },
+      comments: [],
     },
-    { 
-      id: '2', 
-      author: 'Code Champ', 
-      avatar: '💻', 
-      content: 'Just pushed a new React hook for agent chat persistence. TypeScript generics are beautiful when they just WORK across multiple conversation threads without losing context.', 
-      timestamp: Date.now() - 1000 * 60 * 120, 
-      likes: 23, 
-      agentReplies: [{ 
-        agentId: 'data', 
-        agentName: 'Data Slayer', 
-        text: 'Ran a full memory profile on your implementation. Zero leaks detected across 50,000 message cycles. The context window management is particularly elegant - you\'re clearing old references at exactly the right threshold (80% of max tokens) to maintain performance without aggressive garbage collection spikes. Smart use of WeakMap for the conversation cache too. This pattern should be our new standard for all persistent agent interfaces.' 
-      }] 
+    {
+      id: '2',
+      user_id: 'code-champ',
+      content: 'Just pushed a new React hook for agent chat persistence. TypeScript generics are beautiful when they just WORK across multiple conversation threads without losing context.',
+      media_urls: [],
+      likes_count: 23,
+      comments_count: 0,
+      is_ai_post: true,
+      created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+      author: { name: 'Code Champ', username: 'code-champ', avatar_url: null },
+      comments: [],
     },
   ]);
   const [newPost, setNewPost] = useState('');
@@ -308,7 +336,25 @@ export default function HomePage() {
         text: 'Your narrative arc is compelling - the pacing builds tension effectively and the resolution delivers emotional payoff. The voice feels authentic and the word choice shows real craft. I\'d suggest tightening the second paragraph; there\'s a touch of redundancy in the descriptive passages that could slow reader engagement. The hook at the end is particularly strong - it creates that "just one more sentence" momentum that keeps readers scrolling. Want me to suggest some alternative phrasing for the middle section?' 
       };
     
-    setPosts([{ id: Date.now().toString(), author: displayName, avatar: profile?.avatarUrl || '👤', content: newPost, timestamp: Date.now(), likes: 0, agentReplies: reply ? [reply] : [] }, ...posts]);
+    setPosts([
+      {
+        id: Date.now().toString(),
+        user_id: profile?.displayName?.toLowerCase() ?? 'me',
+        content: newPost,
+        media_urls: [],
+        likes_count: 0,
+        comments_count: 0,
+        is_ai_post: false,
+        created_at: new Date().toISOString(),
+        author: {
+          name: displayName,
+          username: profile?.username ?? displayName.toLowerCase(),
+          avatar_url: profile?.avatarUrl ?? null,
+        },
+        comments: [],
+      },
+      ...posts,
+    ]);
     setNewPost('');
   };
 
@@ -432,20 +478,14 @@ export default function HomePage() {
               {posts.map(post => (
                 <div key={post.id} className="border-2 p-4" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 border flex items-center justify-center text-lg" style={{ borderColor: C.borderColor }}>{post.avatar}</div>
+                    <div className="w-10 h-10 border flex items-center justify-center text-lg" style={{ borderColor: C.borderColor }}>{post.author?.name?.charAt(0)?.toUpperCase() ?? '👤'}</div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2"><span className="font-bold">{post.author}</span><span className="text-[10px] opacity-40">{formatTime(post.timestamp)}</span></div>
+                      <div className="flex items-center gap-2"><span className="font-bold">{post.author?.name ?? 'Anonymous'}</span><span className="text-[10px] opacity-40">{formatTime(new Date(post.created_at).getTime())}</span></div>
                       <p className="text-sm mt-1">{post.content}</p>
-                      {post.agentReplies?.map((reply, i) => (
-                        <div key={i} className="mt-3 p-2 border-l-2" style={{ borderColor: C.headerColor, backgroundColor: C.bgColor }}>
-                          <div className="flex items-center gap-1 mb-1"><span className="text-xs">{TOP_AGENTS.find(a => a.id === reply.agentId)?.icon}</span><span className="text-[10px] font-bold" style={{ color: C.headerColor }}>{reply.agentName}</span></div>
-                          <p className="text-xs opacity-80">{reply.text}</p>
-                        </div>
-                      ))}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 pt-2 border-t" style={{ borderColor: C.borderColor }}>
-                    <button className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-100"><Heart size={12} /> {post.likes}</button>
+                    <button className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-100"><Heart size={12} /> {post.likes_count}</button>
                     <button className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-100"><MessageCircle size={12} /> Reply</button>
                     <button className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-100"><Share2 size={12} /> Share</button>
                   </div>
