@@ -1,0 +1,138 @@
+{
+  "name": "LitLabs Autonomic Loop",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "minutes", "minutesInterval": 30 }
+          ]
+        }
+      },
+      "id": "cron-1",
+      "name": "Cron Trigger (30min)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/litbit/LiTTreeLabstudios && bash bin/sync.sh"
+      },
+      "id": "sync-1",
+      "name": "Sync Code",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:11434/api/generate",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"model\": \"qwen2.5-coder:1.5b\", \"prompt\": \"Read tasks/active.json and tasks/backlog/. Plan the next task. Output ONLY valid JSON for tasks/active.json. Use the exact format: {milestone,status,director_instructions,target_files,error_logs}. Be specific and technical.\", \"system\": \"You are the Director. Read the backlog, pick the highest priority task, and write precise instructions. Output ONLY JSON.\", \"stream\": false }",
+        "options": { "timeout": 120000 }
+      },
+      "id": "director-1",
+      "name": "Ollama Director",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/litbit/LiTTreeLabstudios && cat tasks/active.json"
+      },
+      "id": "read-task-1",
+      "name": "Read Active Task",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:11434/api/generate",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"model\": \"qwen2.5-coder:1.5b\", \"prompt\": \"Execute the task in tasks/active.json. Read the target file, modify it according to director_instructions. Return ONLY the raw file content - no markdown, no explanations.\", \"system\": \"You are the Executor. Write clean TypeScript/TSX code. Strict types, no any. Volcanic cyber theme. App Router conventions.\", \"stream\": false }",
+        "options": { "timeout": 180000 }
+      },
+      "id": "executor-1",
+      "name": "Ollama Executor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/litbit/LiTTreeLabstudios && bash bin/save.sh \"autonomic: $(date +%H:%M)\""
+      },
+      "id": "save-1",
+      "name": "Save & Push",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-success",
+              "leftValue": "={{ $json.exitCode }}",
+              "rightValue": "0",
+              "operator": { "type": "number", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-success",
+      "name": "Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1520, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/litbit/LiTTreeLabstudios && bash bin/auto-fix.sh \"Build failed - check logs\""
+      },
+      "id": "auto-fix-1",
+      "name": "Auto-Fix Loop",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1740, 400]
+    }
+  ],
+  "connections": {
+    "Cron Trigger (30min)": {
+      "main": [[{ "node": "Sync Code", "type": "main", "index": 0 }]]
+    },
+    "Sync Code": {
+      "main": [[{ "node": "Ollama Director", "type": "main", "index": 0 }]]
+    },
+    "Ollama Director": {
+      "main": [[{ "node": "Read Active Task", "type": "main", "index": 0 }]]
+    },
+    "Read Active Task": {
+      "main": [[{ "node": "Ollama Executor", "type": "main", "index": 0 }]]
+    },
+    "Ollama Executor": {
+      "main": [[{ "node": "Save & Push", "type": "main", "index": 0 }]]
+    },
+    "Save & Push": {
+      "main": [[{ "node": "Success?", "type": "main", "index": 0 }]]
+    },
+    "Success?": {
+      "main": [
+        [],
+        [{ "node": "Auto-Fix Loop", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "LitLabs Autonomic" }]
+}
