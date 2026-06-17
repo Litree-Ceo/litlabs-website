@@ -112,39 +112,34 @@ export default function AgentDetail() {
     try {
       const res = await fetch("/api/user-agents");
       const data = await res.json();
-      
-      if (data.agents) {
-        const installed = data.agents.some((ua: { agent_id: string }) => ua.agent_id === agentId);
+      if (Array.isArray(data.agents)) {
+        const installed = data.agents.some((ua: { agent_id?: string; agent?: { id?: string; slug?: string } }) =>
+          ua.agent?.id === agentId || ua.agent_id === agentId
+        );
         setIsInstalled(installed);
       }
-    } catch (error) {
-      console.error("Error checking installation:", error);
+    } catch {
+      // silent fail
     }
   }
 
   async function installAgent() {
     if (!agent) return;
-    
     try {
       const res = await fetch("/api/user-agents", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId: agent.id }),
       });
-
-      if (res.ok) {
-        setIsInstalled(true);
-      }
-    } catch (error) {
-      console.error("Error installing agent:", error);
+      if (res.ok) setIsInstalled(true);
+    } catch {
+      // silent fail
     }
   }
 
   function formatPrice(cents: number): string {
     if (cents === 0) return "FREE";
-    return `$${(cents / 100).toFixed(0)}/mo`;
+    return `${cents} LBC`;
   }
 
   if (isLoading) {

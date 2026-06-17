@@ -1,8 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const contentType = "image/png";
-export const size = { width: 1200, height: 630 };
+const size = { width: 1200, height: 630 };
 
 export function GET() {
   return new ImageResponse(
@@ -51,7 +50,7 @@ export function GET() {
           ))}
         </div>
 
-        <div style={{ position: "absolute", bottom: 32, color: "#3f3f46", fontSize: 16 }}>litlabs.net</div>
+        <div style={{ position: "absolute", bottom: 32, color: "#3f3f46", fontSize: 16 }}>litlabs.net · AI Platform</div>
       </div>
     ),
     size,

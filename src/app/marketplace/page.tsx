@@ -96,8 +96,9 @@ function MarketplaceInner() {
   const { isLoaded, isSignedIn, userId } = useClerkAuth();
   const { resolvedColors: T } = useTheme();
   const searchParams = useSearchParams();
-  const [agents] = useState<Agent[]>(DEMO_AGENTS);
-  const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(['1', '2', '3']));
+  const [agents, setAgents] = useState<Agent[]>(DEMO_AGENTS);
+  const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set());
+  const [installedAgentDbIds, setInstalledAgentDbIds] = useState<Map<string, string>>(new Map());
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('featured');
@@ -108,6 +109,42 @@ function MarketplaceInner() {
   const [sellPrice, setSellPrice] = useState('');
   const [listedAgents, setListedAgents] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'agents' | 'coins'>('agents');
+
+  // Build slug→demo lookup for metadata enrichment
+  const DEMO_BY_SLUG = Object.fromEntries(DEMO_AGENTS.map(a => [a.slug, a]));
+
+  // Load agents from /api/agents, enrich with local metadata
+  const loadAgents = async () => {
+    try {
+      const res = await fetch('/api/agents');
+      const data = await res.json();
+      if (Array.isArray(data.agents) && data.agents.length > 0) {
+        const merged: Agent[] = data.agents.map((a: Record<string, unknown>) => {
+          const demo = DEMO_BY_SLUG[a.slug as string || ''];
+          return {
+            id:          String(a.id || demo?.id || a.slug || ''),
+            slug:        String(a.slug || ''),
+            name:        String(a.name || a.display_name || demo?.name || ''),
+            description: String(a.description || demo?.description || ''),
+            category:    String(a.category || demo?.category || 'general'),
+            avatar_url:  String(demo?.avatar_url || a.avatar_url || ''),
+            price_cents: demo?.price_cents ?? (typeof a.price_cents === 'number' ? a.price_cents : 0),
+            features:    demo?.features ?? (Array.isArray(a.features) ? a.features as string[] : []),
+            is_featured: Boolean(a.is_featured ?? demo?.is_featured ?? false),
+            personality: String(demo?.personality ?? a.personality ?? ''),
+            rating:      demo?.rating,
+            installs:    demo?.installs,
+          };
+        });
+        // Append demo agents not in API response so UI stays complete
+        const apiSlugs = new Set(merged.map(a => a.slug));
+        const extraDemo = DEMO_AGENTS.filter(a => !apiSlugs.has(a.slug));
+        setAgents([...merged, ...extraDemo]);
+      }
+    } catch {
+      // keep DEMO_AGENTS default on error
+    }
+  };
 
   // Fetch wallet from API (source of truth)
   const fetchWallet = async () => {
@@ -122,7 +159,34 @@ function MarketplaceInner() {
     }
   };
 
+  // Load which agents the signed-in user has installed
+  const loadInstalledAgents = async () => {
+    try {
+      const res = await fetch('/api/user-agents');
+      const data = await res.json();
+      if (Array.isArray(data.agents)) {
+        const ids = new Set<string>();
+        const dbIdMap = new Map<string, string>();
+        for (const ua of data.agents) {
+          const agentId: string = ua.agent?.id || ua.agent_id || '';
+          const agentSlug: string = ua.agent?.slug || '';
+          if (agentId) { ids.add(agentId); dbIdMap.set(agentId, ua.agent_id || agentId); }
+          if (agentSlug) {
+            ids.add(agentSlug);
+            const demoMatch = DEMO_AGENTS.find(d => d.slug === agentSlug);
+            if (demoMatch) ids.add(demoMatch.id);
+          }
+        }
+        setInstalledAgents(ids);
+        setInstalledAgentDbIds(dbIdMap);
+      }
+    } catch {
+      // silent fail
+    }
+  };
+
   useEffect(() => {
+    loadAgents();
     fetchWallet();
 
     // Stripe return detection
@@ -133,6 +197,10 @@ function MarketplaceInner() {
     } else if (canceled === 'true') {
       showToast('Payment canceled. No coins were charged.', 'info');
     }
+  }, []);
+
+  useEffect(() => {
+    if (isSignedIn) loadInstalledAgents();
   }, [isSignedIn]);
 
   const buyPack = async (pack: typeof CREDIT_PACKS[0]) => {
@@ -234,23 +302,73 @@ function MarketplaceInner() {
   const installAgent = useCallback(async (agentId: string) => {
     const agent = agents.find(a => a.id === agentId);
     if (!agent) return;
+
     if (agent.price_cents > 0) {
-      const cost = agent.price_cents;
-      if (litBitCoins < cost) {
-        showToast(`Not enough 🪙 LiTBit Coins! Need ${cost}, have ${litBitCoins}. Earn more below.`, 'error');
+      // Paid agents: redirect to Stripe checkout
+      if (!isSignedIn || !userId) {
+        showToast('Please sign in to purchase this agent.', 'error');
         return;
       }
-      const newBal = await syncWallet(-cost);
-      if (newBal === null) {
-        showToast('Purchase failed. Could not deduct coins. Try again.', 'error');
-        return;
+      try {
+        const res = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'payment',
+            priceData: {
+              amount: agent.price_cents * 100, // 1 LBC = $0.01 → price_cents * 100 = USD cents
+              currency: 'usd',
+              name: `${agent.name} — Agent License`,
+              description: `One-time purchase: ${agent.name} (${agent.price_cents} LBC)`,
+            },
+            metadata: { clerk_id: userId, agent_slug: agent.slug, agent_id: agent.id, type: 'agent_purchase' },
+          }),
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          showToast(data.error || 'Checkout failed. Try again.', 'error');
+        }
+      } catch {
+        showToast('Network error during checkout.', 'error');
       }
-      showToast(`✅ Installed ${agent.name}! -${cost} 🪙 · Balance: ${newBal}`, 'success');
-    } else {
+      return;
+    }
+
+    // Free agent — install via API
+    try {
+      const res = await fetch('/api/user-agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: agent.id }),
+      });
+      const data = await res.json();
+      if (res.ok || res.status === 200) {
+        setInstalledAgents(prev => { const n = new Set(prev); n.add(agent.id); n.add(agent.slug); return n; });
+        showToast(`✅ ${agent.name} installed!`, 'success');
+      } else {
+        showToast(data.error || 'Install failed.', 'error');
+      }
+    } catch {
+      // Optimistic fallback
+      setInstalledAgents(prev => { const n = new Set(prev); n.add(agent.id); n.add(agent.slug); return n; });
       showToast(`✅ ${agent.name} installed for free!`, 'success');
     }
-    setInstalledAgents(prev => new Set([...prev, agentId]));
-  }, [agents, litBitCoins]);
+  }, [agents, isSignedIn, userId]);
+
+  const uninstallAgent = useCallback(async (agentId: string) => {
+    const agent = agents.find(a => a.id === agentId);
+    if (!agent) return;
+    const dbId = installedAgentDbIds.get(agentId) || agentId;
+    try {
+      await fetch(`/api/user-agents?agentId=${dbId}`, { method: 'DELETE' });
+    } catch {
+      // silent — still remove from local state
+    }
+    setInstalledAgents(prev => { const n = new Set(prev); n.delete(agent.id); n.delete(agent.slug); return n; });
+    showToast(`🗑️ ${agent.name} removed from dock.`, 'info');
+  }, [agents, installedAgentDbIds]);
 
   const listForSale = useCallback(async (agentId: string, price: number) => {
     const earned = Math.floor(price * 0.1);
@@ -550,6 +668,7 @@ function MarketplaceInner() {
                 {installedAgents.has(previewAgent.id) ? (
                   <>
                     <button disabled style={{ flex: 1, padding: '12px', backgroundColor: '#333', color: '#666', border: 'none', fontWeight: 'bold' }}>✓ Installed</button>
+                    <button onClick={() => { uninstallAgent(previewAgent.id); setPreviewAgent(null); }} style={{ padding: '12px 14px', border: '1px solid #ff4444', color: '#ff4444', backgroundColor: 'rgba(255,68,68,0.1)', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Uninstall</button>
                     {!listedAgents.has(previewAgent.id) && (
                       <button onClick={() => { setPreviewAgent(null); setSellModalAgent(previewAgent); }} style={{ padding: '12px 16px', border: '2px solid gold', color: 'gold', backgroundColor: 'rgba(255,215,0,0.1)', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>🏪 Sell</button>
                     )}
