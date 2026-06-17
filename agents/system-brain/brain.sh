@@ -43,7 +43,7 @@ discord_send() {
   local webhook="${DISCORD_ALERTS_WEBHOOK:-$DISCORD_SYSTEM_WEBHOOK}"
   [[ -z "$webhook" ]] && { log "WARN" "No Discord webhook - alert skipped: $title"; return 0; }
   local payload="{\"embeds\":[{\"title\":\"$title\",\"description\":\"$msg\",\"color\":$color,\"footer\":{\"text\":\"LiTTree Brain - $(date '+%Y-%m-%d %H:%M:%S')\"}}]}"
-  curl -s -X POST -H "Content-Type: application/json" -d "$payload" "$webhook" --max-time 10 >/dev/null 2>&1 \
+  curl -s -X POST -A "DiscordBot (litlabs.net, 1.0)" -H "Content-Type: application/json" -d "$payload" "$webhook" --max-time 10 >/dev/null 2>&1 \
     || log "WARN" "Discord POST failed: $title"
 }
 alert() { discord_send "15548997" "$1" "$2"; }   # red

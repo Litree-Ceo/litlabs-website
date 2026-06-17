@@ -229,7 +229,7 @@ export default function Gallery() {
     try {
       const isImage = uploadForm.mediaType === "image";
       let imageUrl = uploadForm.imageUrl.trim();
-      let videoUrl = uploadForm.videoUrl.trim();
+      const videoUrl = uploadForm.videoUrl.trim();
 
       // 1) If image mode and a file was chosen, upload to /api/upload first to get a hosted URL
       if (isImage && uploadFile) {

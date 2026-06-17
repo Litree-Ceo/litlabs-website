@@ -2,6 +2,8 @@
 // Uses admin client server-side, anon client browser-side. Graceful when unconfigured.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getAdminSupabase } from "./supabase-admin";
+import { getSupabase } from "./supabase";
 
 let _admin: SupabaseClient | null = null;
 let _anon: SupabaseClient | null = null;
@@ -10,14 +12,12 @@ function getDb(): SupabaseClient | null {
   // Server-side: try admin first
   if (typeof window === "undefined") {
     try {
-      const { getAdminSupabase } = require("./supabase-admin");
       if (!_admin) _admin = getAdminSupabase();
       return _admin;
     } catch {
       // admin not configured — fall through to anon
     }
     try {
-      const { getSupabase } = require("./supabase");
       if (!_anon) _anon = getSupabase();
       return _anon;
     } catch {
@@ -26,7 +26,6 @@ function getDb(): SupabaseClient | null {
   }
   // Browser-side: use anon client
   try {
-    const { getSupabase } = require("./supabase");
     if (!_anon) _anon = getSupabase();
     return _anon;
   } catch {

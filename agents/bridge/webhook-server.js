@@ -1,7 +1,7 @@
-const http = require('http');
-const { exec } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import http from 'http';
+import { exec } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 const PORT = 9876;
 const LOG_FILE = '/home/litbit/LiTTreeLabstudios/agents/logs/bridge.log';
