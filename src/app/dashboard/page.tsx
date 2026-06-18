@@ -624,7 +624,7 @@ function DashboardInner() {
                 {posts.slice(0, 6).map((post) => (
                   <div
                     key={post.id}
-                    className="p-4 hover:bg-white/[0.01] transition-colors"
+                    className="p-4 hover:bg-white/1 transition-colors"
                   >
                     <div className="flex items-start gap-3">
                       <Avatar name={post.author?.name || "User"} size={36} />

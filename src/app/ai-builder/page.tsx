@@ -238,7 +238,7 @@ Be technically precise. Think like a senior full-stack developer.`;
       {/* Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Quick Prompts Sidebar */}
-        <div className="w-64 border-r border-white/5 bg-white/[0.01] p-3 hidden lg:block overflow-y-auto">
+        <div className="w-64 border-r border-white/5 bg-white/1 p-3 hidden lg:block overflow-y-auto">
           <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
             Quick Prompts
           </div>
@@ -247,7 +247,7 @@ Be technically precise. Think like a senior full-stack developer.`;
               <button
                 key={i}
                 onClick={() => setInput(prompt)}
-                className="w-full text-left p-2 rounded-lg border border-white/5 bg-white/[0.01] text-xs text-zinc-400 hover:text-white hover:border-orange-500/20 hover:bg-orange-500/5 transition-all"
+                className="w-full text-left p-2 rounded-lg border border-white/5 bg-white/1 text-xs text-zinc-400 hover:text-white hover:border-orange-500/20 hover:bg-orange-500/5 transition-all"
               >
                 {prompt}
               </button>
@@ -283,7 +283,7 @@ Be technically precise. Think like a senior full-stack developer.`;
                       className={`max-w-[80%] rounded-xl p-4 ${
                         msg.role === "user"
                           ? "bg-orange-500/20 border border-orange-500/30"
-                          : "bg-white/[0.03] border border-white/10"
+                          : "bg-white/3 border border-white/10"
                       }`}
                     >
                       <div className="text-[10px] text-zinc-500 mb-1">
@@ -298,7 +298,7 @@ Be technically precise. Think like a senior full-stack developer.`;
                 ))}
                 {streamingMessage && (
                   <div className="flex justify-start">
-                    <div className="max-w-[80%] rounded-xl p-4 bg-white/[0.03] border border-white/10">
+                    <div className="max-w-[80%] rounded-xl p-4 bg-white/3 border border-white/10">
                       <div className="text-[10px] text-zinc-500 mb-1">
                         🧠 Hive Mind
                       </div>
@@ -322,7 +322,7 @@ Be technically precise. Think like a senior full-stack developer.`;
                       e.key === "Enter" && !e.shiftKey && sendMessage()
                     }
                     placeholder="Describe what you want to build..."
-                    className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
+                    className="flex-1 rounded-xl border border-white/10 bg-white/3 px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
                     disabled={isBuilding}
                   />
                   <button
@@ -352,9 +352,9 @@ Be technically precise. Think like a senior full-stack developer.`;
                   {generatedFiles.map((file, i) => (
                     <div
                       key={i}
-                      className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden"
+                      className="rounded-xl border border-white/10 bg-white/2 overflow-hidden"
                     >
-                      <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-white/[0.01]">
+                      <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-white/1">
                         <span className="text-xs font-mono text-orange-400">
                           {file.path}
                         </span>

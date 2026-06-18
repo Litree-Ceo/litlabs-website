@@ -110,7 +110,7 @@ function GlitchText({
     <span className={`relative inline-block ${className}`}>
       <span className="relative z-10">{text}</span>
       <span
-        className="absolute top-0 left-0 -ml-[2px] opacity-50 text-red-500 animate-pulse"
+        className="absolute top-0 left-0 ml-[-2px] opacity-50 text-red-500 animate-pulse"
         style={{ clipPath: "inset(0 0 50% 0)" }}
       >
         {text}

@@ -180,7 +180,7 @@ export default function ProfilePage() {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-r from-purple-950 via-black to-blue-950">
+          <div className="w-full h-full flex flex-col items-center justify-center bg-linear-to-r from-purple-950 via-black to-blue-950">
             <span className="text-2xl font-bold tracking-widest text-white/50 animate-pulse">
               📷 CHANGE HERO BACKDROP PACKET
             </span>

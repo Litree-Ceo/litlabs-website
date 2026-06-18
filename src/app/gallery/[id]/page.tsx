@@ -13,42 +13,51 @@ const GALLERY_AGENTS = [
   {
     id: "code-champion",
     name: "Code Champion",
-    avatar: AGENT_AVATARS['code-champion'],
-    greeting: "Code Champion online. Transmit your technical problem or architecture idea. How can I help you build today?",
+    avatar: AGENT_AVATARS["code-champion"],
+    greeting:
+      "Code Champion online. Transmit your technical problem or architecture idea. How can I help you build today?",
   },
   {
     id: "social-dominator",
     name: "Social Dominator",
-    avatar: AGENT_AVATARS['social-dominator'],
-    greeting: "What's the vibe? Give me a topic and I'll craft something worth sharing. Let's make you go viral.",
+    avatar: AGENT_AVATARS["social-dominator"],
+    greeting:
+      "What's the vibe? Give me a topic and I'll craft something worth sharing. Let's make you go viral.",
   },
   {
     id: "data-slayer",
     name: "Data Slayer",
-    avatar: AGENT_AVATARS['data-slayer'],
-    greeting: "Data Slayer initialized. Transmit your dataset or analytical problem. I'll extract the insights you need.",
+    avatar: AGENT_AVATARS["data-slayer"],
+    greeting:
+      "Data Slayer initialized. Transmit your dataset or analytical problem. I'll extract the insights you need.",
   },
   {
     id: "writing-coach",
     name: "Writing Coach",
-    avatar: AGENT_AVATARS['writing-coach'],
-    greeting: "Neural link established. Ready to refine your linguistic output. What are we working on?",
+    avatar: AGENT_AVATARS["writing-coach"],
+    greeting:
+      "Neural link established. Ready to refine your linguistic output. What are we working on?",
   },
   {
     id: "support-agent",
     name: "Support Agent",
-    avatar: AGENT_AVATARS['support-agent'],
+    avatar: AGENT_AVATARS["support-agent"],
     greeting: "Support Node active. How can I assist you or your users today?",
   },
   {
     id: "trading-oracle",
     name: "Trading Oracle",
     avatar: AGENT_AVATARS.champion,
-    greeting: "Market analysis node online. Transmit the asset or sector you want me to evaluate.",
+    greeting:
+      "Market analysis node online. Transmit the asset or sector you want me to evaluate.",
   },
 ];
 
-export default function AgentDeploymentPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AgentDeploymentPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const agent = GALLERY_AGENTS.find((a) => a.id === id) || GALLERY_AGENTS[0];
 
@@ -79,14 +88,18 @@ export default function AgentDeploymentPage({ params }: { params: Promise<{ id: 
       const data = await res.json();
       setMessages((p) => [
         ...p,
-        { role: "assistant", content: data.reply || data.message || "No response." },
+        {
+          role: "assistant",
+          content: data.reply || data.message || "No response.",
+        },
       ]);
     } catch {
       setMessages((p) => [
         ...p,
         {
           role: "assistant",
-          content: "Error: Neural Link Interrupted. Check backend connectivity.",
+          content:
+            "Error: Neural Link Interrupted. Check backend connectivity.",
         },
       ]);
     } finally {
@@ -95,12 +108,21 @@ export default function AgentDeploymentPage({ params }: { params: Promise<{ id: 
   };
 
   return (
-    <PageShell title={agent.name} subtitle="Gallery Agent Chat" fullWidth className="bg-cyber-bg selection:bg-neon-cyan/30">
+    <PageShell
+      title={agent.name}
+      subtitle="Gallery Agent Chat"
+      fullWidth
+      className="bg-cyber-bg selection:bg-neon-cyan/30"
+    >
       <main className="flex-1 max-w-4xl w-full mx-auto flex flex-col p-4 sm:p-6 lg:py-10">
         {/* Agent Info Header */}
         <div className="flex items-center justify-between gap-4 p-4 sm:p-6 glass-panel rounded-2xl border-white/5 mb-6">
           <div className="flex items-center gap-4 min-w-0">
-            <img src={agent.avatar} alt={agent.name} className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl object-cover border border-neon-cyan/30 shrink-0 shadow-[0_0_20px_rgba(0,242,254,0.1)]" />
+            <img
+              src={agent.avatar}
+              alt={agent.name}
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl object-cover border border-neon-cyan/30 shrink-0 shadow-[0_0_20px_rgba(0,242,254,0.1)]"
+            />
             <div className="min-w-0">
               <div className="text-[10px] sm:text-xs font-bold text-neon-cyan tracking-[0.3em] uppercase mb-1">
                 Active_Deployment
@@ -133,7 +155,7 @@ export default function AgentDeploymentPage({ params }: { params: Promise<{ id: 
                   className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-4 text-sm sm:text-base leading-relaxed ${
                     m.role === "user"
                       ? "bg-neon-cyan text-cyber-bg rounded-br-sm font-bold shadow-[0_0_20px_rgba(0,242,254,0.1)]"
-                      : "bg-white/[0.03] border border-white/10 text-text-primary rounded-tl-sm backdrop-blur-md"
+                      : "bg-white/3 border border-white/10 text-text-primary rounded-tl-sm backdrop-blur-md"
                   }`}
                 >
                   {m.role === "assistant" && (
@@ -144,13 +166,15 @@ export default function AgentDeploymentPage({ params }: { params: Promise<{ id: 
                       <div className="h-px flex-1 bg-neon-cyan/20" />
                     </div>
                   )}
-                  <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                  <div className="whitespace-pre-wrap break-words">
+                    {m.content}
+                  </div>
                 </div>
               </div>
             ))}
             {loading && (
               <div className="flex justify-start animate-in fade-in duration-300">
-                <div className="bg-white/[0.03] border border-white/10 rounded-2xl rounded-tl-sm p-4 min-w-[140px]">
+                <div className="bg-white/3 border border-white/10 rounded-2xl rounded-tl-sm p-4 min-w-[140px]">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-[10px] font-bold text-neon-cyan tracking-[0.2em] uppercase">
                       Neural_Link
