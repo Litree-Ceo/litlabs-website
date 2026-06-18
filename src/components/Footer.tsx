@@ -31,49 +31,116 @@ export default function Footer() {
   const { resolvedColors: C } = useTheme();
 
   return (
-    <footer className="w-full" style={{ borderTop: `1px solid ${C.borderColor}18`, backgroundColor: C.bgColor }}>
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+    <footer
+      className="w-full"
+      style={{
+        borderTop: `1px solid ${C.borderColor}18`,
+        backgroundColor: C.bgColor,
+      }}
+    >
+      <div className="w-full px-4 sm:px-6 py-10">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-8">
           <div>
-            <div className="text-sm font-bold mb-3 opacity-90" style={{ color: C.textColor }}>Product</div>
+            <div
+              className="text-sm font-bold mb-3 opacity-90"
+              style={{ color: C.textColor }}
+            >
+              Product
+            </div>
             <div className="space-y-2">
-              {PRODUCT_LINKS.map(item => (
-                <Link key={item.label} href={item.href} className="block text-sm opacity-70 hover:opacity-100 transition-opacity" style={{ color: C.textColor }}>{item.label}</Link>
+              {PRODUCT_LINKS.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="block text-sm opacity-70 hover:opacity-100 transition-opacity"
+                  style={{ color: C.textColor }}
+                >
+                  {item.label}
+                </Link>
               ))}
             </div>
           </div>
           <div>
-            <div className="text-sm font-bold mb-3 opacity-90" style={{ color: C.textColor }}>Resources</div>
+            <div
+              className="text-sm font-bold mb-3 opacity-90"
+              style={{ color: C.textColor }}
+            >
+              Resources
+            </div>
             <div className="space-y-2">
-              {RESOURCE_LINKS.map(item => (
-                <Link key={item.label} href={item.href} className="block text-sm opacity-70 hover:opacity-100 transition-opacity" style={{ color: C.textColor }}>{item.label}</Link>
+              {RESOURCE_LINKS.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="block text-sm opacity-70 hover:opacity-100 transition-opacity"
+                  style={{ color: C.textColor }}
+                >
+                  {item.label}
+                </Link>
               ))}
             </div>
           </div>
           <div>
-            <div className="text-sm font-bold mb-3 opacity-90" style={{ color: C.textColor }}>Company</div>
+            <div
+              className="text-sm font-bold mb-3 opacity-90"
+              style={{ color: C.textColor }}
+            >
+              Company
+            </div>
             <div className="space-y-2">
-              {COMPANY_LINKS.map(item => (
-                <Link key={item.label} href={item.href} className="block text-sm opacity-70 hover:opacity-100 transition-opacity" style={{ color: C.textColor }}>{item.label}</Link>
+              {COMPANY_LINKS.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="block text-sm opacity-70 hover:opacity-100 transition-opacity"
+                  style={{ color: C.textColor }}
+                >
+                  {item.label}
+                </Link>
               ))}
             </div>
           </div>
           <div>
-            <div className="text-sm font-bold mb-3 opacity-90" style={{ color: C.textColor }}>Connect</div>
+            <div
+              className="text-sm font-bold mb-3 opacity-90"
+              style={{ color: C.textColor }}
+            >
+              Connect
+            </div>
             <div className="space-y-2">
-              {CONNECT_LINKS.map(item => (
-                <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" className="block text-sm opacity-70 hover:opacity-100 transition-opacity" style={{ color: C.textColor }}>{item.label}</a>
+              {CONNECT_LINKS.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-sm opacity-70 hover:opacity-100 transition-opacity"
+                  style={{ color: C.textColor }}
+                >
+                  {item.label}
+                </a>
               ))}
             </div>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6" style={{ borderTop: `1px solid ${C.borderColor}15` }}>
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6"
+          style={{ borderTop: `1px solid ${C.borderColor}15` }}
+        >
           <div className="flex items-center gap-2">
-            <span className="text-sm font-black" style={{ color: C.headerColor }}>LiTreeLabStudios</span>
+            <span
+              className="text-sm font-black"
+              style={{ color: C.headerColor }}
+            >
+              LiTreeLabStudios
+            </span>
             <span className="text-xs opacity-60">© 2026</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs opacity-60">
-            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#34d399" }} />
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: "#34d399" }}
+            />
             All Systems Operational
           </div>
         </div>

@@ -3,15 +3,53 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import {
-  Film, Wand2, Download, RefreshCw, AlertTriangle, Loader2, History, Clock, Sparkles
+  Film,
+  Wand2,
+  Download,
+  RefreshCw,
+  AlertTriangle,
+  Loader2,
+  History,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 
 const VIDEO_MODELS = [
-  { id: "veo", label: "Veo", provider: "Google", desc: "High-quality cinematic", cost: 5 },
-  { id: "wan", label: "Wan", provider: "Alibaba", desc: "Fast general purpose", cost: 3 },
-  { id: "wan-pro", label: "Wan Pro", provider: "Alibaba", desc: "Enhanced quality", cost: 4 },
-  { id: "seedance-pro", label: "Seedance Pro", provider: "ByteDance", desc: "Motion mastery", cost: 4 },
-  { id: "ltx-2", label: "LTX-2", provider: "Lightricks", desc: "Realistic scenes", cost: 3 },
+  {
+    id: "veo",
+    label: "Veo",
+    provider: "Google",
+    desc: "High-quality cinematic",
+    cost: 5,
+  },
+  {
+    id: "wan",
+    label: "Wan",
+    provider: "Alibaba",
+    desc: "Fast general purpose",
+    cost: 3,
+  },
+  {
+    id: "wan-pro",
+    label: "Wan Pro",
+    provider: "Alibaba",
+    desc: "Enhanced quality",
+    cost: 4,
+  },
+  {
+    id: "seedance-pro",
+    label: "Seedance Pro",
+    provider: "ByteDance",
+    desc: "Motion mastery",
+    cost: 4,
+  },
+  {
+    id: "ltx-2",
+    label: "LTX-2",
+    provider: "Lightricks",
+    desc: "Realistic scenes",
+    cost: 3,
+  },
 ];
 
 const PROMPT_PRESETS = [
@@ -47,11 +85,14 @@ export default function VideoTool() {
   const [history, setHistory] = useState<VideoGen[]>([]);
   const [coinBalance, setCoinBalance] = useState<number | null>(null);
 
-  const cost = VIDEO_MODELS.find(m => m.id === model)?.cost || 5;
+  const cost = VIDEO_MODELS.find((m) => m.id === model)?.cost || 5;
   const canAfford = coinBalance === null || coinBalance >= cost;
 
   useEffect(() => {
-    try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) setHistory(JSON.parse(raw)); } catch { }
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) setHistory(JSON.parse(raw));
+    } catch {}
     // Read litcoins from localStorage first (consistent with Navbar)
     try {
       const coinsRaw = localStorage.getItem("litcoins");
@@ -59,27 +100,52 @@ export default function VideoTool() {
         const val = Number(coinsRaw);
         if (!isNaN(val)) setCoinBalance(val);
       }
-    } catch { }
+    } catch {}
     // Then sync from API
-    fetch("/api/wallet").then(r => r.json()).then(d => { 
-      if (typeof d.balance === "number") {
-        setCoinBalance(d.balance);
-        try { localStorage.setItem("litcoins", String(d.balance)); } catch {}
-      }
-    }).catch(() => {});
+    fetch("/api/wallet")
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d.balance === "number") {
+          setCoinBalance(d.balance);
+          try {
+            localStorage.setItem("litcoins", String(d.balance));
+          } catch {}
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  useEffect(() => { if (history.length > 0) localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, MAX_HISTORY))); }, [history]);
+  useEffect(() => {
+    if (history.length > 0)
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(history.slice(0, MAX_HISTORY)),
+      );
+  }, [history]);
 
   const handleGenerate = useCallback(async () => {
-    if (!prompt.trim() || prompt.trim().length < 3) { setError("Prompt must be at least 3 characters."); return; }
-    if (!canAfford) { setError(`Need ${cost} LiTBit Coins.`); return; }
+    if (!prompt.trim() || prompt.trim().length < 3) {
+      setError("Prompt must be at least 3 characters.");
+      return;
+    }
+    if (!canAfford) {
+      setError(`Need ${cost} LiTBit Coins.`);
+      return;
+    }
     setError(null);
     setIsGenerating(true);
     const id = `vid_${Date.now()}`;
-    const gen: VideoGen = { id, prompt: prompt.trim(), model, duration, status: "generating", createdAt: Date.now(), cost };
+    const gen: VideoGen = {
+      id,
+      prompt: prompt.trim(),
+      model,
+      duration,
+      status: "generating",
+      createdAt: Date.now(),
+      cost,
+    };
     setCurrent(gen);
-    setHistory(prev => [gen, ...prev].slice(0, MAX_HISTORY));
+    setHistory((prev) => [gen, ...prev].slice(0, MAX_HISTORY));
 
     try {
       const encoded = encodeURIComponent(prompt.trim());
@@ -88,16 +154,48 @@ export default function VideoTool() {
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
       const blob = await res.blob();
       const videoUrl = URL.createObjectURL(blob);
-      setCurrent(prev => prev?.id === id ? { ...prev, status: "succeeded", videoUrl } : prev);
-      setHistory(prev => prev.map(g => g.id === id ? { ...g, status: "succeeded", videoUrl } : g));
+      setCurrent((prev) =>
+        prev?.id === id ? { ...prev, status: "succeeded", videoUrl } : prev,
+      );
+      setHistory((prev) =>
+        prev.map((g) =>
+          g.id === id ? { ...g, status: "succeeded", videoUrl } : g,
+        ),
+      );
       // Deduct coins via server
-      const wres = await fetch("/api/wallet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "spend", amount: cost, reason: `video_${model}` }) });
+      const wres = await fetch("/api/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "spend",
+          amount: cost,
+          reason: `video_${model}`,
+        }),
+      });
       const wdata = await wres.json();
       if (typeof wdata.balance === "number") setCoinBalance(wdata.balance);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Video generation failed");
-      setCurrent(prev => prev?.id === id ? { ...prev, status: "failed", error: err instanceof Error ? err.message : "failed" } : prev);
-      setHistory(prev => prev.map(g => g.id === id ? { ...g, status: "failed", error: err instanceof Error ? err.message : "failed" } : g));
+      setCurrent((prev) =>
+        prev?.id === id
+          ? {
+              ...prev,
+              status: "failed",
+              error: err instanceof Error ? err.message : "failed",
+            }
+          : prev,
+      );
+      setHistory((prev) =>
+        prev.map((g) =>
+          g.id === id
+            ? {
+                ...g,
+                status: "failed",
+                error: err instanceof Error ? err.message : "failed",
+              }
+            : g,
+        ),
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -113,16 +211,31 @@ export default function VideoTool() {
     document.body.removeChild(a);
   }, []);
 
-  const handleClear = () => { setHistory([]); localStorage.removeItem(STORAGE_KEY); };
+  const handleClear = () => {
+    setHistory([]);
+    localStorage.removeItem(STORAGE_KEY);
+  };
 
   return (
-    <div className="p-4 space-y-4 max-w-6xl mx-auto">
+    <div className="p-4 space-y-4 w-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Film size={14} style={{ color: T.accentColor }} />
-          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textMuted }}>Video Generator</span>
+          <span
+            className="text-xs font-bold uppercase tracking-widest"
+            style={{ color: T.textMuted }}
+          >
+            Video Generator
+          </span>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border" style={{ borderColor: T.borderColor, color: T.accentColor, backgroundColor: T.boxBg }}>
+        <div
+          className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border"
+          style={{
+            borderColor: T.borderColor,
+            color: T.accentColor,
+            backgroundColor: T.boxBg,
+          }}
+        >
           <Sparkles size={10} /> {coinBalance ?? "—"} LiTBit
         </div>
       </div>
@@ -130,132 +243,334 @@ export default function VideoTool() {
       <div className="grid lg:grid-cols-5 gap-4">
         {/* LEFT: Controls */}
         <div className="lg:col-span-2 space-y-3">
-          <div className="border rounded-lg p-3" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-            <label className="block text-[10px] uppercase tracking-widest mb-1.5" style={{ color: T.textMuted }}>Scene Description</label>
-            <textarea value={prompt} onChange={e => { setPrompt(e.target.value); setError(null); }}
-              placeholder="A dramatic sunset over a cyberpunk city..." rows={4} disabled={isGenerating}
+          <div
+            className="border rounded-lg p-3"
+            style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}
+          >
+            <label
+              className="block text-[10px] uppercase tracking-widest mb-1.5"
+              style={{ color: T.textMuted }}
+            >
+              Scene Description
+            </label>
+            <textarea
+              value={prompt}
+              onChange={(e) => {
+                setPrompt(e.target.value);
+                setError(null);
+              }}
+              placeholder="A dramatic sunset over a cyberpunk city..."
+              rows={4}
+              disabled={isGenerating}
               className="w-full px-3 py-2 text-sm rounded outline-none resize-none disabled:opacity-50"
-              style={{ backgroundColor: T.bgColor, border: `1px solid ${T.borderColor}`, color: T.textColor }} />
-            <div className="text-right text-[10px] mt-1" style={{ color: T.textMuted }}>{prompt.length} chars</div>
+              style={{
+                backgroundColor: T.bgColor,
+                border: `1px solid ${T.borderColor}`,
+                color: T.textColor,
+              }}
+            />
+            <div
+              className="text-right text-[10px] mt-1"
+              style={{ color: T.textMuted }}
+            >
+              {prompt.length} chars
+            </div>
           </div>
 
-          <div className="border rounded-lg p-3" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-            <label className="block text-[10px] uppercase tracking-widest mb-2" style={{ color: T.textMuted }}>Model</label>
+          <div
+            className="border rounded-lg p-3"
+            style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}
+          >
+            <label
+              className="block text-[10px] uppercase tracking-widest mb-2"
+              style={{ color: T.textMuted }}
+            >
+              Model
+            </label>
             <div className="space-y-1.5">
-              {VIDEO_MODELS.map(m => (
-                <button key={m.id} onClick={() => setModel(m.id)} disabled={isGenerating}
+              {VIDEO_MODELS.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setModel(m.id)}
+                  disabled={isGenerating}
                   className="w-full p-2.5 text-left text-[11px] rounded border transition-all hover:scale-[1.01] disabled:opacity-50"
-                  style={{ backgroundColor: model === m.id ? T.accentColor + "20" : T.bgColor, borderColor: model === m.id ? T.accentColor : T.borderColor, color: model === m.id ? T.accentColor : T.textColor }}>
+                  style={{
+                    backgroundColor:
+                      model === m.id ? T.accentColor + "20" : T.bgColor,
+                    borderColor: model === m.id ? T.accentColor : T.borderColor,
+                    color: model === m.id ? T.accentColor : T.textColor,
+                  }}
+                >
                   <div className="font-bold flex items-center justify-between">
                     <span>{m.label}</span>
                     <span className="text-[9px] opacity-60">{m.provider}</span>
                   </div>
-                  <div className="text-[9px] opacity-60 mt-0.5">{m.desc} · {m.cost} 🪙</div>
+                  <div className="text-[9px] opacity-60 mt-0.5">
+                    {m.desc} · {m.cost} 🪙
+                  </div>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="border rounded-lg p-3" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-            <label className="block text-[10px] uppercase tracking-widest mb-1.5" style={{ color: T.textMuted }}>Duration</label>
-            <input type="range" min={2} max={8} step={1} value={duration}
-              onChange={e => setDuration(parseInt(e.target.value))} disabled={isGenerating}
-              className="w-full" />
-            <div className="flex items-center justify-between text-[10px] mt-1" style={{ color: T.textMuted }}>
-              <span><Clock size={10} className="inline mr-1" />{duration}s</span>
+          <div
+            className="border rounded-lg p-3"
+            style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}
+          >
+            <label
+              className="block text-[10px] uppercase tracking-widest mb-1.5"
+              style={{ color: T.textMuted }}
+            >
+              Duration
+            </label>
+            <input
+              type="range"
+              min={2}
+              max={8}
+              step={1}
+              value={duration}
+              onChange={(e) => setDuration(parseInt(e.target.value))}
+              disabled={isGenerating}
+              className="w-full"
+            />
+            <div
+              className="flex items-center justify-between text-[10px] mt-1"
+              style={{ color: T.textMuted }}
+            >
+              <span>
+                <Clock size={10} className="inline mr-1" />
+                {duration}s
+              </span>
               <span>2s — 8s</span>
             </div>
           </div>
 
-          <div className="border rounded-lg p-3" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-            <label className="block text-[10px] uppercase tracking-widest mb-1.5" style={{ color: T.textMuted }}>Quick Starters</label>
+          <div
+            className="border rounded-lg p-3"
+            style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}
+          >
+            <label
+              className="block text-[10px] uppercase tracking-widest mb-1.5"
+              style={{ color: T.textMuted }}
+            >
+              Quick Starters
+            </label>
             <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
               {PROMPT_PRESETS.map((p, i) => (
-                <button key={i} onClick={() => { setPrompt(p); setError(null); }} disabled={isGenerating}
+                <button
+                  key={i}
+                  onClick={() => {
+                    setPrompt(p);
+                    setError(null);
+                  }}
+                  disabled={isGenerating}
                   className="w-full text-left text-[10px] px-2 py-1 rounded border hover:opacity-80 disabled:opacity-50 line-clamp-2"
-                  style={{ backgroundColor: T.bgColor, borderColor: T.borderColor, color: T.textColor }}>{p}</button>
+                  style={{
+                    backgroundColor: T.bgColor,
+                    borderColor: T.borderColor,
+                    color: T.textColor,
+                  }}
+                >
+                  {p}
+                </button>
               ))}
             </div>
           </div>
 
-          <button onClick={handleGenerate} disabled={!prompt.trim() || !canAfford || isGenerating}
+          <button
+            onClick={handleGenerate}
+            disabled={!prompt.trim() || !canAfford || isGenerating}
             className="w-full py-3 rounded-lg font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40 transition-all hover:scale-[1.01]"
-            style={{ background: `linear-gradient(135deg, ${T.accentColor} 0%, ${T.headerColor} 100%)`, color: T.bgColor, boxShadow: `0 0 20px ${T.accentColor}30` }}>
-            {isGenerating ? <><Loader2 size={16} className="animate-spin" /> Generating...</>
-              : <><Wand2 size={16} /> Generate ({cost} 🪙)</>}
+            style={{
+              background: `linear-gradient(135deg, ${T.accentColor} 0%, ${T.headerColor} 100%)`,
+              color: T.bgColor,
+              boxShadow: `0 0 20px ${T.accentColor}30`,
+            }}
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 size={16} className="animate-spin" /> Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 size={16} /> Generate ({cost} 🪙)
+              </>
+            )}
           </button>
 
           {error && (
-            <div className="text-[11px] flex items-center gap-1.5 px-3 py-2 rounded border" style={{ borderColor: "#f85149", color: "#f85149", backgroundColor: "#f8514910" }}>
-              <AlertTriangle size={12} /><span>{error}</span>
+            <div
+              className="text-[11px] flex items-center gap-1.5 px-3 py-2 rounded border"
+              style={{
+                borderColor: "#f85149",
+                color: "#f85149",
+                backgroundColor: "#f8514910",
+              }}
+            >
+              <AlertTriangle size={12} />
+              <span>{error}</span>
             </div>
           )}
         </div>
 
         {/* RIGHT: Preview + History */}
         <div className="lg:col-span-3 space-y-3">
-          <div className="border-2 rounded-lg overflow-hidden" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-            <div className="px-3 py-1.5 border-b flex items-center justify-between" style={{ borderColor: T.borderColor, backgroundColor: T.bgColor }}>
-              <span className="text-[10px] uppercase tracking-widest" style={{ color: T.textMuted }}>Preview</span>
-              {current?.status === "succeeded" && <span className="text-[10px]" style={{ color: "#56d364" }}>● Ready</span>}
-              {isGenerating && <span className="text-[10px] flex items-center gap-1" style={{ color: T.accentColor }}><Loader2 size={10} className="animate-spin" /> Working...</span>}
+          <div
+            className="border-2 rounded-lg overflow-hidden"
+            style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}
+          >
+            <div
+              className="px-3 py-1.5 border-b flex items-center justify-between"
+              style={{ borderColor: T.borderColor, backgroundColor: T.bgColor }}
+            >
+              <span
+                className="text-[10px] uppercase tracking-widest"
+                style={{ color: T.textMuted }}
+              >
+                Preview
+              </span>
+              {current?.status === "succeeded" && (
+                <span className="text-[10px]" style={{ color: "#56d364" }}>
+                  ● Ready
+                </span>
+              )}
+              {isGenerating && (
+                <span
+                  className="text-[10px] flex items-center gap-1"
+                  style={{ color: T.accentColor }}
+                >
+                  <Loader2 size={10} className="animate-spin" /> Working...
+                </span>
+              )}
             </div>
-            <div className="aspect-video relative flex items-center justify-center" style={{ backgroundColor: T.bgColor }}>
+            <div
+              className="aspect-video relative flex items-center justify-center"
+              style={{ backgroundColor: T.bgColor }}
+            >
               {current?.videoUrl ? (
-                <video src={current.videoUrl} controls className="w-full h-full object-cover" style={{ maxHeight: "360px" }} />
+                <video
+                  src={current.videoUrl}
+                  controls
+                  className="w-full h-full object-cover"
+                  style={{ maxHeight: "360px" }}
+                />
               ) : isGenerating ? (
                 <div className="text-center">
                   <div className="relative w-20 h-20 mx-auto mb-3">
-                    <div className="absolute inset-0 rounded-full border-2 animate-ping" style={{ borderColor: T.accentColor, opacity: 0.4 }} />
-                    <div className="absolute inset-0 flex items-center justify-center text-2xl">🎬</div>
+                    <div
+                      className="absolute inset-0 rounded-full border-2 animate-ping"
+                      style={{ borderColor: T.accentColor, opacity: 0.4 }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center text-2xl">
+                      🎬
+                    </div>
                   </div>
                   <p className="text-sm opacity-70">Generating video...</p>
-                  <p className="text-[10px] opacity-50 mt-1">This can take 30-120 seconds</p>
+                  <p className="text-[10px] opacity-50 mt-1">
+                    This can take 30-120 seconds
+                  </p>
                 </div>
               ) : (
                 <div className="text-center px-6">
                   <div className="text-4xl mb-2 opacity-30">🎬</div>
-                  <p className="text-sm opacity-60">Your video will appear here</p>
+                  <p className="text-sm opacity-60">
+                    Your video will appear here
+                  </p>
                 </div>
               )}
             </div>
             {current?.videoUrl && (
-              <div className="px-3 py-2 border-t flex items-center gap-2" style={{ borderColor: T.borderColor, backgroundColor: T.bgColor }}>
-                <button onClick={() => handleDownload(current.videoUrl!)}
-                  className="px-2.5 py-1 text-[10px] font-bold rounded border flex items-center gap-1" style={{ borderColor: T.borderColor, color: T.textColor }}>
+              <div
+                className="px-3 py-2 border-t flex items-center gap-2"
+                style={{
+                  borderColor: T.borderColor,
+                  backgroundColor: T.bgColor,
+                }}
+              >
+                <button
+                  onClick={() => handleDownload(current.videoUrl!)}
+                  className="px-2.5 py-1 text-[10px] font-bold rounded border flex items-center gap-1"
+                  style={{ borderColor: T.borderColor, color: T.textColor }}
+                >
                   <Download size={10} /> Download
                 </button>
-                <button onClick={handleGenerate}
-                  className="px-2.5 py-1 text-[10px] font-bold rounded border flex items-center gap-1" style={{ borderColor: T.borderColor, color: T.textColor }}>
+                <button
+                  onClick={handleGenerate}
+                  className="px-2.5 py-1 text-[10px] font-bold rounded border flex items-center gap-1"
+                  style={{ borderColor: T.borderColor, color: T.textColor }}
+                >
                   <RefreshCw size={10} /> Regen
                 </button>
               </div>
             )}
           </div>
 
-          <div className="border rounded-lg" style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}>
-            <div className="px-3 py-2 border-b flex items-center justify-between" style={{ borderColor: T.borderColor }}>
-              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest" style={{ color: T.textMuted }}>
+          <div
+            className="border rounded-lg"
+            style={{ borderColor: T.borderColor, backgroundColor: T.boxBg }}
+          >
+            <div
+              className="px-3 py-2 border-b flex items-center justify-between"
+              style={{ borderColor: T.borderColor }}
+            >
+              <div
+                className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest"
+                style={{ color: T.textMuted }}
+              >
                 <History size={10} /> Recent ({history.length})
               </div>
-              {history.length > 0 && <button onClick={handleClear} className="text-[9px] opacity-60 hover:opacity-100">Clear</button>}
+              {history.length > 0 && (
+                <button
+                  onClick={handleClear}
+                  className="text-[9px] opacity-60 hover:opacity-100"
+                >
+                  Clear
+                </button>
+              )}
             </div>
             {history.length === 0 ? (
-              <div className="p-6 text-center text-xs opacity-50">No videos yet.</div>
+              <div className="p-6 text-center text-xs opacity-50">
+                No videos yet.
+              </div>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 p-2">
-                {history.map(g => (
-                  <button key={g.id} onClick={() => setCurrent(g)}
+                {history.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => setCurrent(g)}
                     className="relative aspect-video border rounded overflow-hidden hover:scale-[1.02] transition-transform"
-                    style={{ borderColor: T.borderColor, backgroundColor: T.bgColor }}>
+                    style={{
+                      borderColor: T.borderColor,
+                      backgroundColor: T.bgColor,
+                    }}
+                  >
                     {g.videoUrl ? (
-                      <video src={g.videoUrl} className="w-full h-full object-cover" muted />
+                      <video
+                        src={g.videoUrl}
+                        className="w-full h-full object-cover"
+                        muted
+                      />
                     ) : g.status === "failed" ? (
-                      <div className="w-full h-full flex items-center justify-center text-lg">⚠️</div>
+                      <div className="w-full h-full flex items-center justify-center text-lg">
+                        ⚠️
+                      </div>
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center"><Loader2 size={14} className="animate-spin opacity-50" /></div>
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Loader2
+                          size={14}
+                          className="animate-spin opacity-50"
+                        />
+                      </div>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 px-1.5 py-0.5 text-[8px] truncate" style={{ backgroundColor: "rgba(0,0,0,0.7)", color: "white" }}>{g.model}</div>
+                    <div
+                      className="absolute inset-x-0 bottom-0 px-1.5 py-0.5 text-[8px] truncate"
+                      style={{
+                        backgroundColor: "rgba(0,0,0,0.7)",
+                        color: "white",
+                      }}
+                    >
+                      {g.model}
+                    </div>
                   </button>
                 ))}
               </div>

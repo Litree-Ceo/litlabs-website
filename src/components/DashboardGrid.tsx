@@ -76,7 +76,7 @@ export default function DashboardGrid() {
   const { user } = useAuth();
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="w-full px-4 py-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-extrabold tracking-tight text-white mb-1">
