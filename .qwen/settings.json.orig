@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/litbit/.config/powershell/**)",
+      "Read(//mnt/**)",
+      "Bash(chmod *)",
+      "Bash(docker compose *)",
+      "Bash(./run_openhands.py)",
+      "Bash(docker ps *)",
+      "Bash(python3 *)",
+      "Bash(source *)",
+      "Bash(pip install *)",
+      "Bash(npm view *)",
+      "Bash(npm install *)",
+      "Bash(npm *)",
+      "Bash(rm *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  },
+  "$version": 4
+}

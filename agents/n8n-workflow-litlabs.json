@@ -17,12 +17,29 @@
     },
     {
       "parameters": {
-        "command": "cd /home/litbit/LiTTreeLabstudios && bash bin/sync.sh"
+        "url": "http://localhost:3000/api/sync",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {
+          "header": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-sync-signature",
+              "value": "{{= crypto.createHmac('sha256', process.env.SYNC_WEBHOOK_SECRET).update(JSON.stringify({ timestamp: $now })).digest('hex') }}"
+            }
+          ]
+        },
+        "bodyParametersJson": {
+          "timestamp": "{{ $now }}"
+        }
       },
       "id": "sync-1",
       "name": "Sync Code",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [420, 300]
     },
     {
