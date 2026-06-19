@@ -179,6 +179,78 @@ export async function notifyError(
   });
 }
 
+export async function notifyDeployment(
+  status: "queued" | "building" | "deploying" | "live" | "failed" | "cancelled",
+  branch: string,
+  environment: string,
+  details?: {
+    commitSha?: string;
+    pipelineUrl?: string;
+    deployUrl?: string;
+    error?: string;
+  },
+): Promise<void> {
+  const colors: Record<typeof status, number> = {
+    queued: DISCORD_COLORS.neutral,
+    building: DISCORD_COLORS.info,
+    deploying: DISCORD_COLORS.warning,
+    live: DISCORD_COLORS.success,
+    failed: DISCORD_COLORS.error,
+    cancelled: DISCORD_COLORS.neutral,
+  };
+
+  const emojis: Record<typeof status, string> = {
+    queued: "⏳",
+    building: "🏗️",
+    deploying: "🚀",
+    live: "✅",
+    failed: "❌",
+    cancelled: "🚫",
+  };
+
+  const fields: DiscordEmbed["fields"] = [
+    { name: "Branch", value: branch, inline: true },
+    { name: "Environment", value: environment, inline: true },
+  ];
+
+  if (details?.commitSha) {
+    fields.push({
+      name: "Commit",
+      value: details.commitSha.slice(0, 8),
+      inline: true,
+    });
+  }
+  if (details?.deployUrl) {
+    fields.push({
+      name: "Deploy URL",
+      value: details.deployUrl,
+      inline: false,
+    });
+  }
+  if (details?.error) {
+    fields.push({
+      name: "Error",
+      value: details.error.slice(0, 1000),
+      inline: false,
+    });
+  }
+
+  await sendDiscordMessage("agents", {
+    username: "LiTBiT Deploy",
+    avatar_url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://litlabs.net"}/jarvis-avatar.png`,
+    embeds: [
+      {
+        title: `${emojis[status]} Deploy ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+        description: `Deployment for **${branch}** to **${environment}** is ${status}.`,
+        color: colors[status],
+        timestamp: new Date().toISOString(),
+        fields,
+        url: details?.pipelineUrl,
+      },
+    ],
+  });
+}
+
 export async function notifySystemStatus(
   status: "online" | "offline" | "maintenance" | "update",
   message?: string,

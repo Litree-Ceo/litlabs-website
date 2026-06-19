@@ -122,6 +122,9 @@ create table if not exists public.user_media (
   url text not null,
   type text not null, -- 'image', 'video', 'audio'
   caption text,
+  is_public boolean default true not null, -- show in community gallery
+  category text default 'gallery', -- 'character', 'landscape', 'abstract', '360-worlds', etc
+  likes_count integer default 0 not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -161,6 +164,8 @@ create index if not exists idx_posts_created_at on public.posts(created_at desc)
 create index if not exists idx_post_likes_post_id on public.post_likes(post_id);
 create index if not exists idx_post_comments_post_id on public.post_comments(post_id);
 create index if not exists idx_user_media_user_id on public.user_media(user_id);
+create index if not exists idx_user_media_is_public on public.user_media(is_public, created_at desc);
+create index if not exists idx_user_media_category on public.user_media(category) where is_public = true;
 
 -- ============================================
 -- RPC Functions (called from API routes)
@@ -192,6 +197,30 @@ begin
   where id = post_id;
 end;
 $$ language plpgsql;
+
+-- ============================================
+-- Deployments table (for LiTBiT deploy pipeline tracking)
+-- ============================================
+create table if not exists public.deployments (
+  id uuid primary key default gen_random_uuid(),
+  task_id text,
+  branch text not null,
+  commit_sha text,
+  environment text not null check (environment in ('preview', 'staging', 'production')),
+  status text not null check (status in ('queued', 'building', 'deploying', 'live', 'failed', 'cancelled')),
+  pipeline_url text,
+  deploy_url text,
+  source text not null check (source in ('gitlab', 'manual', 'deploy-agent', 'vercel')),
+  metadata jsonb default '{}',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index if not exists idx_deployments_created_at on public.deployments(created_at desc);
+create index if not exists idx_deployments_status on public.deployments(status);
+create index if not exists idx_deployments_environment on public.deployments(environment);
+
+alter table public.deployments enable row level security;
 
 -- ============================================
 -- Setup Instructions:

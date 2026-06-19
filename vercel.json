@@ -3,6 +3,12 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "installCommand": "npm install",
+  "crons": [
+    {
+      "path": "/api/deployments/digest",
+      "schedule": "0 9 * * 1-5"
+    }
+  ],
   "functions": {
     "src/app/api/media/generate/route.ts": { "maxDuration": 60 },
     "src/app/api/media/generate-video/route.ts": { "maxDuration": 60 },
