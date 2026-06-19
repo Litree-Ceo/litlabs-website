@@ -160,11 +160,34 @@ INSERT INTO public.tracks (title, artist, storage_provider, public_url, sort_ord
   ('Neon Dreams', 'Future Funk', 'url', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3', 6, 'futuresynth')
 ON CONFLICT DO NOTHING;
 
--- 10. Update schema_migrations to mark all applied
+-- 11. Create deployments table for LiTBiT deploy tracking
+CREATE TABLE IF NOT EXISTS public.deployments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id TEXT,
+  branch TEXT NOT NULL,
+  commit_sha TEXT,
+  environment TEXT NOT NULL CHECK (environment IN ('preview', 'staging', 'production')),
+  status TEXT NOT NULL CHECK (status IN ('queued', 'building', 'deploying', 'live', 'failed', 'cancelled')),
+  pipeline_url TEXT,
+  deploy_url TEXT,
+  source TEXT NOT NULL CHECK (source IN ('gitlab', 'manual', 'deploy-agent', 'vercel')),
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_deployments_created_at ON public.deployments(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_deployments_status ON public.deployments(status);
+CREATE INDEX IF NOT EXISTS idx_deployments_environment ON public.deployments(environment);
+
+ALTER TABLE public.deployments ENABLE ROW LEVEL SECURITY;
+
+-- 12. Update schema_migrations to mark all applied
 INSERT INTO supabase_migrations.schema_migrations (version) VALUES
   ('20240614'),
   ('20240615'),
   ('20240616'),
   ('20250617'),
+  ('20250618'),
   ('20260116')
 ON CONFLICT (version) DO NOTHING;

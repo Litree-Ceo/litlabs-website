@@ -683,7 +683,7 @@ export default function PipelineTool() {
                   </div>
                   {idx < nodes.length - 1 && (
                     <div
-                      className={`h-8 w-px my-1.5 relative transition-all ${isRunning && (nodes[idx].status === "completed" || nodes[idx].status === "running") ? "bg-gradient-to-b from-fuchsia-400 via-emerald-400 to-emerald-400 shadow-[0_0_8px_rgba(217,70,239,0.5)]" : "bg-gradient-to-b from-fuchsia-500/50 to-emerald-500/50"}`}
+                      className={`h-8 w-px my-1.5 relative transition-all ${isRunning && (nodes[idx].status === "completed" || nodes[idx].status === "running") ? "bg-linear-to-b from-fuchsia-400 via-emerald-400 to-emerald-400 shadow-[0_0_8px_rgba(217,70,239,0.5)]" : "bg-linear-to-b from-fuchsia-500/50 to-emerald-500/50"}`}
                     >
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border border-fuchsia-500 bg-[#0a0310]" />
                     </div>
