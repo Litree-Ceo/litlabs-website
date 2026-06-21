@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/unit/*.test.mjs",
-    "test:watch": "node --test --watch tests/unit/*.test.mjs",
+    "test": "node --test tests/unit/**/*.mjs",
+    "test:run": "node --test tests/unit/**/*.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "pages:build": "npx @cloudflare/next-on-pages@1",
@@ -35,25 +35,15 @@
     "svix": "^1.95.1"
   },
   "devDependencies": {
-    "@jest/globals": "^30.4.1",
     "@netlify/plugin-nextjs": "^5",
     "@playwright/test": "^1",
     "@tailwindcss/postcss": "^4",
-    "@testing-library/jest-dom": "^6",
-    "@testing-library/react": "^16",
-    "@testing-library/user-event": "^14",
-    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
-    "jest": "^30.4.2",
-    "jest-environment-jsdom": "^30.4.1",
-    "jsdom": "^25",
     "tailwindcss": "^4",
-    "ts-jest": "^29.4.11",
-    "typescript": "^5",
-    "vitest": "^3"
+    "typescript": "^5"
   }
 }
