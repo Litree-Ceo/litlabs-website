@@ -124,7 +124,7 @@ Agent: ${agent}
 Output only the JSON, no explanation.`;
 
     const response = await generateText(prompt, { temperature: 0.3, maxTokens: 1000 });
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    const jsonMatch = response.text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]) as LayoutSchema;
       parsed.userId = user;
