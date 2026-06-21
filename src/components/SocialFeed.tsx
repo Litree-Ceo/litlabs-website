@@ -79,7 +79,6 @@ export default function SocialFeed({ embedded = false }: { embedded?: boolean })
   };
 
   // Setup Supabase Realtime subscription (runs once on mount)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let mount = true;
     
