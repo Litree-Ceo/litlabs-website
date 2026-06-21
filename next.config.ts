@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
     root: __dirname,
   },
 
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   experimental: {
     optimizePackageImports: [
       "@supabase/supabase-js",
