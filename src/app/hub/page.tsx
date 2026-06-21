@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
-import { Image, Film, Music, Bot, Sparkles, Zap, ArrowRight, Terminal, Network, LayoutGrid } from "lucide-react";
+import { Image, Film, Music, Bot, Sparkles, ArrowRight, Terminal, Network } from "lucide-react";
 
 const HUB_TOOLS = [
   { id: "image", label: "Image Generator", desc: "Create stunning AI-generated images and art", icon: Image, href: "/studio?tool=image", color: "#6366f1", shortcut: "Ctrl+1" },

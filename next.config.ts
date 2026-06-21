@@ -1,11 +1,11 @@
 import type { NextConfig } from "next";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const nextConfig: NextConfig = {
-  // ============================================
-  // PERFORMANCE OPTIMIZATIONS
-  // ============================================
-
-  // Turbopack workspace root (fixes lockfile detection warning)
   turbopack: {
     root: __dirname,
   },
@@ -169,7 +169,6 @@ const nextConfig: NextConfig = {
     return [
       { source: "/builder", destination: "/studio", permanent: true },
       { source: "/generate", destination: "/studio?tool=image", permanent: false },
-      { source: "/flow", destination: "/studio?tool=flow", permanent: false },
     ];
   },
 

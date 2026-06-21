@@ -64,7 +64,7 @@ function stringToColor(str: string): string {
   return `hsl(${h}, 65%, 45%)`;
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ── Types ───────────────────────────────────────────────────────────────────
 type GalleryItem = {
   id: string;
   title: string;
