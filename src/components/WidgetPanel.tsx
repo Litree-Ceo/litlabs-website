@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Layout, Youtube, Music, Bot, Eye, EyeOff, ExternalLink, X } from 'lucide-react';
+import { Layout, PlayCircle, Music, Bot, Eye, EyeOff, ExternalLink, X } from 'lucide-react';
 
 const WIDGETS_CONFIG = [
   {
     id: 'youtube',
     label: 'YouTube Player',
-    icon: Youtube,
+    icon: PlayCircle,
     desc: 'Watch & listen to YouTube videos',
     color: '#ff0000',
     storageKey: 'litlabs_youtube_widget',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Minimize, Maximize, Youtube, ExternalLink } from 'lucide-react';
+import { X, Minimize, Maximize, PlayCircle, ExternalLink } from 'lucide-react';
 
 const STORAGE_KEY = 'litlabs_youtube_widget';
 
@@ -54,7 +54,7 @@ export default function YoutubeWidget() {
       <div className="flex items-center justify-between px-3 py-2 border-b cursor-pointer select-none" style={{ borderColor: 'rgba(255,255,255,0.1)' }}
         onClick={() => saveState({ ...state, minimized: !state.minimized })}>
         <div className="flex items-center gap-2">
-          <Youtube size={14} style={{ color: '#ff0000' }} />
+          <PlayCircle size={14} style={{ color: '#ff0000' }} />
           <span className="text-xs font-bold" style={{ color: '#e0e0e0' }}>YouTube</span>
           {videoId && <span className="text-[8px] px-1 py-0.5 rounded" style={{ backgroundColor: '#ff000015', color: '#ff0000' }}>LIVE</span>}
         </div>
