@@ -290,7 +290,7 @@ export default function AgentChat() {
                   <div style={{ color: selectedAgent.color, fontSize: "18px", fontWeight: "bold", marginBottom: "8px" }}>{selectedAgent.name}</div>
                   <div style={{ color: T.textColor, fontSize: "12px", maxWidth: "400px", margin: "0 auto 24px", lineHeight: 1.6 }}>
                     Describe a world and I will generate it as a 360° panoramic image.<br/><br/>
-                    Try: <em style={{ color: T.linkColor }}>"A futuristic cyberpunk city at night with neon lights and flying cars"</em>
+                    Try: <em style={{ color: T.linkColor }}>&ldquo;A futuristic cyberpunk city at night with neon lights and flying cars&rdquo;</em>
                   </div>
                 </div>
               )}

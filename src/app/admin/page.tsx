@@ -141,8 +141,14 @@ export default function AdminDashboard() {
     );
   }
 
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, []);
+
   const formatTime = (date: Date) => {
-    const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+    const mins = Math.floor((now - date.getTime()) / 60000);
     if (mins < 1) return "Just now";
     if (mins < 60) return `${mins}m ago`;
     return `${Math.floor(mins / 60)}h ago`;
