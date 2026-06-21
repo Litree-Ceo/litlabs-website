@@ -12,7 +12,7 @@ const PRODUCT_LINKS = [
 
 const RESOURCE_LINKS = [
   { href: "/flow", label: "Flow" },
-  { href: "/social", label: "Social" },
+  { href: "/", label: "Home" },
   { href: "/settings", label: "Settings" },
 ];
 

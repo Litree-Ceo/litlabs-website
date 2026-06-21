@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { useClerkAuth } from '@/hooks/useClerkAuth';
 import { useProfile } from '@/context/ProfileContext';
+import YoutubeWidget from '@/components/YoutubeWidget';
+import SpotifyWidget from '@/components/SpotifyWidget';
+import JarvisWidget from '@/components/JarvisWidget';
+import WidgetPanel from '@/components/WidgetPanel';
 import {
   Zap, Sparkles, MessageCircle, Settings, Coins,
-  X, Activity, Loader2, Terminal, Heart, Share2, Radio, Users, MessageSquare,
-  Music, Volume2, SkipBack, SkipForward, Play, Pause,
-  BarChart3, Server, Cpu, Database, Globe, Shield,
-  ChevronDown, ChevronUp, Send, Bell, Plus, Edit, Trash2,
-  Copy, ExternalLink, Minimize, Maximize, Search, Filter, Minus,
+  X, Activity, Loader2, Terminal, Heart, Share2, Users, MessageSquare,
+  Send, Minus,
 } from 'lucide-react';
 
 // TypeScript interfaces
@@ -47,14 +48,6 @@ interface FeedPost {
   agentReplies?: AgentReply[];
 }
 
-interface AudioTrack {
-  id: string;
-  title: string;
-  artist: string;
-  duration: string;
-  url: string;
-}
-
 interface DashboardStats {
   visitors: number;
   uptime: string;
@@ -66,6 +59,7 @@ interface DashboardStats {
   totalCoins: number;
   userId: string | null;
 }
+
 
 
 function CRTOverlay({ enabled }: { enabled: boolean }) {
@@ -88,12 +82,6 @@ const C = {
   success: '#00ff41',
   warning: '#ffd93d',
 };
-
-const SYNTHWAVE_TRACKS = [
-  { id: '1', title: 'Neon Drive', artist: 'Synthwave Radio', duration: '4:32', url: '' },
-  { id: '2', title: 'Retrowave', artist: 'Outrun FM', duration: '3:58', url: '' },
-  { id: '3', title: 'Cyber City', artist: 'Darksynth', duration: '5:12', url: '' },
-];
 
 const MOODS = ['🔥 Grinding', '🧠 In Flow', '😎 Chill', '⚡ Hyped', '🎯 Focused', '😴 Tired'];
 
@@ -144,10 +132,8 @@ export default function HomePage() {
     },
   ]);
   const [newPost, setNewPost] = useState('');
-  const [isPlaying, setIsPlaying] = useState(false);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedPosting, setFeedPosting] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState(0);
   const displayName = profile?.displayName || 'Builder';
 
   useEffect(() => {
@@ -242,9 +228,7 @@ export default function HomePage() {
           <div className="mb-4 p-3 flex items-center justify-between border-2" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
             <div className="text-lg font-black uppercase" style={{ color: C.headerColor }}>⚡ LiTree Labs</div>
             <div className="flex items-center gap-3">
-              <button onClick={() => setIsPlaying(!isPlaying)} className="flex items-center gap-1 px-2 py-1 text-[10px] border" style={{ borderColor: C.borderColor, color: isPlaying ? C.linkColor : C.textMuted }}>
-                <Radio size={12} /> {isPlaying ? '▶ ' + SYNTHWAVE_TRACKS[currentTrack].title : '♪ Synthwave'}
-              </button>
+              <WidgetPanel />
               <button onClick={() => setCrtEnabled(!crtEnabled)} className="px-2 py-1 text-[10px] border" style={{ borderColor: C.borderColor, color: crtEnabled ? C.linkColor : C.textMuted }}>
                 {crtEnabled ? '✓ CRT' : 'CRT'}
               </button>
@@ -400,6 +384,10 @@ export default function HomePage() {
                 <div className="text-2xl font-black font-mono" style={{ color: C.linkColor }}>{visitorCount.toLocaleString()}</div>
                 <button onClick={() => setVisitorCount(v => v + 1)} className="mt-2 text-[10px] px-3 py-1 border hover:opacity-80" style={{ borderColor: C.borderColor }}>+1 Visit</button>
               </div>
+
+              {/* Media Widgets */}
+              <YoutubeWidget />
+              <SpotifyWidget />
             </aside>
           </div>
         </main>
@@ -582,6 +570,7 @@ export default function HomePage() {
           ))}
         </div>
       )}
+      <JarvisWidget />
     </div>
   );
 }
