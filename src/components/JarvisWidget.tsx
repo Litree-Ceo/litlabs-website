@@ -17,7 +17,7 @@ const SYSTEM_STATUS = [
   { label: 'Neural Link', status: 'online', color: '#22c55e' },
   { label: 'Data Stream', status: 'online', color: '#22c55e' },
   { label: 'Security Grid', status: 'online', color: '#22c55e' },
-  { label: 'Voice Module', status: typeof window !== 'undefined' && 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window ? 'online' : 'offline', color: '#22c55e' },
+  { label: 'Voice Module', status: typeof window !== 'undefined' && (('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window)) ? 'online' : 'offline', color: '#22c55e' },
 ];
 
 const JARVIS_PERSONALITY = `You are JARVIS (Just A Rather Very Intelligent System), the advanced AI assistant for LiTree Lab Studios. You speak with calm professionalism, slight wit, and genuine helpfulness. You are the user's personal AI butler — always ready, always precise. Keep responses concise but carry an air of sophisticated intelligence. You can help with coding, agent management, system monitoring, and general tasks. Refer to the user as "Sir" or "Boss" occasionally. You have access to the LiTree Labs platform and can help navigate its features. Keep responses under 3 sentences when possible. Never be rude or dismissive.`;
