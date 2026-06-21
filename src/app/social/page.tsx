@@ -1,5 +1,7 @@
-import { redirect } from 'next/navigation';
+import SocialFeed from "@/components/SocialFeed";
 
-export default function SocialRedirect() {
-  redirect('/');
+export const dynamic = "force-dynamic";
+
+export default function SocialPage() {
+  return <SocialFeed />;
 }

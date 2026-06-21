@@ -1,15 +1,11 @@
-// Jarvis Notification System
-// Real-time notifications for sales, signups, system alerts
-// Multi-channel: Discord, Webhook, Push, Email
-
 import { supabase } from "./supabase";
 
-export type NotificationType = 
-  | "sale" 
-  | "signup" 
-  | "agent_created" 
-  | "system_alert" 
-  | "chat" 
+export type NotificationType =
+  | "sale"
+  | "signup"
+  | "agent_created"
+  | "system_alert"
+  | "chat"
   | "marketing"
   | "cli_event";
 
@@ -28,11 +24,13 @@ export interface NotificationPayload {
 export interface NotificationConfig {
   discordWebhookUrl?: string;
   adminEmail?: string;
-  pushProvider?: "onesignal" | "webpush";
+  pushVapidPublicKey?: string;
+  pushVapidPrivateKey?: string;
+  pushVapidSubject?: string;
   webhookEndpoint?: string;
+  resendApiKey?: string;
 }
 
-// Jarvis class for handling notifications
 class Jarvis {
   private config: NotificationConfig;
   private initialized = false;
@@ -44,7 +42,6 @@ class Jarvis {
   init(config: NotificationConfig) {
     this.config = { ...this.config, ...config };
     this.initialized = true;
-    console.log("🤖 Jarvis initialized");
   }
 
   async notify(payload: NotificationPayload): Promise<boolean> {
@@ -55,7 +52,6 @@ class Jarvis {
     const channels = payload.channels || ["discord"];
     const results: boolean[] = [];
 
-    // Save to database first
     try {
       const { error } = await supabase.from("notifications").insert({
         user_id: payload.userId || null,
@@ -66,15 +62,11 @@ class Jarvis {
         data: payload.data || {},
         channels: channels,
       });
-
-      if (error) {
-        console.error("Failed to save notification:", error);
-      }
+      if (error) console.error("Failed to save notification:", error);
     } catch (err) {
       console.error("Error saving notification:", err);
     }
 
-    // Send to each channel
     for (const channel of channels) {
       try {
         switch (channel) {
@@ -97,30 +89,27 @@ class Jarvis {
       }
     }
 
-    return results.some((r) => r); // Return true if at least one succeeded
+    return results.some((r) => r);
   }
 
   private async sendDiscord(payload: NotificationPayload): Promise<boolean> {
-    if (!this.config.discordWebhookUrl) {
-      console.warn("Discord webhook not configured");
-      return false;
-    }
+    if (!this.config.discordWebhookUrl) return false;
 
     const colorMap: Record<NotificationPriority, number> = {
-      low: 0x00ff00,    // Green
-      medium: 0xffff00, // Yellow
-      high: 0xffa500,   // Orange
-      critical: 0xff0000, // Red
+      low: 0x00ff00,
+      medium: 0xffff00,
+      high: 0xffa500,
+      critical: 0xff0000,
     };
 
     const typeEmoji: Record<NotificationType, string> = {
-      sale: "💰",
-      signup: "📝",
-      agent_created: "🤖",
-      system_alert: "⚠️",
-      chat: "💬",
-      marketing: "📢",
-      cli_event: "💻",
+      sale: "\u{1F4B0}",
+      signup: "\u{1F4DD}",
+      agent_created: "\u{1F916}",
+      system_alert: "\u26A0\uFE0F",
+      chat: "\u{1F4AC}",
+      marketing: "\u{1F4E2}",
+      cli_event: "\u{1F4BB}",
     };
 
     const embed = {
@@ -135,9 +124,7 @@ class Jarvis {
             inline: true,
           }))
         : [],
-      footer: {
-        text: `LiTTree Labs • ${payload.priority.toUpperCase()}`,
-      },
+      footer: { text: `LiTTree Labs \u2022 ${payload.priority.toUpperCase()}` },
     };
 
     try {
@@ -146,19 +133,14 @@ class Jarvis {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ embeds: [embed] }),
       });
-
       return response.ok;
-    } catch (err) {
-      console.error("Discord webhook failed:", err);
+    } catch {
       return false;
     }
   }
 
   private async sendWebhook(payload: NotificationPayload): Promise<boolean> {
-    if (!this.config.webhookEndpoint) {
-      console.warn("Webhook endpoint not configured");
-      return false;
-    }
+    if (!this.config.webhookEndpoint) return false;
 
     try {
       const response = await fetch(this.config.webhookEndpoint, {
@@ -174,46 +156,89 @@ class Jarvis {
           source: "jarvis",
         }),
       });
-
       return response.ok;
-    } catch (err) {
-      console.error("Webhook failed:", err);
+    } catch {
       return false;
     }
   }
 
   private async sendPush(payload: NotificationPayload): Promise<boolean> {
-    // OneSignal or WebPush implementation would go here
-    console.log("Push notification (not implemented):", payload.title);
-    return true;
+    if (!this.config.pushVapidPublicKey || !this.config.pushVapidPrivateKey) {
+      return false;
+    }
+
+    try {
+      const subscriptions = await supabase
+        .from("push_subscriptions")
+        .select("subscription")
+        .eq("user_id", payload.userId || "");
+
+      const subs = subscriptions.data || [];
+      if (subs.length === 0) return false;
+
+      const results = await Promise.allSettled(
+        subs.map(async (row: any) => {
+          const sub = row.subscription;
+          await fetch(sub.endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `vapid t=${this.config.pushVapidPublicKey}, k=${this.config.pushVapidPrivateKey}`,
+            },
+            body: JSON.stringify({
+              title: payload.title,
+              body: payload.body,
+              icon: "/icons/icon-192x192.png",
+              data: payload.data || {},
+            }),
+          });
+        })
+      );
+
+      return results.some((r) => r.status === "fulfilled");
+    } catch {
+      return false;
+    }
   }
 
   private async sendEmail(payload: NotificationPayload): Promise<boolean> {
-    // Resend or SendGrid implementation would go here
-    console.log("Email notification (not implemented):", payload.title);
-    return true;
+    if (!this.config.resendApiKey || !this.config.adminEmail) {
+      return false;
+    }
+
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.config.resendApiKey}`,
+        },
+        body: JSON.stringify({
+          from: "Jarvis <notifications@litlabs.net>",
+          to: this.config.adminEmail,
+          subject: `[${payload.priority.toUpperCase()}] ${payload.title}`,
+          html: `
+            <h2>${payload.title}</h2>
+            <p>${payload.body}</p>
+            ${payload.data ? `<pre>${JSON.stringify(payload.data, null, 2)}</pre>` : ""}
+            <hr />
+            <p style="color: #888; font-size: 12px;">LiTTree Labs Notification System</p>
+          `,
+        }),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 
-  // Quick notification methods
-  async sale(data: {
-    buyerName: string;
-    agentName: string;
-    priceLBC: number;
-    priceUSD?: number;
-    sellerName?: string;
-  }) {
+  async sale(data: { buyerName: string; agentName: string; priceLBC: number; priceUSD?: number; sellerName?: string }) {
     return this.notify({
       type: "sale",
       priority: "high",
-      title: "New Sale! 🎉",
+      title: "New Sale! \uD83C\uDF89",
       body: `${data.buyerName} bought ${data.agentName} for ${data.priceLBC} LBC`,
-      data: {
-        buyer: data.buyerName,
-        agent: data.agentName,
-        price_lbc: data.priceLBC,
-        price_usd: data.priceUSD || 0,
-        seller: data.sellerName || "Platform",
-      },
+      data: { buyer: data.buyerName, agent: data.agentName, price_lbc: data.priceLBC, price_usd: data.priceUSD || 0, seller: data.sellerName || "Platform" },
       channels: ["discord", "webhook"],
     });
   }
@@ -224,30 +249,18 @@ class Jarvis {
       priority: "medium",
       title: "New User Signup",
       body: `${data.userName} (${data.userEmail}) just joined`,
-      data: {
-        name: data.userName,
-        email: data.userEmail,
-        source: data.source || "website",
-      },
+      data: { name: data.userName, email: data.userEmail, source: data.source || "website" },
       channels: ["discord"],
     });
   }
 
-  async agentCreated(data: {
-    creatorName: string;
-    agentName: string;
-    category: string;
-  }) {
+  async agentCreated(data: { creatorName: string; agentName: string; category: string }) {
     return this.notify({
       type: "agent_created",
       priority: "medium",
       title: "New Agent Created",
       body: `${data.creatorName} created ${data.agentName}`,
-      data: {
-        creator: data.creatorName,
-        agent: data.agentName,
-        category: data.category,
-      },
+      data: { creator: data.creatorName, agent: data.agentName, category: data.category },
       channels: ["discord"],
     });
   }
@@ -269,30 +282,23 @@ class Jarvis {
       priority: data.success ? "low" : "high",
       title: `CLI: ${data.tool}`,
       body: data.success ? "Command executed successfully" : `Failed: ${data.output}`,
-      data: {
-        tool: data.tool,
-        command: data.command,
-        output: data.output.substring(0, 500),
-        success: data.success,
-      },
+      data: { tool: data.tool, command: data.command, output: data.output.substring(0, 500), success: data.success },
       channels: ["discord"],
     });
   }
 }
 
-// Singleton instance
 export const jarvis = new Jarvis();
 
-// Initialize with environment variables
-if (typeof window !== "undefined") {
-  // Browser - can't access env vars directly
-  // Will be initialized via API call
-} else {
-  // Server
+if (typeof window === "undefined") {
   jarvis.init({
     discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL,
     adminEmail: process.env.ADMIN_EMAIL,
     webhookEndpoint: process.env.JARVIS_WEBHOOK_URL,
+    pushVapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    pushVapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
+    pushVapidSubject: process.env.VAPID_SUBJECT || "mailto:admin@litlabs.net",
+    resendApiKey: process.env.RESEND_API_KEY,
   });
 }
 
