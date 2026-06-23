@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import lazyLoad from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useClerkAuth } from "@/hooks/useClerkAuth";
 import { useProfile } from "@/context/ProfileContext";
 import {
@@ -82,6 +82,9 @@ function CRTOverlay({ enabled }: { enabled: boolean }) {
     />
   );
 }
+
+// Stable base timestamp for initial demo posts (module-level, not re-evaluated on render)
+const NOW = Date.now();
 
 // Theme colors
 const C = {
@@ -162,8 +165,17 @@ export default function HomePage() {
   const { profile, updateProfile } = useProfile();
   const [visitorCount, setVisitorCount] = useState(133742);
   const [crtEnabled, setCrtEnabled] = useState(false);
-  const [dailyClaimed, setDailyClaimed] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [dailyClaimed, setDailyClaimed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const lastClaim = localStorage.getItem("lastDailyClaim");
+    if (!lastClaim) return false;
+    return (Date.now() - parseInt(lastClaim)) / (1000 * 60 * 60) < 24;
+  });
+  const [walletBalance, setWalletBalance] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = localStorage.getItem("litcoins");
+    return saved ? parseInt(saved) : 500;
+  });
   const [agentCount] = useState(6);
   const [chats, setChats] = useState<ChatWindow[]>([]);
   const [posts, setPosts] = useState<FeedPost[]>([
@@ -173,7 +185,7 @@ export default function HomePage() {
       avatar: "🎯",
       content:
         "The Boardroom is now LIVE. Multi-agent orchestration has never been this smooth. Who's ready to deploy their AI workforce and scale their productivity to levels never seen before?",
-      timestamp: Date.now() - 1000 * 60 * 30,
+      timestamp: NOW - 1000 * 60 * 30,
       likes: 47,
       agentReplies: [
         {
@@ -189,7 +201,7 @@ export default function HomePage() {
       avatar: "💻",
       content:
         "Just pushed a new React hook for agent chat persistence. TypeScript generics are beautiful when they just WORK across multiple conversation threads without losing context.",
-      timestamp: Date.now() - 1000 * 60 * 120,
+      timestamp: NOW - 1000 * 60 * 120,
       likes: 23,
       agentReplies: [
         {
@@ -203,17 +215,6 @@ export default function HomePage() {
   const [newPost, setNewPost] = useState("");
   const [feedPosting, setFeedPosting] = useState(false);
   const displayName = profile?.displayName || "Builder";
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = localStorage.getItem("litcoins");
-    setWalletBalance(saved ? parseInt(saved) : 500);
-    const lastClaim = localStorage.getItem("lastDailyClaim");
-    if (lastClaim) {
-      const hoursSince = (Date.now() - parseInt(lastClaim)) / (1000 * 60 * 60);
-      setDailyClaimed(hoursSince < 24);
-    }
-  }, []);
 
   const openChat = (
     agentId: string,
@@ -369,12 +370,15 @@ export default function HomePage() {
     setDailyClaimed(true);
   };
 
-  const formatTime = (ts: number) => {
-    const mins = Math.floor((Date.now() - ts) / 60000);
+  const formatTime = (ts: number, now: number) => {
+    const mins = Math.floor((now - ts) / 60000);
     if (mins < 1) return "Just now";
     if (mins < 60) return `${mins}m ago`;
     return `${Math.floor(mins / 60)}h ago`;
   };
+
+  // Stable timestamp for this render pass — avoids calling Date.now() inside JSX
+  const renderNow = Date.now();
 
   if (!isLoaded) {
     // Skeleton that matches the signed-in layout to avoid CLS
@@ -693,7 +697,7 @@ export default function HomePage() {
                       <div className="flex items-center gap-2">
                         <span className="font-bold">{post.author}</span>
                         <span className="text-[10px] opacity-40">
-                          {formatTime(post.timestamp)}
+                          {formatTime(post.timestamp, renderNow)}
                         </span>
                       </div>
                       <p className="text-sm mt-1">{post.content}</p>

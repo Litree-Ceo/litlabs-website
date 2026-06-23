@@ -40,12 +40,20 @@ export default function JarvisWidget() {
   const [messages, setMessages] = useState<JarvisMessage[]>([WELCOME_MSG]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [minimized, setMinimized] = useState(false);
   const [listening, setListening] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // WebRTC Refs
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const dcRef = useRef<RTCDataChannel | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     try {
@@ -61,7 +69,102 @@ export default function JarvisWidget() {
       }
     } catch {}
     setLoaded(true);
+
+    // Create audio element for WebRTC output
+    const audio = document.createElement("audio");
+    audio.autoplay = true;
+    audioRef.current = audio;
+
+    return () => {
+      stopVoiceMode();
+    };
   }, []);
+
+  const startVoiceMode = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // 1. Get ephemeral token
+      const tokenRes = await fetch("/api/jarvis/session", { method: "POST" });
+      if (!tokenRes.ok) throw new Error("Failed to initialize secure session");
+      const { client_secret } = await tokenRes.json();
+
+      // 2. Setup WebRTC
+      const pc = new RTCPeerConnection();
+      pcRef.current = pc;
+
+      // Listen for model audio
+      pc.ontrack = (e) => {
+        if (audioRef.current) audioRef.current.srcObject = e.streams[0];
+      };
+
+      // Add microphone
+      const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = ms;
+      pc.addTrack(ms.getTracks()[0]);
+
+      // Data channel for events
+      const dc = pc.createDataChannel("oai-events");
+      dcRef.current = dc;
+
+      dc.onmessage = (e) => {
+        const event = JSON.parse(e.data);
+        if (event.type === "response.audio_transcript.delta") {
+          // Could update live transcript here
+        }
+        if (event.type === "response.done") {
+          const transcript = event.response.output[0]?.content[0]?.transcript;
+          if (transcript) {
+            setMessages(prev => [...prev, { role: 'jarvis', content: transcript, ts: Date.now() }]);
+          }
+        }
+      };
+
+      // SDP Handshake
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const baseUrl = "https://api.openai.com/v1/realtime";
+      const model = "gpt-4o-realtime-preview-2024-12-17";
+      const sdpRes = await fetch(`${baseUrl}?model=${model}`, {
+        method: "POST",
+        body: offer.sdp,
+        headers: {
+          Authorization: `Bearer ${client_secret}`,
+          "Content-Type": "application/sdp",
+        },
+      });
+
+      if (!sdpRes.ok) throw new Error("Voice connection refused by server");
+
+      const answer: RTCSessionDescriptionInit = {
+        type: "answer",
+        sdp: await sdpRes.text(),
+      };
+      await pc.setRemoteDescription(answer);
+
+      setVoiceMode(true);
+    } catch (err) {
+      console.error("Jarvis Voice Error:", err);
+      const msg = err instanceof Error ? err.message : "Voice initialization failed";
+      setMessages(prev => [...prev, { role: 'jarvis', content: `Apologies Sir, I encountered a technical hurdle: ${msg}. Shall we proceed with text?`, ts: Date.now() }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stopVoiceMode = () => {
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
+    }
+    setVoiceMode(false);
+  };
 
   useEffect(() => {
     if (messages.length > 1) {
@@ -258,16 +361,25 @@ export default function JarvisWidget() {
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
-                      placeholder="Ask Jarvis anything..."
+                      placeholder={voiceMode ? "Voice Active - Jarvis is listening..." : "Ask Jarvis anything..."}
+                      disabled={voiceMode}
                       className="w-full px-3 py-2 text-sm bg-transparent border outline-none pr-10"
                       style={{ borderColor: 'rgba(255,255,255,0.15)', color: '#e0e0e0' }}
                     />
-                    {hasVoice && (
-                      <button onClick={toggleVoice} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:opacity-70"
-                        style={{ color: listening ? '#ff00a0' : 'rgba(255,255,255,0.4)' }}>
-                        {listening ? <Loader2 size={14} className="animate-spin" /> : <Mic size={14} />}
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <button onClick={voiceMode ? stopVoiceMode : startVoiceMode} className="p-1 hover:opacity-70"
+                        style={{ color: voiceMode ? '#ff00a0' : 'rgba(255,255,255,0.4)' }}
+                        title={voiceMode ? "Stop Voice Session" : "Start Real-Time Voice"}>
+                        {loading ? <Loader2 size={14} className="animate-spin" /> : voiceMode ? <Activity size={14} className="animate-pulse" /> : <Mic size={14} />}
                       </button>
-                    )}
+                      {!voiceMode && hasVoice && (
+                        <button onClick={toggleVoice} className="p-1 hover:opacity-70"
+                          style={{ color: listening ? '#00f0ff' : 'rgba(255,255,255,0.2)' }}
+                          title="Quick Speech-to-Text">
+                          <Send size={12} className={listening ? "animate-pulse" : ""} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading}
                     className="px-4 py-2 text-xs font-bold border disabled:opacity-30"
