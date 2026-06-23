@@ -21,6 +21,14 @@ async function getHandler(req: NextRequest) {
     return NextResponse.json({
       synced: true,
       isNew: result.isNew,
+      // Include user object so callers like SocialFeed can get the DB user id
+      user: result.user
+        ? {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+          }
+        : null,
     });
   } catch (error) {
     // [Account Sync] Error:
@@ -61,7 +69,7 @@ async function deleteHandler(req: NextRequest) {
       // Error deleting user:
       return NextResponse.json(
         { error: "Failed to delete account" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -77,7 +85,7 @@ async function deleteHandler(req: NextRequest) {
     // Error deleting account:
     return NextResponse.json(
       { error: "Failed to delete account" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
