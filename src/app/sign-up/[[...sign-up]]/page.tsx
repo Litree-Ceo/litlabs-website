@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useCallback } from "react";
-import { useSignUp, useClerk } from "@clerk/nextjs";
+import { useSignUp } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PasswordStrength } from "@/components/PasswordStrength";
@@ -20,10 +20,10 @@ import {
 } from "lucide-react";
 
 type Step = "name" | "credentials" | "verify";
+const STEPS: Step[] = ["name", "credentials", "verify"];
 
 export default function SignUpPage() {
   const { isLoaded, signUp, setActive } = useSignUp();
-  const clerk = useClerk();
   const router = useRouter();
   const [step, setStep] = useState<Step>("name");
   const [firstName, setFirstName] = useState("");
@@ -44,6 +44,7 @@ export default function SignUpPage() {
     }, 50);
   }, []);
 
+  // ── Social OAuth ──────────────────────────────────────────────────────────
   const handleSocial = async (provider: "google" | "github") => {
     if (!signUp) return;
     setPending(true);
@@ -59,15 +60,23 @@ export default function SignUpPage() {
     }
   };
 
-  const startSignUp = async () => {
-    if (!signUp || !firstName.trim() || !email.trim()) return;
+  // ── Step 1 → 2: validate name + email locally, no Clerk call yet ─────────
+  const handleStep1Next = () => {
+    if (!firstName.trim() || !validEmail) return;
+    goToStep("credentials", "forward");
+  };
+
+  // ── Step 2 → 3: create Clerk account with all fields, then send email OTP ─
+  const handleStep2Next = async () => {
+    if (!signUp || !validPassword) return;
     setPending(true);
     setError("");
     try {
       await signUp.create({
         firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        lastName: lastName.trim() || undefined,
         emailAddress: email.trim(),
+        password,
       });
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       goToStep("verify", "forward");
@@ -82,8 +91,9 @@ export default function SignUpPage() {
     }
   };
 
+  // ── Step 3: verify the OTP code ───────────────────────────────────────────
   const verifyCode = async () => {
-    if (!signUp || !code.trim()) return;
+    if (!signUp || code.length !== 6) return;
     setPending(true);
     setError("");
     try {
@@ -93,42 +103,15 @@ export default function SignUpPage() {
       if (res.status === "complete") {
         await setActive({ session: res.createdSessionId });
         router.push("/studio");
-      } else if (res.status === "missing_requirements") {
-        // Set password
-        await signUp.update({ password });
-        const res2 = await signUp.attemptEmailAddressVerification({
-          code: code.trim(),
-        });
-        if (res2.status === "complete") {
-          await setActive({ session: res2.createdSessionId });
-          router.push("/studio");
-        } else {
-          setError("Verification incomplete. Please try again.");
-        }
       } else {
-        setError("Verification failed. Please try again.");
+        setError("Verification incomplete. Please try again.");
       }
     } catch (err: any) {
       setError(
         err?.errors?.[0]?.longMessage ||
           err?.errors?.[0]?.message ||
-          "Invalid code",
+          "Invalid or expired code",
       );
-    } finally {
-      setPending(false);
-    }
-  };
-
-  const handleStep2Next = async () => {
-    if (!signUp) return;
-    setPending(true);
-    setError("");
-    try {
-      await signUp.update({ password });
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      goToStep("verify", "forward");
-    } catch (err: any) {
-      setError(err?.errors?.[0]?.longMessage || "Failed to proceed");
     } finally {
       setPending(false);
     }
@@ -136,15 +119,15 @@ export default function SignUpPage() {
 
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const validPassword = password.length >= 8;
-  const canStep1 = firstName.trim() && validEmail;
-  const canStep2 = validPassword;
+  const canStep1 = !!firstName.trim() && validEmail;
+  const canStep2 = validPassword && isLoaded;
 
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{ backgroundColor: "#0a0a0f" }}
     >
-      {/* Glow effects */}
+      {/* Glow blobs */}
       <div
         className="fixed top-[-10%] left-[-5%] w-[600px] h-[600px] rounded-full pointer-events-none"
         style={{
@@ -192,50 +175,45 @@ export default function SignUpPage() {
               step === "verify" ? "0 0 40px rgba(0,240,255,0.1)" : "none",
           }}
         >
-          {/* Steps indicator */}
+          {/* Step indicator */}
           <div className="flex items-center justify-center gap-2 mb-6">
-            {(["name", "credentials", "verify"] as const).map((s, i) => (
-              <div key={s} className="flex items-center gap-2">
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-500"
-                  style={{
-                    backgroundColor:
-                      step === s
+            {STEPS.map((s, i) => {
+              const currentIdx = STEPS.indexOf(step);
+              const done = i < currentIdx;
+              const active = step === s;
+              return (
+                <div key={s} className="flex items-center gap-2">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-500"
+                    style={{
+                      backgroundColor: active
                         ? "#00f0ff"
-                        : i < ["name", "credentials", "verify"].indexOf(step)
+                        : done
                           ? "rgba(0,240,255,0.3)"
                           : "rgba(255,255,255,0.06)",
-                    color:
-                      step === s
-                        ? "#0a0a0f"
-                        : i < ["name", "credentials", "verify"].indexOf(step)
-                          ? "#00f0ff"
-                          : "#64748b",
-                    border: `1px solid ${step === s ? "#00f0ff" : i < ["name", "credentials", "verify"].indexOf(step) ? "rgba(0,240,255,0.3)" : "rgba(255,255,255,0.1)"}`,
-                  }}
-                >
-                  {i < ["name", "credentials", "verify"].indexOf(step) ? (
-                    <Check size={12} />
-                  ) : (
-                    i + 1
+                      color: active ? "#0a0a0f" : done ? "#00f0ff" : "#64748b",
+                      border: `1px solid ${active ? "#00f0ff" : done ? "rgba(0,240,255,0.3)" : "rgba(255,255,255,0.1)"}`,
+                    }}
+                  >
+                    {done ? <Check size={12} /> : i + 1}
+                  </div>
+                  {i < STEPS.length - 1 && (
+                    <div
+                      className="w-8 h-px transition-all duration-500"
+                      style={{
+                        backgroundColor:
+                          i < STEPS.indexOf(step)
+                            ? "#00f0ff"
+                            : "rgba(255,255,255,0.1)",
+                      }}
+                    />
                   )}
                 </div>
-                {i < 2 && (
-                  <div
-                    className="w-8 h-px transition-all duration-500"
-                    style={{
-                      backgroundColor:
-                        i < ["name", "credentials", "verify"].indexOf(step)
-                          ? "#00f0ff"
-                          : "rgba(255,255,255,0.1)",
-                    }}
-                  />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* Error */}
+          {/* Error banner */}
           {error && (
             <div
               className="mb-4 p-3 rounded-lg text-sm font-medium border"
@@ -249,7 +227,7 @@ export default function SignUpPage() {
             </div>
           )}
 
-          {/* Step: Name */}
+          {/* ── Step 1: Name + Email ── */}
           {step === "name" && (
             <div
               className="space-y-4"
@@ -293,6 +271,7 @@ export default function SignUpPage() {
                         color: "#e2e8f0",
                       }}
                       placeholder="John"
+                      autoComplete="given-name"
                     />
                   </div>
                 </div>
@@ -315,6 +294,7 @@ export default function SignUpPage() {
                       color: "#e2e8f0",
                     }}
                     placeholder="Doe"
+                    autoComplete="family-name"
                   />
                 </div>
               </div>
@@ -347,16 +327,17 @@ export default function SignUpPage() {
                       color: "#e2e8f0",
                     }}
                     placeholder="you@example.com"
+                    autoComplete="email"
                     onKeyDown={(e) =>
-                      e.key === "Enter" && canStep1 && startSignUp()
+                      e.key === "Enter" && canStep1 && handleStep1Next()
                     }
                   />
                 </div>
               </div>
 
               <button
-                onClick={startSignUp}
-                disabled={!canStep1 || pending}
+                onClick={handleStep1Next}
+                disabled={!canStep1}
                 className="w-full rounded-lg py-2.5 text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-30 border"
                 style={{
                   backgroundColor: "rgba(0,240,255,0.1)",
@@ -364,16 +345,11 @@ export default function SignUpPage() {
                   color: "#00f0ff",
                 }}
               >
-                {pending ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <>
-                    Continue <ArrowRight size={14} />
-                  </>
-                )}
+                Continue <ArrowRight size={14} />
               </button>
 
-              <div className="relative my-6">
+              {/* Social divider */}
+              <div className="relative my-2">
                 <div className="absolute inset-0 flex items-center">
                   <div
                     className="w-full border-t"
@@ -447,7 +423,7 @@ export default function SignUpPage() {
               </div>
 
               <p
-                className="text-center text-xs mt-4"
+                className="text-center text-xs mt-2"
                 style={{ color: "#64748b" }}
               >
                 Already have an account?{" "}
@@ -462,7 +438,7 @@ export default function SignUpPage() {
             </div>
           )}
 
-          {/* Step: Password */}
+          {/* ── Step 2: Password — creates the Clerk account on submit ── */}
           {step === "credentials" && (
             <div
               className="space-y-4"
@@ -477,7 +453,10 @@ export default function SignUpPage() {
                 Secure your account
               </h2>
               <p className="text-xs text-center" style={{ color: "#64748b" }}>
-                Choose a strong password.
+                Choose a strong password for{" "}
+                <span className="font-medium" style={{ color: "#e2e8f0" }}>
+                  {email}
+                </span>
               </p>
 
               <div>
@@ -508,14 +487,22 @@ export default function SignUpPage() {
                       color: "#e2e8f0",
                     }}
                     placeholder="Min. 8 characters"
+                    autoComplete="new-password"
                     onKeyDown={(e) =>
-                      e.key === "Enter" && canStep2 && handleStep2Next()
+                      e.key === "Enter" &&
+                      canStep2 &&
+                      !pending &&
+                      handleStep2Next()
                     }
                   />
                   <button
+                    type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2"
                     style={{ color: "#64748b" }}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
@@ -549,7 +536,8 @@ export default function SignUpPage() {
                     <Loader2 size={14} className="animate-spin" />
                   ) : (
                     <>
-                      Continue <ArrowRight size={14} />
+                      {" "}
+                      Continue <ArrowRight size={14} />{" "}
                     </>
                   )}
                 </button>
@@ -557,7 +545,7 @@ export default function SignUpPage() {
             </div>
           )}
 
-          {/* Step: Verify */}
+          {/* ── Step 3: Email OTP verify ── */}
           {step === "verify" && (
             <div
               className="space-y-4"
@@ -570,7 +558,7 @@ export default function SignUpPage() {
                 Check your email
               </h2>
               <p className="text-xs text-center" style={{ color: "#64748b" }}>
-                We sent a verification code to{" "}
+                We sent a code to{" "}
                 <span className="font-medium" style={{ color: "#e2e8f0" }}>
                   {email}
                 </span>
@@ -602,7 +590,10 @@ export default function SignUpPage() {
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   onKeyDown={(e) =>
-                    e.key === "Enter" && code.length === 6 && verifyCode()
+                    e.key === "Enter" &&
+                    code.length === 6 &&
+                    !pending &&
+                    verifyCode()
                   }
                 />
               </div>
@@ -621,7 +612,8 @@ export default function SignUpPage() {
                   <Loader2 size={14} className="animate-spin" />
                 ) : (
                   <>
-                    Verify & Create Account <ArrowRight size={14} />
+                    {" "}
+                    Verify &amp; Create Account <ArrowRight size={14} />{" "}
                   </>
                 )}
               </button>
@@ -629,6 +621,7 @@ export default function SignUpPage() {
               <p className="text-center text-xs" style={{ color: "#64748b" }}>
                 Didn&apos;t receive it?{" "}
                 <button
+                  type="button"
                   onClick={async () => {
                     try {
                       await signUp?.prepareEmailAddressVerification({
@@ -671,26 +664,15 @@ export default function SignUpPage() {
         </div>
       </div>
 
-      <style jsx>{`
+      {/* Slide animations — plain style tag, App Router safe (no jsx attribute) */}
+      <style>{`
         @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateX(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
+          from { opacity: 0; transform: translateX(20px); }
+          to   { opacity: 1; transform: translateX(0); }
         }
         @keyframes slideOut {
-          from {
-            opacity: 1;
-            transform: translateX(0);
-          }
-          to {
-            opacity: 0;
-            transform: translateX(-20px);
-          }
+          from { opacity: 1; transform: translateX(0); }
+          to   { opacity: 0; transform: translateX(-20px); }
         }
       `}</style>
     </div>

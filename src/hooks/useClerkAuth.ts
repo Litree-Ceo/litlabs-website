@@ -3,36 +3,26 @@
 import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 
-// Safe wrapper — useAuth() throws when ClerkProvider isn't mounted (SSG without key)
-function useSafeAuth(): ReturnType<typeof useAuth> {
-  try {
-    return useAuth();
-  } catch {
-    return {
-      isLoaded: true,
-      isSignedIn: false,
-      userId: null,
-      sessionClaims: undefined,
-    } as unknown as ReturnType<typeof useAuth>;
-  }
-}
-
 export function useClerkAuth() {
-  const clerk = useSafeAuth();
+  // Always call unconditionally — Rules of Hooks.
+  // Returns isLoaded:false while Clerk JS is initialising (~300ms).
+  const clerk = useAuth();
+
   const [sessionUser, setSessionUser] = useState<{
     id: string;
     name: string | null;
     email: string;
   } | null>(null);
-
-  // Start as true so pages never block on this —
-  // Clerk's own isLoaded drives auth state once it resolves.
-  const [sessionLoaded, setSessionLoaded] = useState(true);
+  // Tracks whether the custom-session fallback fetch has settled.
+  // Starts true — if Clerk itself says isLoaded:true we don't need this.
+  // Only set to false while we're mid-fetch for the fallback session.
+  const [sessionCheckDone, setSessionCheckDone] = useState(true);
 
   useEffect(() => {
-    // Only check custom session when Clerk is loaded but NOT signed in
+    // Only run the custom-session fallback when Clerk has loaded but has no session
     if (!clerk.isLoaded || clerk.isSignedIn) return;
 
+    setSessionCheckDone(false);
     fetch("/api/auth/session", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -46,11 +36,16 @@ export function useClerkAuth() {
       })
       .catch(() => {
         // Session check failed — treat as unauthenticated
+      })
+      .finally(() => {
+        setSessionCheckDone(true);
       });
   }, [clerk.isLoaded, clerk.isSignedIn]);
 
-  // isLoaded: true once Clerk resolves OR immediately (sessionLoaded=true by default)
-  const isLoaded = clerk.isLoaded || sessionLoaded;
+  // isLoaded is true when Clerk has resolved AND our fallback session check is done.
+  // While Clerk is still initialising (clerk.isLoaded=false), we report isLoaded:true
+  // so pages don't block — auth state (isSignedIn) will update once Clerk resolves.
+  const isLoaded = !clerk.isLoaded ? true : sessionCheckDone;
   const isSignedIn = clerk.isSignedIn || !!sessionUser;
   const userId = clerk.userId || sessionUser?.id || null;
   const sessionClaims =
