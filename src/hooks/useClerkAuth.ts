@@ -1,40 +1,52 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export function useClerkAuth() {
+  // Always call unconditionally — Rules of Hooks.
   const clerk = useAuth();
-  const [sessionUser, setSessionUser] = useState<{ id: string; name: string | null; email: string } | null>(null);
-  const [sessionLoaded, setSessionLoaded] = useState(false);
+
+  const [sessionUser, setSessionUser] = useState<{
+    id: string;
+    name: string | null;
+    email: string;
+  } | null>(null);
+
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
-    // If Clerk already says signed in, no need to check custom session
-    if (clerk.isSignedIn) {
-      setSessionLoaded(true);
-      return;
-    }
-    // If Clerk is still loading, wait
-    if (!clerk.isLoaded) return;
+    // Only run once when Clerk is loaded but has no session
+    if (!clerk.isLoaded || clerk.isSignedIn || fetchedRef.current) return;
+    fetchedRef.current = true;
 
-    // Clerk loaded and not signed in — check custom JWT session
+    // Silent background check — never causes a loading state
     fetch("/api/auth/session", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.user) {
-          setSessionUser({ id: data.user.id, name: data.user.name, email: data.user.email });
+          setSessionUser({
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+          });
         }
-        setSessionLoaded(true);
       })
       .catch(() => {
-        setSessionLoaded(true);
+        // Session check failed — treat as unauthenticated
       });
   }, [clerk.isLoaded, clerk.isSignedIn]);
 
-  const isLoaded = clerk.isLoaded || sessionLoaded;
+  // While Clerk is initialising (clerk.isLoaded=false), report isLoaded:true
+  // so pages render immediately. Auth state updates ~300ms later when Clerk resolves.
+  const isLoaded = clerk.isLoaded || true;
   const isSignedIn = clerk.isSignedIn || !!sessionUser;
   const userId = clerk.userId || sessionUser?.id || null;
-  const sessionClaims = clerk.sessionClaims || (sessionUser ? { name: sessionUser.name, username: sessionUser.email } : undefined);
+  const sessionClaims =
+    clerk.sessionClaims ||
+    (sessionUser
+      ? { name: sessionUser.name, username: sessionUser.email }
+      : undefined);
 
   return { ...clerk, isLoaded, isSignedIn, userId, sessionClaims };
 }

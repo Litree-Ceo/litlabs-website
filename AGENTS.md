@@ -222,57 +222,103 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 ## 🛠️ LiTTree Lab Studios — Repo-Specific Context
 
 ### Tech Stack & Build
-- **Next.js 16.2.7** with **webpack** build (`next build --webpack` in `vercel.json`)
+
+- **Next.js 16.2.9** with **Turbopack** build (`next build` in `vercel.json`, no `--webpack` flag)
 - **React 19**, **TypeScript**, **Tailwind CSS v4**
 - **Clerk** for auth (wraps entire app in `layout.tsx` via `ClerkProvider`)
 - **Supabase** for DB — project `rokbfvuoqildggnhappy`
-- Do NOT use `next build` without `--webpack` — `vercel.json` and `package.json` both expect it
+- Build: `npm run build` (runs `next build`)
+
+### Pages Overview (29 total)
+
+| Route                             | Status                                         |
+| --------------------------------- | ---------------------------------------------- |
+| `/`                               | Full homepage with chat, widgets, feed         |
+| `/studio`                         | Creative studio hub (image/video/audio/agents) |
+| `/social`                         | Full social feed with posts, likes, comments   |
+| `/marketplace`                    | Agent marketplace with Stripe checkout         |
+| `/agents`, `/agents/[slug]`       | Agent listing and detail with chat             |
+| `/agent-chat`                     | Multi-agent chat interface                     |
+| `/flow`                           | Visual pipeline builder (drag-and-drop nodes)  |
+| `/gallery`, `/gallery/[id]`       | Gallery showcase with lightbox                 |
+| `/dashboard`                      | User dashboard with stats                      |
+| `/profile`, `/profile/[username]` | Profile editor + public profile                |
+| `/settings`                       | Settings panel (6 tabs)                        |
+| `/admin`                          | Admin dashboard with live stats                |
+| `/builder`                        | Image forge/remix builder                      |
+| `/code`                           | Code scanner/explorer                          |
+| `/games`                          | Game library browser                           |
+| `/generate`                       | AI Generation Hub (redirects to studio tools)  |
+| `/sign-in`, `/sign-up`, `/login`  | Auth pages                                     |
+| `/cookies`, `/privacy`, `/terms`  | Legal pages                                    |
+| `/showcase`                       | Portfolio showcase                             |
+
+### API Routes (68 total)
+
+- Auth (4): login, logout, session, user ensure
+- Agents (11): CRUD, activity, backlog, commits, logs, services, status, tasks
+- AI/LLM (5): Gemini chat, code generation, streaming chat, health, orchestration
+- Media (10): Image/video/audio generation, transcription, analysis
+- Social (4): Posts CRUD, likes, comments, feed
+- Wallet/Economy (4): Wallet CRUD, credits, Stripe checkout + webhook
+- Users (6): Account sync, follows, plan, profile, preferences, storage
+- Notifications (2): List, count
+- Webhooks (2): Clerk, agent action
+- Dashboard/Stats (5): Stats, dashboard, admin SSE, telemetry, gallery
+- Home Assistant (3): State, service, devices
+- Utilities (6): Upload, audio, flow, jarvis, CLI bridge, queue
 
 ### Critical Auth Architecture
-- **Three-layer auth that WILL conflict if misconfigured:**
-  1. `ClerkProvider` wraps the app in `layout.tsx` — always rendered (was conditionally skipped before, causing `useUser`/`useAuth` to crash during SSG)
-  2. `middleware.ts` enforces custom JWT auth with hardcoded `ADMIN_EMAIL` check
-  3. `AuthContext` (`src/context/AuthContext.tsx`) manages client-side session state
-- `PUBLIC_PATHS` in `middleware.ts` must include every public route or users get 401 redirects
-- The `NavAuth` component (`src/components/ClerkAuth.tsx`) calls `useUser()` inside a try-catch — this is intentional because `useUser()` can throw if ClerkProvider isn't mounted (but now it always is)
 
-### Database Schema Traps
-- **`supabase_schema.sql` is DESTRUCTIVE** — drops ALL tables with `cascade`. Never run it on production without backup.
-- **Two schemas exist:** `supabase/migrations/` (idempotent, uses `users` table) vs `supabase_schema.sql` (destructive, uses `profiles` table)
-- **Webhook table mismatch:** `src/app/api/webhook/clerk/route.ts` was hitting `/rest/v1/users` but the app code consistently uses `.from("profiles")`. The webhook MUST match whatever table the app uses. Currently fixed to `profiles`.
-- **Missing `clerk_id` column:** The `profiles` schema doesn't have a `clerk_id` column, but the webhook sends it. Migration `supabase_migrations/20250610_add_clerk_id.sql` adds it.
+- `ClerkProvider` in `layout.tsx` is **conditionally rendered** — only mounts when `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is set. This allows `next build` to succeed locally without the key. In Vercel production, the key is always present so ClerkProvider always mounts.
+- `useClerkAuth` in `src/hooks/useClerkAuth.ts` wraps `useAuth()` in a try-catch (`useSafeAuth`) so it doesn't throw when ClerkProvider isn't mounted (SSG path).
+- Pages using Clerk hooks must have `export const dynamic = "force-dynamic"` to prevent SSG prerendering.
+- No global `middleware.ts` — auth is handled per-route in API handlers and by Clerk components.
+- `AuthContext` (`src/context/AuthContext.tsx`) manages client-side session state.
 
-### Performance Landmines
-- **`AnimatedBackground.tsx`** — 60fps canvas animation runs on EVERY page. Previously had:
-  - `setInterval` for noise overlay (now replaced with rAF)
-  - Resize listener leak (`addEventListener` used anonymous arrow, `removeEventListener` tried to remove `resize` function directly)
-  - Now throttled to **30fps**, pauses on tab hidden, respects `prefers-reduced-motion`
-- **`src/app/page.tsx`** — previously had a 30s Gemini API polling interval AND a 12s fake telemetry ticker causing constant re-renders. Both removed.
-- **Do NOT add frequent `setInterval`/`setTimeout` in client components** without cleanup guards and visibility checks.
+### Database Schema
+
+- **Use `supabase/schema.sql`** for the main schema (10 tables: users, user_preferences, user_agents, subscriptions, wallets, transactions, posts, post_likes, post_comments, user_media)
+- **Agent platform migrations** in `supabase/migrations/` (conversations, sessions, analytics, notifications, sales, earnings, reviews, CLI sessions)
+- **Run in order:** `supabase/schema.sql` → `supabase/migrations/20240614_social_graph.sql` → `20260116000000_agent_platform_schema.sql`
+- All tables use `users` table (not `profiles`)
+
+### Performance Notes
+
+- `AnimatedBackground.tsx` — 30fps canvas, pauses on tab hidden, respects `prefers-reduced-motion`
+- Rate limiter is in-memory (single-process), resets on restart
+- Many pages use demo/fallback data when DB or API keys are unavailable
+
+### CSP (Content-Security-Policy) Rules
+
+- Config is in `next.config.ts` under `headers()` — applied to `/(.*)`
+- **NEVER use `'strict-dynamic'` in `script-src`** — per spec it silently overrides both `'self'` and `'unsafe-inline'`, meaning only nonce/hash-gated scripts run. Next.js static chunks have no nonces, so they all get blocked and the entire app goes blank.
+- Current correct `script-src`: `'self' 'unsafe-inline' 'unsafe-eval'` + explicit third-party domains (Clerk, GTM, Cloudflare, etc.)
+- If you need stricter CSP in future, use nonces via `next.config.ts` `generateBuildId` + middleware injection — not `strict-dynamic` alone.
 
 ### Deploy Pipeline
-- **Auto-deploy agent:** `agents/deploy-agent/deploy.sh`
-- **Critical fix:** Line 25 used bare `npx vercel` which fails because cron/service user has no `npx` in PATH. Must use absolute path: `/home/litbit/.nvm/versions/node/v22.22.3/bin/npx` or export PATH first.
-- **Down services** (external to this repo): `litlabs-api-tunnel`, `n8n-tunnel` — restart via systemctl or the agent's companion script, not via Next.js build.
-- **Vercel project ID:** `prj_EnE4JStJUENM89PWov574Y9q7mTy`
 
-### Missing Env Vars (Production Blockers)
-These are needed but currently missing/placeholder:
-- `CLERK_WEBHOOK_SECRET` — Clerk Dashboard → Webhooks
-- `STRIPE_SECRET_KEY` — currently `REGENERATE_REQUIRED`
-- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
-- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
-- AI provider keys: `HUGGING_FACE_API_KEY`, `TOGETHER_API_KEY`, `FAL_KEY`, `MINIMAX_API_KEY`, `SKYBOX_API_KEY`
+- **Vercel project:** `prj_EnE4JStJUENM89PWov574Y9q7mTy`
+- **Deploy:** `git push origin main` or manual `npx vercel --prod`
+- **Auto-deploy agent:** `agents/deploy-agent/deploy.sh`
+- Configuration in `vercel.json`
+
+### Required Env Vars (Set in Vercel)
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET`
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
+- `OPENROUTER_API_KEY`, `GEMINI_API_KEY`
+- `DISCORD_WEBHOOK_URL`, `JARVIS_WEBHOOK_URL`
+- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (optional)
+- AI provider keys: `HUGGING_FACE_API_KEY`, `TOGETHER_API_KEY`, `FAL_KEY` (optional)
 
 ### Console Logging Policy
-- **Never leave `console.log`/`console.warn`/`console.error` in server-side code** (API routes, `src/lib/*.ts`)
-- Client-side (`src/components/`, `src/context/`) is less critical but should still be minimal
-- `src/components/UserSync.tsx` had a `console.warn` that was removed
-- `src/lib/agents.ts` had `console.error` that was replaced with a comment
 
-### File Permissions Quirk
-- `src/app/api/generate/video/route.ts` has permissions `600` (owner-only read/write). If Vercel build runs as a different user, this will cause a permission error. Check with `ls -l` and `chmod 644` if needed.
+- **Minimize `console.log`/`console.warn`/`console.error` in server-side code** (API routes, `src/lib/*.ts`)
+- Client-side (`src/components/`, `src/context/`) is more acceptable but should still be minimal
 
 ### Shell Environment Issue (This Workspace)
-- The custom shell prompt (`GOD-CORE` banner) swallows command output and returns exit code 1 for ALL commands, even `node -e "console.log('hello')"`
-- **Workaround:** Commands actually execute but output is hidden. Use file redirection (`> output.log`) and then `cat output.log` to see results. Or run builds in a standard terminal outside this wrapper.
+
+- The custom shell prompt (`GOD-CORE` banner) swallows command output and returns exit code 127 for many commands
+- **Workaround:** Use file redirection (`> output.log`) and then `cat output.log` to see results, or run in standard terminal outside this wrapper

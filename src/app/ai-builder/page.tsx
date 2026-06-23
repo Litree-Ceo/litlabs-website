@@ -1,4 +1,7 @@
 "use client";
+
+export const dynamic = "force-dynamic";
+
 import { useState, useRef, useEffect } from "react";
 import { useClerkAuth } from "@/hooks/useClerkAuth";
 import Link from "next/link";
@@ -21,12 +24,17 @@ export default function AIBuilder() {
   const [input, setInput] = useState("");
   const [isBuilding, setIsBuilding] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState<GeneratedFile[]>([]);
-  const [activeTab, setActiveTab] = useState<"chat" | "files" | "preview">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "files" | "preview">(
+    "chat",
+  );
   const [streamingMessage, setStreamingMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
   }, [messages, streamingMessage]);
 
   const systemPrompt = `You are the LitLabs Hive Mind -- an AI architect and code generator. You help build and improve the LitLabs platform.
@@ -51,8 +59,12 @@ Be technically precise. Think like a senior full-stack developer.`;
   const sendMessage = async () => {
     if (!input.trim() || isBuilding) return;
 
-    const userMessage: Message = { role: "user", content: input, timestamp: new Date().toLocaleTimeString() };
-    setMessages(prev => [...prev, userMessage]);
+    const userMessage: Message = {
+      role: "user",
+      content: input,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsBuilding(true);
     setStreamingMessage("");
@@ -62,7 +74,10 @@ Be technically precise. Think like a senior full-stack developer.`;
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content })),
+          messages: [...messages, userMessage].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
           systemPrompt,
           stream: true,
         }),
@@ -90,14 +105,23 @@ Be technically precise. Think like a senior full-stack developer.`;
                   fullText += parsed.text;
                   setStreamingMessage(fullText);
                 }
-              } catch { /* skip */ }
+              } catch {
+                /* skip */
+              }
             }
           }
         }
       }
 
       if (fullText) {
-        setMessages(prev => [...prev, { role: "assistant", content: fullText, timestamp: new Date().toLocaleTimeString() }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: fullText,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
         setStreamingMessage("");
 
         // Try to extract code blocks and create generated files
@@ -105,22 +129,28 @@ Be technically precise. Think like a senior full-stack developer.`;
         if (codeBlocks) {
           const newFiles: GeneratedFile[] = codeBlocks.map((block, i) => {
             const code = block.replace(/```tsx?\n/, "").replace(/```$/, "");
-            const pathMatch = fullText.match(new RegExp(`src/[^\\s]+\\.tsx`, "g"));
+            const pathMatch = fullText.match(
+              new RegExp(`src/[^\\s]+\\.tsx`, "g"),
+            );
             return {
-              path: pathMatch?.[i] || `src/components/generated-${Date.now()}.tsx`,
+              path:
+                pathMatch?.[i] || `src/components/generated-${Date.now()}.tsx`,
               code,
               status: "generated" as const,
             };
           });
-          setGeneratedFiles(prev => [...prev, ...newFiles]);
+          setGeneratedFiles((prev) => [...prev, ...newFiles]);
         }
       }
     } catch (e) {
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: `⚠️ Error: ${e instanceof Error ? e.message : "Connection failed"}. Check that GOOGLE_API_KEY is set.`,
-        timestamp: new Date().toLocaleTimeString(),
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `⚠️ Error: ${e instanceof Error ? e.message : "Connection failed"}. Check that GOOGLE_API_KEY is set.`,
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]);
       setStreamingMessage("");
     }
 
@@ -138,10 +168,18 @@ Be technically precise. Think like a senior full-stack developer.`;
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0f0f14", color: "#e2e8f0" }}>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "#0f0f14", color: "#e2e8f0" }}
+      >
         <div className="text-center">
           <div className="text-3xl mb-4 animate-pulse">⚡</div>
-          <div className="text-xs font-bold tracking-wider uppercase animate-pulse" style={{ color: "#94a3b8" }}>Loading...</div>
+          <div
+            className="text-xs font-bold tracking-wider uppercase animate-pulse"
+            style={{ color: "#94a3b8" }}
+          >
+            Loading...
+          </div>
         </div>
       </div>
     );
@@ -150,8 +188,14 @@ Be technically precise. Think like a senior full-stack developer.`;
   if (!isSignedIn) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <p className="text-sm opacity-60">Please sign in to use the AI Builder.</p>
-        <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
+        <p className="text-sm opacity-60">
+          Please sign in to use the AI Builder.
+        </p>
+        <Link
+          href="/login"
+          className="px-4 py-2 rounded-lg text-sm font-bold"
+          style={{ backgroundColor: "#6366f1", color: "#fff" }}
+        >
           Sign In
         </Link>
       </div>
@@ -167,11 +211,13 @@ Be technically precise. Think like a senior full-stack developer.`;
             <span className="text-2xl">🧠</span>
             <div>
               <h1 className="text-lg font-extrabold">AI Page Builder</h1>
-              <p className="text-[10px] text-zinc-500">Powered by Gemini 2.0 Flash</p>
+              <p className="text-[10px] text-zinc-500">
+                Powered by Gemini 2.0 Flash
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {(["chat", "files", "preview"] as const).map(tab => (
+            {(["chat", "files", "preview"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -181,7 +227,11 @@ Be technically precise. Think like a senior full-stack developer.`;
                     : "text-zinc-500 hover:text-zinc-300 border border-transparent"
                 }`}
               >
-                {tab === "chat" ? "💬 Chat" : tab === "files" ? `📁 Files (${generatedFiles.length})` : "👁️ Preview"}
+                {tab === "chat"
+                  ? "💬 Chat"
+                  : tab === "files"
+                    ? `📁 Files (${generatedFiles.length})`
+                    : "👁️ Preview"}
               </button>
             ))}
           </div>
@@ -192,7 +242,9 @@ Be technically precise. Think like a senior full-stack developer.`;
       <div className="flex-1 flex overflow-hidden">
         {/* Quick Prompts Sidebar */}
         <div className="w-64 border-r border-white/5 bg-white/[0.01] p-3 hidden lg:block overflow-y-auto">
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Quick Prompts</div>
+          <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">
+            Quick Prompts
+          </div>
           <div className="space-y-1.5">
             {quickPrompts.map((prompt, i) => (
               <button
@@ -215,30 +267,48 @@ Be technically precise. Think like a senior full-stack developer.`;
                 {messages.length === 0 && (
                   <div className="text-center py-16">
                     <div className="text-6xl mb-4">🧠</div>
-                    <h2 className="text-xl font-bold mb-2">Hive Mind AI Builder</h2>
+                    <h2 className="text-xl font-bold mb-2">
+                      Hive Mind AI Builder
+                    </h2>
                     <p className="text-sm text-zinc-500 max-w-md mx-auto">
-                      Describe what you want to build and I'll generate the code.
-                      Try a quick prompt from the sidebar or type your own.
+                      Describe what you want to build and I'll generate the
+                      code. Try a quick prompt from the sidebar or type your
+                      own.
                     </p>
                   </div>
                 )}
                 {messages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[80%] rounded-xl p-4 ${
-                      msg.role === "user"
-                        ? "bg-orange-500/20 border border-orange-500/30"
-                        : "bg-white/[0.03] border border-white/10"
-                    }`}>
-                      <div className="text-[10px] text-zinc-500 mb-1">{msg.role === "user" ? "You" : "🧠 Hive Mind"} • {msg.timestamp}</div>
-                      <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
+                  <div
+                    key={i}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-xl p-4 ${
+                        msg.role === "user"
+                          ? "bg-orange-500/20 border border-orange-500/30"
+                          : "bg-white/[0.03] border border-white/10"
+                      }`}
+                    >
+                      <div className="text-[10px] text-zinc-500 mb-1">
+                        {msg.role === "user" ? "You" : "🧠 Hive Mind"} •{" "}
+                        {msg.timestamp}
+                      </div>
+                      <div className="text-sm whitespace-pre-wrap">
+                        {msg.content}
+                      </div>
                     </div>
                   </div>
                 ))}
                 {streamingMessage && (
                   <div className="flex justify-start">
                     <div className="max-w-[80%] rounded-xl p-4 bg-white/[0.03] border border-white/10">
-                      <div className="text-[10px] text-zinc-500 mb-1">🧠 Hive Mind</div>
-                      <div className="text-sm whitespace-pre-wrap">{streamingMessage}<span className="animate-pulse">▊</span></div>
+                      <div className="text-[10px] text-zinc-500 mb-1">
+                        🧠 Hive Mind
+                      </div>
+                      <div className="text-sm whitespace-pre-wrap">
+                        {streamingMessage}
+                        <span className="animate-pulse">▊</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -250,8 +320,10 @@ Be technically precise. Think like a senior full-stack developer.`;
                 <div className="max-w-4xl mx-auto flex gap-2">
                   <input
                     value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && !e.shiftKey && sendMessage()
+                    }
                     placeholder="Describe what you want to build..."
                     className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20"
                     disabled={isBuilding}
@@ -273,21 +345,37 @@ Be technically precise. Think like a senior full-stack developer.`;
               {generatedFiles.length === 0 ? (
                 <div className="text-center py-16 text-zinc-500">
                   <div className="text-4xl mb-4">📁</div>
-                  <p>No files generated yet. Start a conversation to generate code.</p>
+                  <p>
+                    No files generated yet. Start a conversation to generate
+                    code.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {generatedFiles.map((file, i) => (
-                    <div key={i} className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                    <div
+                      key={i}
+                      className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden"
+                    >
                       <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-white/[0.01]">
-                        <span className="text-xs font-mono text-orange-400">{file.path}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                          file.status === "generated" ? "bg-green-500/20 text-green-400" :
-                          file.status === "applied" ? "bg-blue-500/20 text-blue-400" :
-                          "bg-red-500/20 text-red-400"
-                        }`}>{file.status}</span>
+                        <span className="text-xs font-mono text-orange-400">
+                          {file.path}
+                        </span>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full ${
+                            file.status === "generated"
+                              ? "bg-green-500/20 text-green-400"
+                              : file.status === "applied"
+                                ? "bg-blue-500/20 text-blue-400"
+                                : "bg-red-500/20 text-red-400"
+                          }`}
+                        >
+                          {file.status}
+                        </span>
                       </div>
-                      <pre className="p-4 text-xs font-mono text-zinc-300 overflow-x-auto max-h-64">{file.code}</pre>
+                      <pre className="p-4 text-xs font-mono text-zinc-300 overflow-x-auto max-h-64">
+                        {file.code}
+                      </pre>
                     </div>
                   ))}
                 </div>
@@ -300,7 +388,9 @@ Be technically precise. Think like a senior full-stack developer.`;
               <div className="text-center py-16 text-zinc-500">
                 <div className="text-4xl mb-4">👁️</div>
                 <p>Preview generated components here.</p>
-                <p className="text-xs mt-2">Generated files: {generatedFiles.length}</p>
+                <p className="text-xs mt-2">
+                  Generated files: {generatedFiles.length}
+                </p>
               </div>
             </div>
           )}

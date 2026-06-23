@@ -55,9 +55,14 @@ export default function SocialFeed({ embedded = false }: { embedded?: boolean })
     try {
       const res = await fetch('/api/follows?type=following');
       const data = await res.json();
-      const ids = new Set<string>((data.follows || []).map((f: any) => String(f.users?.followee_id || f.followee_id || '')).filter(Boolean));
+      const ids = new Set<string>((data.follows || []).map((f: { users?: { followee_id?: string }; followee_id?: string }) => String(f.users?.followee_id || f.followee_id || '')).filter(Boolean));
       setFollowedUsers(ids);
     } catch { /* ignore */ }
+  };
+
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
   const fetchPosts = async () => {
@@ -73,6 +78,28 @@ export default function SocialFeed({ embedded = false }: { embedded?: boolean })
     }
   };
 
+  // Setup Supabase Realtime subscription (runs once on mount)
+  useEffect(() => {
+    let mount = true;
+    
+    const setupRealtime = async () => {
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        if (!supabaseUrl || !supabaseKey || !mount) return;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        supabase.channel('public:posts').on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'posts' },
+          () => { fetchPosts(); }
+        ).subscribe();
+      } catch { /* ignore if no supabase config */ }
+    };
+    setupRealtime();
+    return () => { mount = false; };
+  }, []);
+
   useEffect(() => {
     fetchPosts();
     fetchFollows();
@@ -80,11 +107,6 @@ export default function SocialFeed({ embedded = false }: { embedded?: boolean })
     const interval = setInterval(() => { fetchPosts(); fetchFollows(); }, 10000);
     return () => clearInterval(interval);
   }, [isSignedIn, feedFilter]);
-
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

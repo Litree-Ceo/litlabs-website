@@ -1,76 +1,185 @@
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const params = await searchParams;
-  const error = params.error || null;
+"use client";
+
+export const dynamic = "force-dynamic";
+
+import { useState } from "react";
+import { useSignIn } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  Loader2,
+  ArrowRight,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Sparkles,
+} from "lucide-react";
+
+export default function LoginPage() {
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+
+  const handleSignIn = async () => {
+    if (!signIn || !email.trim() || !password) return;
+    setPending(true);
+    setError("");
+    try {
+      const res = await signIn.create({ identifier: email.trim(), password });
+      if (res.status === "complete") {
+        await setActive({ session: res.createdSessionId });
+        router.push("/studio");
+      } else {
+        setError("Additional verification required.");
+      }
+    } catch (err: any) {
+      setError(err?.errors?.[0]?.message || "Invalid credentials");
+    } finally {
+      setPending(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f] p-6 relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-5%] w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[120px] pointer-events-none" />
-
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo */}
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ backgroundColor: "#0a0a0f" }}
+    >
+      <div
+        className="w-full max-w-md p-8 rounded-2xl border"
+        style={{ backgroundColor: "#111118", borderColor: "#1a1a2e" }}
+      >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1">
-            lit<span className="text-blue-500">labs</span>
+          <div className="text-3xl mb-3">⚡</div>
+          <h1 className="text-xl font-black" style={{ color: "#00f0ff" }}>
+            Welcome Back
           </h1>
-          <p className="text-sm text-zinc-500">Build AI Agents</p>
+          <p className="text-sm opacity-50 mt-1">
+            Sign in to LiTTree Lab Studios
+          </p>
         </div>
 
-        {/* Card */}
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8">
-          <h2 className="text-lg font-bold mb-6 text-center">Sign In</h2>
+        {error && (
+          <div
+            className="mb-4 p-3 rounded-lg text-xs font-bold"
+            style={{
+              backgroundColor: "#2e0a0a",
+              border: "1px solid #ff4444",
+              color: "#ff4444",
+            }}
+          >
+            {error}
+          </div>
+        )}
 
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg p-3 text-sm font-medium mb-4">
-              {decodeURIComponent(error.replace(/\+/g, " "))}
-            </div>
-          )}
-
-          <form method="POST" action="/api/auth/login" className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-xs font-medium text-zinc-400 mb-1.5">
-                Email
-              </label>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold opacity-60 mb-1.5 block">
+              Email
+            </label>
+            <div className="relative">
+              <Mail
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: "#555" }}
+              />
               <input
-                id="email"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500 transition-colors"
                 type="email"
-                name="email"
-                required
-                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                className="w-full pl-10 pr-4 py-3 rounded-lg text-sm outline-none border transition-all"
+                style={{
+                  backgroundColor: "#0a0a12",
+                  borderColor: "#1a1a2e",
+                  color: "#e0e0e0",
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
               />
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="password" className="block text-xs font-medium text-zinc-400 mb-1.5">
-                Password
-              </label>
+          <div>
+            <label className="text-xs font-bold opacity-60 mb-1.5 block">
+              Password
+            </label>
+            <div className="relative">
+              <Lock
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: "#555" }}
+              />
               <input
-                id="password"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500 transition-colors"
-                type="password"
-                name="password"
-                required
-                autoComplete="current-password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                className="w-full pl-10 pr-10 py-3 rounded-lg text-sm outline-none border transition-all"
+                style={{
+                  backgroundColor: "#0a0a12",
+                  borderColor: "#1a1a2e",
+                  color: "#e0e0e0",
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
               />
+              <button
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ color: "#555" }}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
+          </div>
 
-            <button type="submit" className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 transition-colors">
-              Sign In
-            </button>
-          </form>
+          <button
+            onClick={handleSignIn}
+            disabled={!email.trim() || !password || pending || !isLoaded}
+            className="w-full py-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2"
+            style={{
+              backgroundColor:
+                email.trim() && password && !pending ? "#00f0ff" : "#1a1a2e",
+              color: email.trim() && password && !pending ? "#000" : "#555",
+              cursor:
+                email.trim() && password && !pending
+                  ? "pointer"
+                  : "not-allowed",
+            }}
+          >
+            {pending ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <ArrowRight size={16} />
+            )}
+            {pending ? "Signing in..." : "Sign In"}
+          </button>
         </div>
 
-        <p className="text-center text-xs text-zinc-600 mt-6">
-          LitLabs v3.0 · AI-Powered Platform
-        </p>
+        <div className="mt-6 text-center">
+          <span className="text-xs opacity-40">
+            Don&apos;t have an account?{" "}
+          </span>
+          <Link
+            href="/sign-up"
+            className="text-xs font-bold"
+            style={{ color: "#ff9ff3" }}
+          >
+            Create one
+          </Link>
+        </div>
+
+        <div
+          className="mt-4 pt-4 text-center"
+          style={{ borderTop: "1px solid #1a1a2e" }}
+        >
+          <Link href="/" className="text-[10px]" style={{ color: "#555" }}>
+            ← Back to home
+          </Link>
+        </div>
       </div>
     </div>
   );

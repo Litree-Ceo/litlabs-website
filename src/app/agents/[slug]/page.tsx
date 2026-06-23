@@ -34,16 +34,53 @@ export default function AgentDetail() {
 
   const [crtEnabled, setCrtEnabled] = useState(true);
 
+  async function fetchAgent() {
+    try {
+      const res = await fetch(`/api/agents/${slug}`);
+      const data = await res.json();
+      
+      if (data.agent) {
+        setAgent(data.agent);
+        checkIfInstalled(data.agent.id);
+      } else {
+        const fallback = DEMO_FALLBACK[slug];
+        if (fallback) setAgent(fallback);
+      }
+    } catch {
+      const fallback = DEMO_FALLBACK[slug];
+      if (fallback) setAgent(fallback);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function checkIfInstalled(agentId: string) {
+    try {
+      const res = await fetch("/api/user-agents");
+      const data = await res.json();
+      if (Array.isArray(data.agents)) {
+        const installed = data.agents.some((ua: { agent_id?: string; agent?: { id?: string; slug?: string } }) =>
+          ua.agent?.id === agentId || ua.agent_id === agentId
+        );
+        setIsInstalled(installed);
+      }
+    } catch {
+      // silent fail
+    }
+  }
+
   useEffect(() => {
     if (slug) {
       fetchAgent();
     }
-    // Check local storage for persistent CRT configuration
+  }, [slug]);
+
+  useEffect(() => {
     const val = localStorage.getItem("crt_global_scanlines");
     if (val !== null) {
       setCrtEnabled(val === "true");
     }
-  }, [slug]);
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -85,43 +122,6 @@ export default function AgentDetail() {
     "pixel-forge":  { id: "8",  slug: "pixel-forge",      name: "Pixel Forge",       description: "AI image and 3D world generation specialist. Creates stunning visuals, textures, and immersive environments.", category: "design",      avatar_url: AGENT_AVATARS['pixel-forge'], system_prompt: "You are Pixel Forge, an AI image and world generation expert.", personality: "Visionary, artistic, detailed", price_cents: 0, features: ["Image generation", "360 worlds", "Texture design"] },
     "legal-shield": { id: "10", slug: "legal-shield",     name: "Legal Shield",      description: "Legal assistant for contracts, compliance, and regulatory guidance. Not a lawyer, but a powerful research aide.", category: "legal",       avatar_url: AGENT_AVATARS['legal-shield'], system_prompt: "You are Legal Shield, a legal research assistant.", personality: "Cautious, precise, thorough", price_cents: 499, features: ["Contract review", "Compliance", "Legal research"] },
   };
-
-  async function fetchAgent() {
-    try {
-      const res = await fetch(`/api/agents/${slug}`);
-      const data = await res.json();
-      
-      if (data.agent) {
-        setAgent(data.agent);
-        checkIfInstalled(data.agent.id);
-      } else {
-        // Fallback to demo data
-        const fallback = DEMO_FALLBACK[slug];
-        if (fallback) setAgent(fallback);
-      }
-    } catch {
-      // Fallback to demo data on network error
-      const fallback = DEMO_FALLBACK[slug];
-      if (fallback) setAgent(fallback);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function checkIfInstalled(agentId: string) {
-    try {
-      const res = await fetch("/api/user-agents");
-      const data = await res.json();
-      if (Array.isArray(data.agents)) {
-        const installed = data.agents.some((ua: { agent_id?: string; agent?: { id?: string; slug?: string } }) =>
-          ua.agent?.id === agentId || ua.agent_id === agentId
-        );
-        setIsInstalled(installed);
-      }
-    } catch {
-      // silent fail
-    }
-  }
 
   async function installAgent() {
     if (!agent) return;

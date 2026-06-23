@@ -6,12 +6,21 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!GEMINI_API_KEY) return NextResponse.json({ error: "Gemini API key not configured" }, { status: 500 });
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!GEMINI_API_KEY)
+    return NextResponse.json(
+      { error: "Gemini API key not configured" },
+      { status: 500 },
+    );
 
   try {
     const { operationName } = await req.json();
-    if (!operationName) return NextResponse.json({ error: "Missing operationName" }, { status: 400 });
+    if (!operationName)
+      return NextResponse.json(
+        { error: "Missing operationName" },
+        { status: 400 },
+      );
 
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
     const op = new GenerateVideosOperation();
@@ -21,14 +30,18 @@ export async function POST(req: NextRequest) {
     const uri = updated.response?.generatedVideos?.[0]?.video?.uri;
 
     if (!uri) {
-      return NextResponse.json({ error: "No video download URI available yet" }, { status: 400 });
+      return NextResponse.json(
+        { error: "No video download URI available yet" },
+        { status: 400 },
+      );
     }
 
     const videoRes = await fetch(uri, {
       headers: { "x-goog-api-key": GEMINI_API_KEY },
     });
 
-    if (!videoRes.ok) throw new Error("Could not download video from Google server.");
+    if (!videoRes.ok)
+      throw new Error("Could not download video from Google server.");
 
     const buffer = await videoRes.arrayBuffer();
     return new NextResponse(Buffer.from(buffer), {
@@ -38,7 +51,10 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    console.error("Video download error:", err);
-    return NextResponse.json({ error: err.message || "Download failed" }, { status: 500 });
+    // Video download error — returned to caller below
+    return NextResponse.json(
+      { error: err.message || "Download failed" },
+      { status: 500 },
+    );
   }
 }

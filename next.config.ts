@@ -1,14 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // ============================================
-  // PERFORMANCE OPTIMIZATIONS
-  // ============================================
-
-  // Turbopack workspace root (fixes lockfile detection warning)
-  turbopack: {
-    root: __dirname,
-  },
+  turbopack: {},
 
   experimental: {
     optimizePackageImports: [
@@ -75,7 +68,8 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()",
+            value:
+              "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()",
           },
           {
             key: "Cross-Origin-Opener-Policy",
@@ -89,7 +83,7 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://js.clerk.dev https://accounts.google.com https://www.googletagmanager.com https://challenges.cloudflare.com https://cdn-cgi.cloudflare.com https://static.cloudflareinsights.com https://litlabs.net",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://js.clerk.dev https://clerk.litlabs.net https://accounts.google.com https://www.googletagmanager.com https://challenges.cloudflare.com https://cdn-cgi.cloudflare.com https://static.cloudflareinsights.com https://litlabs.net",
               "style-src 'self' 'unsafe-inline' https://*.clerk.com",
               "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://image.pollinations.ai https://img.clerk.com https://images.clerk.dev https://fal.media https://storage.googleapis.com https://img.youtube.com https://*.googleusercontent.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
               "font-src 'self' https://*.clerk.com",
@@ -99,6 +93,7 @@ const nextConfig: NextConfig = {
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
+              "manifest-src 'self'",
               "upgrade-insecure-requests",
             ].join("; "),
           },
@@ -168,8 +163,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/builder", destination: "/studio", permanent: true },
-      { source: "/generate", destination: "/studio?tool=image", permanent: false },
-      { source: "/flow", destination: "/studio?tool=flow", permanent: false },
+      {
+        source: "/generate",
+        destination: "/studio?tool=image",
+        permanent: false,
+      },
     ];
   },
 
@@ -180,7 +178,6 @@ const nextConfig: NextConfig = {
       fallback: [],
     };
   },
-
 };
 
 export default nextConfig;

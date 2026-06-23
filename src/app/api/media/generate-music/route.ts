@@ -8,46 +8,66 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const COST = 3;
 
 async function handler(req: NextRequest) {
-    const { userId } = await auth();
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!GEMINI_API_KEY) return NextResponse.json({ error: "Gemini API key not configured" }, { status: 500 });
+  const { userId } = await auth();
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!GEMINI_API_KEY)
+    return NextResponse.json(
+      { error: "Gemini API key not configured" },
+      { status: 500 },
+    );
 
-    const wallet = await getUserWallet(userId);
-    if (wallet.balance < COST) {
-      return NextResponse.json({ error: `Need ${COST} LiTBit Coins` }, { status: 402 });
+  const wallet = await getUserWallet(userId);
+  if (wallet.balance < COST) {
+    return NextResponse.json(
+      { error: `Need ${COST} LiTBit Coins` },
+      { status: 402 },
+    );
+  }
+
+  try {
+    const {
+      prompt,
+      model = "lyria-3-clip-preview",
+      imageBytes,
+      mimeType,
+    } = await req.json();
+    if (!prompt?.trim())
+      return NextResponse.json({ error: "Prompt required" }, { status: 400 });
+
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+    const parts: any[] = [{ text: prompt.trim() }];
+    if (imageBytes) {
+      parts.push({
+        inlineData: { data: imageBytes, mimeType: mimeType || "image/jpg" },
+      });
     }
 
-    try {
-      const { prompt, model = "lyria-3-clip-preview", imageBytes, mimeType } = await req.json();
-      if (!prompt?.trim()) return NextResponse.json({ error: "Prompt required" }, { status: 400 });
+    const response = await ai.models.generateContent({
+      model,
+      contents: { parts },
+      config: { responseModalities: [Modality.AUDIO] },
+    });
 
-      const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const audioBase64 =
+      response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ?? "";
+    if (!audioBase64) throw new Error("Music generation returned empty audio.");
 
-      const parts: any[] = [{ text: prompt.trim() }];
-      if (imageBytes) {
-        parts.push({ inlineData: { data: imageBytes, mimeType: mimeType || "image/jpg" } });
-      }
+    const newBalance = await updateWalletBalance(userId, -COST);
 
-      const response = await ai.models.generateContent({
-        model,
-        contents: { parts },
-        config: { responseModalities: [Modality.AUDIO] },
-      });
-
-      const audioBase64 = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ?? "";
-      if (!audioBase64) throw new Error("Music generation returned empty audio.");
-
-      const newBalance = await updateWalletBalance(userId, -COST);
-
-      return NextResponse.json({
-        audioBase64: `data:audio/wav;base64,${audioBase64}`,
-        cost: COST,
-        balance: newBalance,
-      });
-    } catch (err: any) {
-      console.error("Music generation error:", err);
-      return NextResponse.json({ error: err.message || "Music generation failed" }, { status: 500 });
-    }
+    return NextResponse.json({
+      audioBase64: `data:audio/wav;base64,${audioBase64}`,
+      cost: COST,
+      balance: newBalance,
+    });
+  } catch (err: any) {
+    // Music generation error — returned to caller below
+    return NextResponse.json(
+      { error: err.message || "Music generation failed" },
+      { status: 500 },
+    );
+  }
 }
 
 export const POST = withRateLimit(handler, 60, 60);

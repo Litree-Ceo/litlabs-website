@@ -19,10 +19,10 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (existing) {
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         user: existing,
-        message: "User already exists" 
+        message: "User already exists",
       });
     }
 
@@ -46,8 +46,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Failed to create user:", error);
-      return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
+      // DB error — returned to caller below
+      return NextResponse.json(
+        { error: "Failed to create user" },
+        { status: 500 },
+      );
     }
 
     // Create initial wallet
@@ -57,15 +60,14 @@ export async function POST(req: NextRequest) {
       lifetime_earned: 500,
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       user: newUser,
       message: "User created successfully",
-      startingBalance: 500
+      startingBalance: 500,
     });
-
   } catch (err) {
-    console.error("Ensure user error:", err);
+    // Unexpected error — returned to caller below
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -74,19 +76,22 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const { userId: clerkId } = await auth();
   if (!clerkId) {
-    return NextResponse.json({ exists: false, error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json(
+      { exists: false, error: "Not authenticated" },
+      { status: 401 },
+    );
   }
 
   const sb = getSupabase();
-  
+
   const { data: user } = await sb
     .from("users")
     .select("id, username, display_name")
     .eq("clerk_id", clerkId)
     .single();
 
-  return NextResponse.json({ 
+  return NextResponse.json({
     exists: !!user,
-    user: user || null 
+    user: user || null,
   });
 }

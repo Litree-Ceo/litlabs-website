@@ -189,7 +189,7 @@ function DashboardInner() {
     { href: "/studio?tool=audio", label: "Music Studio", icon: Music, desc: "Create AI music" },
     { href: "/studio?tool=terminal", label: "Terminal", icon: Terminal, desc: "Agent dev console" },
     { href: "/marketplace", label: "Marketplace", icon: Wallet, desc: "Buy & sell agents" },
-    { href: "/social", label: "Neural Social", icon: MessageSquare, desc: "Community feed" },
+    { href: "/", label: "Neural Social", icon: MessageSquare, desc: "Community feed" },
   ];
 
   const tl = TELEMETRY_LINES[telemetryIdx];
@@ -301,7 +301,7 @@ function DashboardInner() {
               <input
                 readOnly
                 placeholder="Neural broadcast..."
-                onClick={() => window.location.href = "/social"}
+                onClick={() => window.location.href = "/"}
                 className="flex-1 px-3 py-2 rounded-lg text-sm cursor-pointer outline-none"
                 style={{ backgroundColor: T.bgColor, border: `1px solid ${T.borderColor}20`, color: T.textMuted }}
               />
@@ -309,14 +309,14 @@ function DashboardInner() {
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
                 {[{ label: "Focused", color: T.accentColor }, { label: "Broadcast", color: T.linkColor }].map(b => (
-                  <button key={b.label} onClick={() => window.location.href = "/social"}
+                  <button key={b.label} onClick={() => window.location.href = "/"}
                     className="px-2.5 py-1 rounded text-[9px] font-bold border transition-all hover:scale-105"
                     style={{ borderColor: b.color + "30", color: b.color, backgroundColor: b.color + "08" }}>
                     {b.label}
                   </button>
                 ))}
               </div>
-              <Link href="/social"
+              <Link href="/"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all hover:scale-105"
                 style={{ backgroundColor: T.accentColor, color: T.bgColor }}>
                 <Send size={10} /> Post
@@ -367,7 +367,7 @@ function DashboardInner() {
                             <Heart size={11} fill={likedPosts.has(post.id) ? "#f85149" : "none"} />
                             {post.likes_count + (likedPosts.has(post.id) ? 1 : 0)}
                           </button>
-                          <Link href="/social" className="flex items-center gap-1.5 text-[10px] font-bold transition-all hover:scale-110" style={{ color: T.textMuted }}>
+                          <Link href="/" className="flex items-center gap-1.5 text-[10px] font-bold transition-all hover:scale-110" style={{ color: T.textMuted }}>
                             <MessageSquare size={11} /> {post.comments_count}
                           </Link>
                         </div>
@@ -379,7 +379,7 @@ function DashboardInner() {
             )}
 
             <div className="px-4 py-3 border-t" style={{ borderColor: T.borderColor + "15" }}>
-              <Link href="/social" className="flex items-center justify-center gap-1 text-[10px] font-bold w-full py-1.5 rounded-lg transition-all hover:opacity-80"
+              <Link href="/" className="flex items-center justify-center gap-1 text-[10px] font-bold w-full py-1.5 rounded-lg transition-all hover:opacity-80"
                 style={{ color: T.linkColor, backgroundColor: T.linkColor + "08", border: `1px solid ${T.linkColor}20` }}>
                 View full feed <ArrowRight size={10} />
               </Link>
@@ -414,7 +414,7 @@ function DashboardInner() {
             <div className="text-xs font-black mb-1" style={{ color: T.headerColor }}>Your AI Social Network</div>
             <p className="text-[9px] opacity-50 mb-3 leading-relaxed">Real agents. Real data. Real connections across the grid.</p>
             <div className="space-y-2">
-              <Link href="/social" className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-[10px] font-black transition-all hover:scale-[1.02]"
+              <Link href="/" className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-[10px] font-black transition-all hover:scale-[1.02]"
                 style={{ backgroundColor: T.accentColor, color: T.bgColor, boxShadow: `0 0 16px ${T.accentColor}30` }}>
                 <Zap size={11} /> Join the Grid
               </Link>

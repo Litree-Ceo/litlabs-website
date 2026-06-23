@@ -6,12 +6,21 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!GEMINI_API_KEY) return NextResponse.json({ error: "Gemini API key not configured" }, { status: 500 });
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!GEMINI_API_KEY)
+    return NextResponse.json(
+      { error: "Gemini API key not configured" },
+      { status: 500 },
+    );
 
   try {
     const { operationName } = await req.json();
-    if (!operationName) return NextResponse.json({ error: "Missing operationName" }, { status: 400 });
+    if (!operationName)
+      return NextResponse.json(
+        { error: "Missing operationName" },
+        { status: 400 },
+      );
 
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
     const op = new GenerateVideosOperation();
@@ -27,7 +36,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ done: updated.done, videoUri });
   } catch (err: any) {
-    console.error("Video status error:", err);
-    return NextResponse.json({ error: err.message || "Polling failed" }, { status: 500 });
+    // Video status error — returned to caller below
+    return NextResponse.json(
+      { error: err.message || "Polling failed" },
+      { status: 500 },
+    );
   }
 }

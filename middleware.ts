@@ -16,22 +16,41 @@ const isProtectedRoute = createRouteMatcher([
   "/api/orchestrate",
 ]);
 
-// Skip middleware entirely if Clerk is not configured
+const PUBLIC_PATHS = [
+  "/",
+  "/sign-in",
+  "/sign-up",
+  "/about",
+  "/contact",
+  "/docs",
+  "/pricing",
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/auth/session",
+  "/api/jarvis/notify",
+  "/api/stripe/webhook",
+  "/api/webhook/clerk",
+  "/api/og-image",
+];
+
 const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const clerkSecretKey = process.env.CLERK_SECRET_KEY;
 const isClerkConfigured = !!(clerkKey && clerkSecretKey);
 
 export default clerkMiddleware(async (auth, req) => {
-  // If Clerk is not configured, just pass through
   if (!isClerkConfigured) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    if (PUBLIC_PATHS.some(p => req.nextUrl.pathname.startsWith(p) || req.nextUrl.pathname === p)) {
+      response.headers.set("Cache-Control", "public, max-age=1800, stale-while-revalidate=3600");
+    }
+    response.headers.set("Vary", "Accept-Encoding");
+    return response;
   }
 
   const { userId } = await auth();
-
   const response = NextResponse.next();
 
-  if (["/about", "/contact", "/docs", "/pricing"].includes(req.nextUrl.pathname)) {
+  if (PUBLIC_PATHS.some(p => req.nextUrl.pathname.startsWith(p) || req.nextUrl.pathname === p)) {
     response.headers.set("Cache-Control", "public, max-age=1800, stale-while-revalidate=3600");
   }
 
