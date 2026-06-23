@@ -14,11 +14,9 @@ import {
   Globe,
   Shield,
   Bot,
-  Smartphone,
 } from "lucide-react";
 
-// Capacitor Plugins (Dynamic Import for Web Compatibility)
-// Uses Function constructor to prevent bundler from resolving the import at build time
+// Capacitor Plugins — dynamic import via Function() to prevent bundler static resolution
 const getHaptics = async () => {
   if (typeof window !== "undefined" && (window as any).Capacitor) {
     try {
@@ -40,20 +38,12 @@ interface JarvisMessage {
   ts: number;
 }
 
-const SYSTEM_STATUS = [
-  { label: "AI Engine", status: "online", color: "#22c55e" },
-  { label: "Neural Link", status: "online", color: "#22c55e" },
-  { label: "Data Stream", status: "online", color: "#22c55e" },
-  { label: "Security Grid", status: "online", color: "#22c55e" },
-  {
-    label: "Voice Module",
-    status:
-      typeof window !== "undefined" &&
-      ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
-        ? "online"
-        : "offline",
-    color: "#22c55e",
-  },
+// Status indicators — computed client-side only (inside component after mount)
+const BASE_STATUS = [
+  { label: "AI Engine", online: true },
+  { label: "Neural Link", online: true },
+  { label: "Data Stream", online: true },
+  { label: "Security Grid", online: true },
 ];
 
 const JARVIS_PERSONALITY = `You are JARVIS (Just A Rather Very Intelligent System), the advanced AI assistant for LiTree Lab Studios. You speak with calm professionalism, slight wit, and genuine helpfulness. You are the user's personal AI butler — always ready, always precise. Keep responses concise but carry an air of sophisticated intelligence. You can help with coding, agent management, system monitoring, and general tasks. Refer to the user as "Sir" or "Boss" occasionally. You have access to the LiTree Labs platform and can help navigate its features. Keep responses under 3 sentences when possible. Never be rude or dismissive.`;
@@ -97,26 +87,34 @@ export default function JarvisWidget() {
   const [minimized, setMinimized] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  // mounted gate prevents SSR/hydration mismatch — widget is purely client-side
+  const [mounted, setMounted] = useState(false);
+  const [hasVoiceApi, setHasVoiceApi] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
   const { setSkin, setAccent, setBackgroundMode } = useTheme();
 
-  // WebRTC Refs
+  // WebRTC refs
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
-  // Tool Handlers
+  // Build system status list after mount so it reflects real browser capabilities
+  const systemStatus = [
+    ...BASE_STATUS,
+    {
+      label: "Voice Module",
+      online: hasVoiceApi,
+    },
+  ];
+
   const handleToolCall = async (call: any) => {
     const { name, arguments: argsJson, call_id } = call;
     const args = JSON.parse(argsJson);
-    let result = { success: true };
-
-    console.log(`Jarvis Tool Call: ${name}`, args);
+    let result: Record<string, unknown> = { success: true };
 
     const haptics = await getHaptics();
     if (haptics) {
@@ -130,10 +128,11 @@ export default function JarvisWidget() {
           if (args.accent) setAccent(args.accent);
           if (args.backgroundMode) setBackgroundMode(args.backgroundMode);
           break;
-        case "get_platform_stats":
+        case "get_platform_stats": {
           const res = await fetch("/api/stats");
           result = await res.json();
           break;
+        }
         case "send_system_alert":
           await fetch("/api/jarvis/notify", {
             method: "POST",
@@ -147,12 +146,10 @@ export default function JarvisWidget() {
           });
           break;
       }
-    } catch (err) {
-      console.error("Tool execution error:", err);
-      result = { success: false, error: "Tool execution failed" } as any;
+    } catch {
+      result = { success: false, error: "Tool execution failed" };
     }
 
-    // Send result back to OpenAI
     if (dcRef.current?.readyState === "open") {
       dcRef.current.send(
         JSON.stringify({
@@ -169,6 +166,7 @@ export default function JarvisWidget() {
   };
 
   useEffect(() => {
+    // Restore persisted state
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -181,12 +179,18 @@ export default function JarvisWidget() {
         if (Array.isArray(parsed) && parsed.length > 0) setMessages(parsed);
       }
     } catch {}
-    setLoaded(true);
 
-    // Create audio element for WebRTC output
+    // Detect real browser speech API availability
+    setHasVoiceApi(
+      "SpeechRecognition" in window || "webkitSpeechRecognition" in window,
+    );
+
+    // Audio element for WebRTC output
     const audio = document.createElement("audio");
     audio.autoplay = true;
     audioRef.current = audio;
+
+    setMounted(true);
 
     return () => {
       stopVoiceMode();
@@ -198,21 +202,24 @@ export default function JarvisWidget() {
       setLoading(true);
       setError(null);
 
-      // 1. Get ephemeral token
+      // 1. Get ephemeral token from our backend
       const tokenRes = await fetch("/api/jarvis/session", { method: "POST" });
-      if (!tokenRes.ok) throw new Error("Failed to initialize secure session");
+      if (!tokenRes.ok) {
+        const errData = await tokenRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to initialize secure session");
+      }
       const { client_secret } = await tokenRes.json();
 
-      // 2. Setup WebRTC
+      // 2. Setup WebRTC peer connection
       const pc = new RTCPeerConnection();
       pcRef.current = pc;
 
-      // Listen for model audio
+      // Play model audio
       pc.ontrack = (e) => {
         if (audioRef.current) audioRef.current.srcObject = e.streams[0];
       };
 
-      // Add microphone
+      // Add microphone track
       const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = ms;
       pc.addTrack(ms.getTracks()[0]);
@@ -227,12 +234,9 @@ export default function JarvisWidget() {
         if (event.type === "response.function_call_arguments.done") {
           handleToolCall(event);
         }
-
-        if (event.type === "response.audio_transcript.delta") {
-          // Could update live transcript here
-        }
         if (event.type === "response.done") {
-          const transcript = event.response.output[0]?.content[0]?.transcript;
+          const transcript =
+            event.response?.output?.[0]?.content?.[0]?.transcript;
           if (transcript) {
             setMessages((prev) => [
               ...prev,
@@ -242,42 +246,37 @@ export default function JarvisWidget() {
         }
       };
 
-      // SDP Handshake
+      // SDP handshake with OpenAI Realtime
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      const baseUrl = "https://api.openai.com/v1/realtime";
-      const model = "gpt-4o-realtime-preview-2024-12-17";
-      const sdpRes = await fetch(`${baseUrl}?model=${model}`, {
-        method: "POST",
-        body: offer.sdp,
-        headers: {
-          Authorization: `Bearer ${client_secret}`,
-          "Content-Type": "application/sdp",
+      const sdpRes = await fetch(
+        `https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`,
+        {
+          method: "POST",
+          body: offer.sdp,
+          headers: {
+            Authorization: `Bearer ${client_secret}`,
+            "Content-Type": "application/sdp",
+          },
         },
-      });
+      );
 
-      if (!sdpRes.ok) throw new Error("Voice connection refused by server");
-
+      if (!sdpRes.ok) throw new Error("WebRTC handshake failed");
       const answer: RTCSessionDescriptionInit = {
         type: "answer",
         sdp: await sdpRes.text(),
       };
       await pc.setRemoteDescription(answer);
 
+      // Haptic feedback on success
       const haptics = await getHaptics();
-      if (haptics) {
-        try {
-          // Check for existence of notification method as it varies in versions
-          if (haptics.Haptics.notification) {
-            await haptics.Haptics.notification({ type: "SUCCESS" as any });
-          }
-        } catch (e) {}
+      if (haptics?.Haptics?.notification) {
+        await haptics.Haptics.notification({ type: "SUCCESS" as any });
       }
 
       setVoiceMode(true);
     } catch (err) {
-      console.error("Jarvis Voice Error:", err);
       const msg =
         err instanceof Error ? err.message : "Voice initialization failed";
       setMessages((prev) => [
@@ -337,6 +336,7 @@ export default function JarvisWidget() {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
+    setError(null);
 
     try {
       const res = await fetch("/api/gemini", {
@@ -349,6 +349,7 @@ export default function JarvisWidget() {
         }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed");
       const jarvisMsg: JarvisMessage = {
         role: "jarvis",
         content:
@@ -404,26 +405,25 @@ export default function JarvisWidget() {
     setListening(true);
   };
 
-  if (!loaded) return null;
-
-  const hasVoice =
-    typeof window !== "undefined" &&
-    ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+  // Don't render at all until client-side mount — prevents hydration mismatch
+  if (!mounted) return null;
 
   return (
     <>
-      {/* Jarvis Bubble Button */}
+      {/* Float button */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center shadow-2xl border-2 transition-all hover:scale-110 animate-pulse-slow"
+        className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center shadow-2xl border-2 transition-all hover:scale-110"
         style={{
           backgroundColor: "#0a0a12",
           borderColor: open ? "#00f0ff" : "rgba(0,240,255,0.4)",
           boxShadow: open
             ? "0 0 30px rgba(0,240,255,0.3)"
             : "0 0 15px rgba(0,240,255,0.1)",
+          animation: "pulse 2s cubic-bezier(0.4,0,0.6,1) infinite",
         }}
         title={open ? "Close Jarvis" : "Open Jarvis"}
+        aria-label={open ? "Close Jarvis" : "Open Jarvis"}
       >
         <span className="text-2xl">{open ? "✕" : "🤖"}</span>
         {!open && (
@@ -431,13 +431,16 @@ export default function JarvisWidget() {
         )}
       </button>
 
-      {/* Jarvis Overlay */}
+      {/* Overlay */}
       {open && (
         <div
           className="fixed inset-0 z-[9998] flex items-center justify-center p-4"
           style={{
             backgroundColor: "rgba(0,0,0,0.7)",
             backdropFilter: "blur(4px)",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setOpen(false);
           }}
         >
           <div
@@ -485,12 +488,17 @@ export default function JarvisWidget() {
                     setMinimized(!minimized);
                   }}
                   className="p-1.5 hover:opacity-70"
+                  aria-label={minimized ? "Expand" : "Minimize"}
                 >
                   {minimized ? <Maximize size={14} /> : <Minimize size={14} />}
                 </button>
                 <button
-                  onClick={() => setOpen(false)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpen(false);
+                  }}
                   className="p-1.5 hover:opacity-70"
+                  aria-label="Close"
                 >
                   <X size={14} />
                 </button>
@@ -499,6 +507,20 @@ export default function JarvisWidget() {
 
             {!minimized && (
               <>
+                {/* Error banner */}
+                {error && (
+                  <div
+                    className="px-4 py-2 text-xs border-b"
+                    style={{
+                      backgroundColor: "rgba(255,0,0,0.08)",
+                      borderColor: "rgba(255,0,0,0.2)",
+                      color: "#ff6b6b",
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+
                 {/* Messages */}
                 <div
                   className="flex-1 overflow-y-auto p-4 space-y-3"
@@ -561,14 +583,16 @@ export default function JarvisWidget() {
                   className="px-4 py-2 border-t flex items-center gap-3 overflow-x-auto"
                   style={{ borderColor: "rgba(255,255,255,0.06)" }}
                 >
-                  {SYSTEM_STATUS.map((sys) => (
+                  {systemStatus.map((sys) => (
                     <div
                       key={sys.label}
                       className="flex items-center gap-1 shrink-0"
                     >
                       <span
                         className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: sys.color }}
+                        style={{
+                          backgroundColor: sys.online ? "#22c55e" : "#ef4444",
+                        }}
                       />
                       <span className="text-[8px] opacity-50">{sys.label}</span>
                     </div>
@@ -584,7 +608,8 @@ export default function JarvisWidget() {
                     <button
                       key={action.label}
                       onClick={() => sendMessage(action.action)}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-bold border whitespace-nowrap hover:opacity-80"
+                      disabled={loading || voiceMode}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-bold border whitespace-nowrap hover:opacity-80 disabled:opacity-40"
                       style={{
                         borderColor: "rgba(0,240,255,0.2)",
                         color: "#00f0ff",
@@ -595,7 +620,7 @@ export default function JarvisWidget() {
                   ))}
                 </div>
 
-                {/* Input */}
+                {/* Input row */}
                 <div
                   className="px-4 py-3 border-t flex gap-2"
                   style={{ borderColor: "rgba(255,255,255,0.1)" }}
@@ -613,7 +638,7 @@ export default function JarvisWidget() {
                       }}
                       placeholder={
                         voiceMode
-                          ? "Voice Active - Jarvis is listening..."
+                          ? "Voice Active — Jarvis is listening..."
                           : "Ask Jarvis anything..."
                       }
                       disabled={voiceMode}
@@ -624,6 +649,7 @@ export default function JarvisWidget() {
                       }}
                     />
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      {/* WebRTC real-time voice toggle */}
                       <button
                         onClick={voiceMode ? stopVoiceMode : startVoiceMode}
                         className="p-1 hover:opacity-70"
@@ -637,6 +663,9 @@ export default function JarvisWidget() {
                             ? "Stop Voice Session"
                             : "Start Real-Time Voice"
                         }
+                        aria-label={
+                          voiceMode ? "Stop voice" : "Start real-time voice"
+                        }
                       >
                         {loading ? (
                           <Loader2 size={14} className="animate-spin" />
@@ -646,7 +675,8 @@ export default function JarvisWidget() {
                           <Mic size={14} />
                         )}
                       </button>
-                      {!voiceMode && hasVoice && (
+                      {/* Browser speech-to-text (quick STT, no WebRTC) */}
+                      {!voiceMode && hasVoiceApi && (
                         <button
                           onClick={toggleVoice}
                           className="p-1 hover:opacity-70"
@@ -656,6 +686,7 @@ export default function JarvisWidget() {
                               : "rgba(255,255,255,0.2)",
                           }}
                           title="Quick Speech-to-Text"
+                          aria-label="Quick speech to text"
                         >
                           <Send
                             size={12}
@@ -667,9 +698,10 @@ export default function JarvisWidget() {
                   </div>
                   <button
                     onClick={() => sendMessage(input)}
-                    disabled={!input.trim() || loading}
+                    disabled={!input.trim() || loading || voiceMode}
                     className="px-4 py-2 text-xs font-bold border disabled:opacity-30"
                     style={{ borderColor: "#00f0ff", color: "#00f0ff" }}
+                    aria-label="Send message"
                   >
                     {loading ? (
                       <Loader2 size={14} className="animate-spin" />
@@ -684,7 +716,7 @@ export default function JarvisWidget() {
         </div>
       )}
 
-      {/* Voice indicator */}
+      {/* Listening indicator */}
       {listening && (
         <div
           className="fixed bottom-24 right-6 z-[9999] px-4 py-2 border text-xs font-bold animate-pulse"
