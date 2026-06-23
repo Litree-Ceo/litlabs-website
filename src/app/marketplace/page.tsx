@@ -1,395 +1,375 @@
-'use client';
-export const dynamic = "force-dynamic";
+"use client";
 
-import { useState, useCallback, useEffect, Suspense } from 'react';
-import Link from 'next/link';
-import { useTheme } from '@/context/ThemeContext';
-import { useClerkAuth } from '@/hooks/useClerkAuth';
-import { useSearchParams } from 'next/navigation';
-import { AGENT_AVATARS, AGENT_AVATAR_META, type AgentAvatarMeta } from '@/lib/avatars';
-import { Check } from 'lucide-react';
+import { useState, useEffect, useMemo } from "react";
+import { useTheme } from "@/context/ThemeContext";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
+import Link from "next/link";
+import PageShell from "@/components/PageShell";
+import {
+  ShoppingBag,
+  Zap,
+  Sparkles,
+  Bot,
+  Search,
+  Filter,
+  ArrowRight,
+  Loader2,
+  Check,
+  Shield,
+  Coins,
+  Star,
+  Users,
+  Code,
+  Layout,
+  Music,
+  Camera,
+  Layers,
+  ExternalLink,
+  ChevronDown,
+} from "lucide-react";
 
-function formatPrice(cents: number): string {
-  if (cents === 0) return 'FREE';
-  return cents + ' LBC';
+interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price_cents: number;
+  rating: number;
+  installs: number;
+  icon: string;
+  tags: string[];
+  is_featured: boolean;
 }
 
-// Category color mapping for consistent theming
-function getCategoryColor(category: string): string {
-  const colors: Record<string, string> = {
-    developer: '#818cf8',    // Indigo
-    marketing: '#34d399',  // Emerald  
-    analytics: '#a78bfa',    // Purple
-    content: '#f472b6',      // Pink
-    general: '#fbbf24',      // Amber
-    orchestrator: '#fb923c', // Orange
-    music: '#22d3ee',        // Cyan
-    design: '#ec4899',       // Rose
-    research: '#60a5fa',     // Blue
-    legal: '#94a3b8',        // Slate
-  };
-  return colors[category] || '#fbbf24';
-}
-
-// CREDIT PACKS — Stripe price_id required for each (create in Stripe Dashboard)
-// Note: Found price_1TYs4AJ53kgx4fp5RgAChEmk (Pro Membership) in Stripe, but not specific coin packs.
-const CREDIT_PACKS: { id: string; coins: number; price: number; priceId: string; label: string; popular: boolean; savings: string }[] = [
-  { id: 'starter', coins: 500, price: 1, priceId: '', label: 'Starter', popular: false, savings: 'Entry pack' },
-  { id: 'popular', coins: 1200, price: 5, priceId: '', label: 'Popular', popular: true, savings: 'Save 20%' },
-  { id: 'pro', coins: 3000, price: 10, priceId: '', label: 'Pro', popular: false, savings: 'Save 33%' },
-  { id: 'whale', coins: 7000, price: 25, priceId: '', label: 'Whale', popular: false, savings: 'Save 43%' },
-  { id: 'max', coins: 15000, price: 50, priceId: '', label: 'Max', popular: false, savings: 'Save 50%' },
+const CATEGORIES = [
+  "all",
+  "general",
+  "developer",
+  "design",
+  "marketing",
+  "analytics",
+  "content",
+  "music",
 ];
-
-// SPEND COINS — interactive features with real coin deduction
-const SPEND_FEATURES: { id: string; title: string; desc: string; cost: number; action: string }[] = [
-  { id: 'generate', title: 'AI Generate', desc: 'Generate an image, music track, or video with AI', cost: 50, action: 'Generate' },
-  { id: 'slot', title: 'Extra Agent Slot', desc: 'Expand your dock to run +1 agent simultaneously', cost: 200, action: 'Unlock' },
-  { id: 'boost', title: 'Social Boost', desc: 'Feature your post at the top of the social feed for 24h', cost: 100, action: 'Boost' },
-  { id: 'priority', title: 'Priority Mode', desc: 'Get faster agent responses and higher rate limits', cost: 150, action: 'Activate' },
-  { id: 'theme', title: 'Rare Theme', desc: 'Unlock an exclusive limited-edition UI skin', cost: 300, action: 'Unlock' },
-  { id: 'workflow', title: 'Workflow Run', desc: 'Execute a multi-agent orchestrated workflow', cost: 75, action: 'Run' },
-];
-
-type Agent = {
-  id: string; slug: string; name: string; description: string;
-  category: string; avatar_url: string; price_cents: number;
-  features: string[]; is_featured: boolean; personality: string;
-  rating?: number; installs?: number;
-};
 
 const CATEGORY_LABELS: Record<string, string> = {
-  developer: 'Developer', marketing: 'Marketing', analytics: 'Analytics',
-  content: 'Content', general: 'General', orchestrator: 'Orchestrator',
-  music: 'Music', design: 'Design', research: 'Research', legal: 'Legal',
+  all: "All Neural Units",
+  general: "General Purpose",
+  developer: "Dev Tools",
+  design: "Visual Forge",
+  marketing: "Growth Hackers",
+  analytics: "Data Slayers",
+  content: "Content Engines",
+  music: "Audio Producers",
 };
 
-// AGENT PRICING TIERS (in LiTBit Coins 🪙)
-// Free: Core agents everyone gets
-// Budget (50-150): Basic specialized agents  
-// Pro (200-500): Advanced agents with premium features
-// Elite (1000+): Enterprise-grade specialized agents
-const DEMO_AGENTS: Agent[] = [
-  // FREE TIER - Core agents
-  { id: '1', slug: 'director', name: 'Director', description: 'The master orchestrator. Coordinates strategy, builds agent systems, and delegates tasks across your entire platform.', category: 'orchestrator', avatar_url: AGENT_AVATARS.director, price_cents: 0, features: ['Multi-agent orchestration', 'Strategy planning', 'Workflow automation'], is_featured: true, personality: 'Strategic, decisive, concise', rating: 4.9, installs: 1240 },
-  { id: '2', slug: 'champion', name: 'Champion', description: 'Your all-purpose AI partner. Brainstorm, research, plan, and execute any task with unlimited versatility.', category: 'general', avatar_url: AGENT_AVATARS.champion, price_cents: 0, features: ['General assistance', 'Brainstorming', 'Research'], is_featured: true, personality: 'Helpful, thorough, direct', rating: 4.8, installs: 2103 },
-  { id: '3', slug: 'code-champion', name: 'Code Champion', description: 'Senior software engineer. Writes, reviews, debugs, and explains code across all languages and frameworks.', category: 'developer', avatar_url: AGENT_AVATARS['code-champion'], price_cents: 0, features: ['Code generation', 'Debugging', 'Architecture'], is_featured: true, personality: 'Precise, clean, practical', rating: 4.9, installs: 1567 },
-
-  // BUDGET TIER (50-150 coins ~ $0.50-$1.50)
-  { id: '4', slug: 'writing-coach', name: 'Writing Coach', description: 'Master copywriter. Elevates writing quality — editing, tone adjustment, copywriting, and storytelling.', category: 'content', avatar_url: AGENT_AVATARS['writing-coach'], price_cents: 75, features: ['Editing', 'Tone adjustment', 'Copywriting'], is_featured: false, personality: 'Constructive, articulate, refined', rating: 4.8, installs: 1120 },
-  { id: '5', slug: 'research-guru', name: 'Research Guru', description: 'Deep research agent. Synthesizes information from multiple sources, fact-checks, and produces reports.', category: 'research', avatar_url: AGENT_AVATARS['research-guru'], price_cents: 100, features: ['Deep research', 'Fact-checking', 'Reporting'], is_featured: false, personality: 'Thorough, skeptical, rigorous', rating: 4.5, installs: 432 },
-  { id: '6', slug: 'support-agent', name: 'Support Agent', description: 'Customer support specialist. Handles inquiries, troubleshooting, and creates FAQ documentation.', category: 'general', avatar_url: AGENT_AVATARS['support-agent'], price_cents: 50, features: ['Support tickets', 'Documentation', 'Troubleshooting'], is_featured: false, personality: 'Patient, helpful, clear', rating: 4.6, installs: 543 },
-
-  // PRO TIER (200-500 coins ~ $2-$5)
-  { id: '7', slug: 'social-dominator', name: 'Social Dominator', description: 'Growth hacker and content creator. Writes viral posts, crafts strategies, and helps you dominate social media.', category: 'marketing', avatar_url: AGENT_AVATARS['social-dominator'], price_cents: 250, features: ['Viral content', 'Growth strategy', 'Analytics'], is_featured: true, personality: 'Bold, creative, results-driven', rating: 4.7, installs: 890 },
-  { id: '8', slug: 'data-slayer', name: 'Data Slayer', description: 'Data scientist. Analyzes data, builds models, creates visualizations, and surfaces actionable insights.', category: 'analytics', avatar_url: AGENT_AVATARS['data-slayer'], price_cents: 300, features: ['Data analysis', 'Modeling', 'Visualization'], is_featured: true, personality: 'Precise, analytical, data-driven', rating: 4.6, installs: 654 },
-  { id: '9', slug: 'pixel-forge', name: 'Pixel Forge', description: 'AI image and 3D world generation specialist. Creates stunning visuals, textures, and immersive environments.', category: 'design', avatar_url: AGENT_AVATARS['pixel-forge'], price_cents: 200, features: ['Image generation', '360 worlds', 'Texture design'], is_featured: true, personality: 'Visionary, artistic, detailed', rating: 4.8, installs: 921 },
-  { id: '10', slug: 'music-producer', name: 'Music Producer', description: 'Creates original music from text prompts and lyrics. Generates songs, instrumentals, and covers with AI.', category: 'music', avatar_url: AGENT_AVATARS['music-producer'], price_cents: 400, features: ['Music generation', 'Lyrics writing', 'Style guidance'], is_featured: true, personality: 'Creative, musical, expressive', rating: 4.7, installs: 743 },
-
-  // ELITE TIER (1000+ coins ~ $10+)
-  { id: '11', slug: 'legal-shield', name: 'Legal Shield', description: 'Legal assistant for contracts, compliance, and regulatory guidance. Not a lawyer, but a powerful research aide.', category: 'legal', avatar_url: AGENT_AVATARS['legal-shield'], price_cents: 1000, features: ['Contract review', 'Compliance', 'Legal research'], is_featured: false, personality: 'Cautious, precise, thorough', rating: 4.4, installs: 210 },
-  { id: '12', slug: 'security-guru', name: 'Security Guru', description: 'Cybersecurity expert. Audits code, finds vulnerabilities, and recommends security best practices.', category: 'developer', avatar_url: AGENT_AVATARS['security-guru'], price_cents: 1200, features: ['Security audits', 'Vulnerability scanning', 'Best practices'], is_featured: false, personality: 'Paranoid, thorough, vigilant', rating: 4.7, installs: 156 },
-  { id: '13', slug: 'ml-engineer', name: 'ML Engineer', description: 'Machine learning specialist. Builds models, optimizes training, and deploys AI systems.', category: 'analytics', avatar_url: AGENT_AVATARS['ml-engineer'], price_cents: 1500, features: ['Model training', 'Hyperparameter tuning', 'Model deployment'], is_featured: false, personality: 'Methodical, experimental, rigorous', rating: 4.8, installs: 89 },
+const AGENTS: Agent[] = [
+  {
+    id: "champion",
+    name: "Champion",
+    description:
+      "Your all-purpose AI partner. Brainstorm, research, plan, and execute any task with unlimited versatility.",
+    category: "general",
+    price_cents: 0,
+    rating: 4.8,
+    installs: 2103,
+    icon: "🏆",
+    tags: ["General assistance", "Brainstorming", "Research"],
+    is_featured: true,
+  },
+  {
+    id: "code-champion",
+    name: "Code Champion",
+    description:
+      "Senior software engineer. Writes, reviews, debugs, and explains code across all languages and frameworks.",
+    category: "developer",
+    price_cents: 0,
+    rating: 4.9,
+    installs: 1567,
+    icon: "💻",
+    tags: ["Code generation", "Debugging", "Architecture"],
+    is_featured: true,
+  },
+  {
+    id: "director",
+    name: "Director",
+    description:
+      "The master orchestrator. Coordinates strategy, builds agent systems, and delegates tasks across your entire platform.",
+    category: "general",
+    price_cents: 0,
+    rating: 4.9,
+    installs: 1240,
+    icon: "🎯",
+    tags: [
+      "Multi-agent orchestration",
+      "Strategy planning",
+      "Workflow automation",
+    ],
+    is_featured: true,
+  },
+  {
+    id: "pixel-forge",
+    name: "Pixel Forge",
+    description:
+      "AI image and 3D world generation specialist. Creates stunning visuals, textures, and immersive environments.",
+    category: "design",
+    price_cents: 200,
+    rating: 4.8,
+    installs: 921,
+    icon: "🎨",
+    tags: ["Image generation", "360 worlds", "Texture design"],
+    is_featured: true,
+  },
+  {
+    id: "social-dominator",
+    name: "Social Dominator",
+    description:
+      "Growth hacker and content creator. Writes viral posts, crafts strategies, and helps you dominate social media.",
+    category: "marketing",
+    price_cents: 250,
+    rating: 4.7,
+    installs: 890,
+    icon: "📱",
+    tags: ["Viral content", "Growth strategy", "Analytics"],
+    is_featured: true,
+  },
+  {
+    id: "music-producer",
+    name: "Music Producer",
+    description:
+      "Creates original music from text prompts and lyrics. Generates songs, instrumentals, and covers with AI.",
+    category: "music",
+    price_cents: 400,
+    rating: 4.7,
+    installs: 743,
+    icon: "🎵",
+    tags: ["Music generation", "Lyrics writing", "Style guidance"],
+    is_featured: true,
+  },
+  {
+    id: "data-slayer",
+    name: "Data Slayer",
+    description:
+      "Data scientist. Analyzes data, builds models, creates visualizations, and surfaces actionable insights.",
+    category: "analytics",
+    price_cents: 300,
+    rating: 4.6,
+    installs: 654,
+    icon: "📊",
+    tags: ["Data analysis", "Modeling", "Visualization"],
+    is_featured: true,
+  },
+  {
+    id: "writing-coach",
+    name: "Writing Coach",
+    description:
+      "Master copywriter. Elevates writing quality — editing, tone adjustment, copywriting, and storytelling.",
+    category: "content",
+    price_cents: 75,
+    rating: 4.8,
+    installs: 1120,
+    icon: "✍️",
+    tags: ["Editing", "Tone adjustment", "Copywriting"],
+    is_featured: false,
+  },
+  {
+    id: "support-agent",
+    name: "Support Agent",
+    description:
+      "Customer support specialist. Handles inquiries, troubleshooting, and creates FAQ documentation.",
+    category: "general",
+    price_cents: 50,
+    rating: 4.6,
+    installs: 543,
+    icon: "🤝",
+    tags: ["Support tickets", "Documentation", "Troubleshooting"],
+    is_featured: false,
+  },
+  {
+    id: "research-guru",
+    name: "Research Guru",
+    description:
+      "Deep research agent. Synthesizes information from multiple sources, fact-checks, and produces reports.",
+    category: "content",
+    price_cents: 100,
+    rating: 4.5,
+    installs: 432,
+    icon: "🔬",
+    tags: ["Deep research", "Fact-checking", "Reporting"],
+    is_featured: false,
+  },
+  {
+    id: "legal-shield",
+    name: "Legal Shield",
+    description:
+      "Legal assistant for contracts, compliance, and regulatory guidance. Not a lawyer, but a powerful research aide.",
+    category: "general",
+    price_cents: 1000,
+    rating: 4.4,
+    installs: 210,
+    icon: "⚖️",
+    tags: ["Contract review", "Compliance", "Legal research"],
+    is_featured: false,
+  },
+  {
+    id: "security-guru",
+    name: "Security Guru",
+    description:
+      "Cybersecurity expert. Audits code, finds vulnerabilities, and recommends security best practices.",
+    category: "developer",
+    price_cents: 1200,
+    rating: 4.7,
+    installs: 156,
+    icon: "🔒",
+    tags: ["Security audits", "Vulnerability scanning", "Best practices"],
+    is_featured: false,
+  },
+  {
+    id: "ml-engineer",
+    name: "ML Engineer",
+    description:
+      "Machine learning specialist. Builds models, optimizes training, and deploys AI systems.",
+    category: "analytics",
+    price_cents: 1500,
+    rating: 4.8,
+    installs: 89,
+    icon: "🧠",
+    tags: ["Model training", "Hyperparameter tuning", "Model deployment"],
+    is_featured: false,
+  },
 ];
 
-function MarketplaceInner() {
-  const { isLoaded, isSignedIn, userId } = useClerkAuth();
+function AgentCard({
+  agent,
+  isInstalled,
+  onInstall,
+  theme: T,
+}: {
+  agent: Agent;
+  isInstalled: boolean;
+  onInstall: () => void;
+  theme: any;
+}) {
+  return (
+    <div className="glass-card group flex flex-col h-full overflow-hidden hover:border-indigo-500/30 transition-all duration-300 shadow-xl">
+      <div className="relative p-6 space-y-4 flex-1">
+        {/* Card Header */}
+        <div className="flex items-start justify-between">
+          <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform duration-500">
+            {agent.icon}
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            {agent.is_featured && (
+              <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                Featured
+              </span>
+            )}
+            <div className="flex items-center gap-1 text-xs font-bold opacity-60">
+              <Star size={12} className="text-yellow-500 fill-current" />
+              {agent.rating}
+            </div>
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="space-y-2">
+          <h3 className="text-xl font-black tracking-tight">{agent.name}</h3>
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-40">
+            <span style={{ color: T.accentColor }}>{agent.category}</span>
+            <span>•</span>
+            <span>{agent.installs.toLocaleString()} Installs</span>
+          </div>
+          <p className="text-sm opacity-60 leading-relaxed line-clamp-3 group-hover:opacity-100 transition-opacity">
+            {agent.description}
+          </p>
+        </div>
+
+        {/* Tags */}
+        <div className="flex flex-wrap gap-1.5 pt-2">
+          {agent.tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/5 opacity-50"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer / CTA */}
+      <div className="p-4 bg-white/5 border-t border-white/5 flex items-center justify-between mt-auto">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-bold uppercase tracking-widest opacity-40">
+            Deployment
+          </span>
+          <span className="text-sm font-black">
+            {agent.price_cents === 0 ? (
+              <span className="text-green-400">FREE</span>
+            ) : (
+              <span className="flex items-center gap-1 text-yellow-500">
+                <Coins size={12} /> {agent.price_cents} LBC
+              </span>
+            )}
+          </span>
+        </div>
+        <button
+          onClick={onInstall}
+          disabled={isInstalled}
+          className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+            isInstalled
+              ? "bg-green-500/20 text-green-400 border border-green-500/30"
+              : "bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] hover:scale-105 active:scale-95"
+          }`}
+        >
+          {isInstalled ? "Installed" : "Deploy"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function MarketplacePage() {
   const { resolvedColors: T } = useTheme();
-  const searchParams = useSearchParams();
-  const [agents, setAgents] = useState<Agent[]>(DEMO_AGENTS);
-  const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set());
-  const [installedAgentDbIds, setInstalledAgentDbIds] = useState<Map<string, string>>(new Map());
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('featured');
-  const [previewAgent, setPreviewAgent] = useState<Agent | null>(null);
-  const [litBitCoins, setLitBitCoins] = useState(500);
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [sellModalAgent, setSellModalAgent] = useState<Agent | null>(null);
-  const [sellPrice, setSellPrice] = useState('');
-  const [listedAgents, setListedAgents] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<'agents' | 'coins'>('agents');
+  const { userId, isLoaded, isSignedIn } = useClerkAuth();
 
-  // Build slug→demo lookup for metadata enrichment
-  const DEMO_BY_SLUG = Object.fromEntries(DEMO_AGENTS.map(a => [a.slug, a]));
-
-  // Load agents from /api/agents, enrich with local metadata
-  const loadAgents = async () => {
-    try {
-      const res = await fetch('/api/agents');
-      const data = await res.json();
-      if (Array.isArray(data.agents) && data.agents.length > 0) {
-        const merged: Agent[] = data.agents.map((a: Record<string, unknown>) => {
-          const demo = DEMO_BY_SLUG[a.slug as string || ''];
-          return {
-            id:          String(a.id || demo?.id || a.slug || ''),
-            slug:        String(a.slug || ''),
-            name:        String(a.name || a.display_name || demo?.name || ''),
-            description: String(a.description || demo?.description || ''),
-            category:    String(a.category || demo?.category || 'general'),
-            avatar_url:  String(demo?.avatar_url || a.avatar_url || ''),
-            price_cents: demo?.price_cents ?? (typeof a.price_cents === 'number' ? a.price_cents : 0),
-            features:    demo?.features ?? (Array.isArray(a.features) ? a.features as string[] : []),
-            is_featured: Boolean(a.is_featured ?? demo?.is_featured ?? false),
-            personality: String(demo?.personality ?? a.personality ?? ''),
-            rating:      demo?.rating,
-            installs:    demo?.installs,
-          };
-        });
-        // Append demo agents not in API response so UI stays complete
-        const apiSlugs = new Set(merged.map(a => a.slug));
-        const extraDemo = DEMO_AGENTS.filter(a => !apiSlugs.has(a.slug));
-        setAgents([...merged, ...extraDemo]);
-      }
-    } catch {
-      // keep DEMO_AGENTS default on error
-    }
-  };
-
-  // Fetch wallet from API (source of truth)
-  const fetchWallet = async () => {
-    try {
-      const res = await fetch('/api/wallet');
-      const data = await res.json();
-      if (typeof data.balance === 'number') {
-        setLitBitCoins(data.balance);
-      }
-    } catch {
-      // silent fail
-    }
-  };
-
-  // Load which agents the signed-in user has installed
-  const loadInstalledAgents = async () => {
-    try {
-      const res = await fetch('/api/user-agents');
-      const data = await res.json();
-      if (Array.isArray(data.agents)) {
-        const ids = new Set<string>();
-        const dbIdMap = new Map<string, string>();
-        for (const ua of data.agents) {
-          const agentId: string = ua.agent?.id || ua.agent_id || '';
-          const agentSlug: string = ua.agent?.slug || '';
-          if (agentId) { ids.add(agentId); dbIdMap.set(agentId, ua.agent_id || agentId); }
-          if (agentSlug) {
-            ids.add(agentSlug);
-            const demoMatch = DEMO_AGENTS.find(d => d.slug === agentSlug);
-            if (demoMatch) ids.add(demoMatch.id);
-          }
-        }
-        setInstalledAgents(ids);
-        setInstalledAgentDbIds(dbIdMap);
-      }
-    } catch {
-      // silent fail
-    }
-  };
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [installedAgents, setInstalledAgents] = useState<Set<string>>(
+    new Set(),
+  );
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadAgents();
-    fetchWallet();
-
-    // Stripe return detection
-    const success = searchParams?.get('success');
-    const canceled = searchParams?.get('canceled');
-    if (success === 'true') {
-      showToast('Payment successful! Your LiTBit Coins will be credited shortly.', 'success');
-    } else if (canceled === 'true') {
-      showToast('Payment canceled. No coins were charged.', 'info');
-    }
+    // Simulate loading data
+    setTimeout(() => {
+      setLoading(false);
+      setInstalledAgents(new Set(["champion", "code-champion"]));
+    }, 800);
   }, []);
 
-  useEffect(() => {
-    if (isSignedIn) loadInstalledAgents();
-  }, [isSignedIn]);
-
-  const buyPack = async (pack: typeof CREDIT_PACKS[0]) => {
-    if (!isSignedIn || !userId) {
-      showToast('Please sign in to purchase coins.', 'error');
-      return;
-    }
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'payment',
-          priceData: {
-            amount: pack.price * 100,
-            currency: 'usd',
-            name: `${pack.coins} LiTBit Coins`,
-            description: `${pack.label} pack — ${pack.savings}`,
-          },
-          metadata: { clerk_id: userId, coin_amount: String(pack.coins) },
-        }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        showToast(data.error || 'Checkout failed. Try again.', 'error');
-      }
-    } catch {
-      showToast('Network error during checkout.', 'error');
-    }
-  };
-
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  const [claimLoading, setClaimLoading] = useState(false);
-
-  const earnCoins = async () => {
-    if (claimLoading) return;
-    setClaimLoading(true);
-    try {
-      const res = await fetch('/api/wallet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'daily' }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setLitBitCoins(data.balance);
-        showToast(`+50 LBC Daily bonus claimed. Balance: ${data.balance}`, 'success');
-      } else {
-        showToast(data.error || 'Failed to claim daily bonus.', 'error');
-      }
-    } catch {
-      showToast('Network error. Try again.', 'error');
-    } finally {
-      setClaimLoading(false);
-    }
-  };
-
-  const categories = Array.from(new Set(agents.map(a => a.category)));
-
-  const filteredAgents = agents
-    .filter(a => !selectedCategory || a.category === selectedCategory)
-    .filter(a => !searchQuery || a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => {
-      if (sortBy === 'featured') return (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0) || (b.installs || 0) - (a.installs || 0);
-      if (sortBy === 'popular') return (b.installs || 0) - (a.installs || 0);
-      if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
-      if (sortBy === 'price') return a.price_cents - b.price_cents;
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
-      return 0;
+  const filteredAgents = useMemo(() => {
+    return AGENTS.filter((agent) => {
+      const matchesCategory =
+        selectedCategory === "all" || agent.category === selectedCategory;
+      const matchesSearch =
+        agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
     });
+  }, [selectedCategory, searchQuery]);
 
-  const featuredAgents = filteredAgents.filter(a => a.is_featured);
-  const regularAgents = filteredAgents.filter(a => !a.is_featured);
-
-  const syncWallet = async (amount: number) => {
-    try {
-      const res = await fetch('/api/wallet', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount }),
-      });
-      const data = await res.json();
-      if (res.ok && typeof data.balance === 'number') {
-        setLitBitCoins(data.balance);
-        return data.balance;
-      }
-    } catch {
-      // silent fail
-    }
-    return null;
-  };
-
-  const installAgent = useCallback(async (agentId: string) => {
-    const agent = agents.find(a => a.id === agentId);
-    if (!agent) return;
-
-    if (agent.price_cents > 0) {
-      // Paid agents: redirect to Stripe checkout
-      if (!isSignedIn || !userId) {
-        showToast('Please sign in to purchase this agent.', 'error');
-        return;
-      }
-      try {
-        const res = await fetch('/api/stripe/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mode: 'payment',
-            priceData: {
-              amount: agent.price_cents * 100, // 1 LBC = $0.01 → price_cents * 100 = USD cents
-              currency: 'usd',
-              name: `${agent.name} — Agent License`,
-              description: `One-time purchase: ${agent.name} (${agent.price_cents} LBC)`,
-            },
-            metadata: { clerk_id: userId, agent_slug: agent.slug, agent_id: agent.id, type: 'agent_purchase' },
-          }),
-        });
-        const data = await res.json();
-        if (data.url) {
-          window.location.href = data.url;
-        } else {
-          showToast(data.error || 'Checkout failed. Try again.', 'error');
-        }
-      } catch {
-        showToast('Network error during checkout.', 'error');
-      }
-      return;
-    }
-
-    // Free agent — install via API
-    try {
-      const res = await fetch('/api/user-agents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: agent.id }),
-      });
-      const data = await res.json();
-      if (res.ok || res.status === 200) {
-        setInstalledAgents(prev => { const n = new Set(prev); n.add(agent.id); n.add(agent.slug); return n; });
-        showToast(`✅ ${agent.name} installed!`, 'success');
-      } else {
-        showToast(data.error || 'Install failed.', 'error');
-      }
-    } catch {
-      // Optimistic fallback
-      setInstalledAgents(prev => { const n = new Set(prev); n.add(agent.id); n.add(agent.slug); return n; });
-      showToast(`✅ ${agent.name} installed for free!`, 'success');
-    }
-  }, [agents, isSignedIn, userId]);
-
-  const uninstallAgent = useCallback(async (agentId: string) => {
-    const agent = agents.find(a => a.id === agentId);
-    if (!agent) return;
-    const dbId = installedAgentDbIds.get(agentId) || agentId;
-    try {
-      await fetch(`/api/user-agents?agentId=${dbId}`, { method: 'DELETE' });
-    } catch {
-      // silent — still remove from local state
-    }
-    setInstalledAgents(prev => { const n = new Set(prev); n.delete(agent.id); n.delete(agent.slug); return n; });
-    showToast(`🗑️ ${agent.name} removed from dock.`, 'info');
-  }, [agents, installedAgentDbIds]);
-
-  const listForSale = useCallback(async (agentId: string, price: number) => {
-    const earned = Math.floor(price * 0.1);
-    const newBal = await syncWallet(earned);
-    if (newBal === null) {
-      showToast('Listing failed. Could not credit bonus. Try again.', 'error');
-      return;
-    }
-    setListedAgents(prev => new Set([...prev, agentId]));
-    showToast(`🏪 Agent listed! You earned ${earned} 🪙 listing bonus.`, 'info');
-    setSellModalAgent(null);
-    setSellPrice('');
-  }, [litBitCoins]);
-
-  // Require authentication (after all hooks to respect Rules of Hooks)
-  if (!isLoaded) {
+  if (!isLoaded || loading) {
     return (
-      <div style={{ backgroundColor: T?.bgColor || '#0a0a0f', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T?.textColor || '#00ff41', fontFamily: 'monospace' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '32px', marginBottom: '16px' }}>⏳</div>
-          <div>Loading marketplace...</div>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: T.bgColor }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-indigo-500" size={32} />
+          <span className="text-sm font-bold uppercase tracking-[0.2em] opacity-40">
+            Syncing Marketplace...
+          </span>
         </div>
       </div>
     );
@@ -397,482 +377,167 @@ function MarketplaceInner() {
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <p className="text-sm opacity-60">Please sign in to view the marketplace.</p>
-        <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
-          Sign In
-        </Link>
-      </div>
+      <PageShell title="Marketplace">
+        <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
+          <div className="p-6 rounded-full bg-white/5">
+            <ShoppingBag size={48} className="opacity-20" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight">
+              Access Restricted
+            </h1>
+            <p className="text-sm opacity-60 max-w-xs mx-auto">
+              Please sign in to browse and deploy neural agents to your
+              workspace.
+            </p>
+          </div>
+          <Link href="/login" className="btn-primary">
+            Sign In to Continue
+          </Link>
+        </div>
+      </PageShell>
     );
   }
 
-  const stats: Record<string, number | string> = {
-    total: agents.length,
-    free: agents.filter(a => a.price_cents === 0).length,
-    installed: installedAgents.size,
-    coins: litBitCoins + ' 🪙',
-  };
-
   return (
-    <div style={{ backgroundColor: T.bgColor, color: T.textColor, position: 'relative' }}>
-      {/* Toast notification */}
-      {toast && (
-        <div style={{ position: 'fixed', top: '80px', right: '20px', zIndex: 200, padding: '12px 20px', backgroundColor: toast.type === 'success' ? '#0a2e0a' : toast.type === 'error' ? '#2e0a0a' : '#0a1a2e', border: '2px solid ' + (toast.type === 'success' ? T.accentColor : toast.type === 'error' ? '#ff4444' : T.linkColor), color: toast.type === 'success' ? T.accentColor : toast.type === 'error' ? '#ff4444' : T.linkColor, fontSize: '12px', fontWeight: 'bold', maxWidth: '320px' }}>
-          {toast.msg}
-        </div>
-      )}
-
-        <div style={{ borderBottom: '2px solid ' + T.borderColor, padding: '24px', textAlign: 'center', background: 'linear-gradient(180deg, ' + T.boxBg + ' 0%, ' + T.bgColor + ' 100%)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
-          <h1 style={{ color: T.headerColor, fontSize: '28px', fontWeight: 'bold', letterSpacing: '3px', margin: 0 }}>🤖 AGENT MARKETPLACE</h1>
-          <span style={{ padding: '4px 10px', backgroundColor: 'rgba(255,107,107,0.2)', border: '1px solid #ff6b6b', color: '#ff6b6b', fontSize: '10px', fontWeight: 'bold', borderRadius: '6px', letterSpacing: '1px', textTransform: 'uppercase' }}>Beta</span>
-        </div>
-        <p style={{ color: T.textColor, fontSize: '13px', opacity: 0.7, maxWidth: '800px', margin: '0 auto 16px' }}>Discover, install, and deploy AI agents to your workspace</p>
-        
-        {/* Smart Wallet Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', border: '2px solid gold', borderRadius: '8px', backgroundColor: 'rgba(255,215,0,0.08)' }}>
-            <span style={{ fontSize: '24px' }}>🪙</span>
-            <div>
-              <div style={{ color: 'gold', fontSize: '20px', fontWeight: 'bold' }}>{litBitCoins.toLocaleString()}</div>
-              <div style={{ color: T.textColor, fontSize: '10px', opacity: 0.6 }}>LiTBit Coins Available</div>
-            </div>
-          </div>
-          <button onClick={earnCoins} disabled={claimLoading} style={{ padding: '10px 18px', backgroundColor: `${T.accentColor}20`, border: `2px solid ${T.accentColor}`, color: T.accentColor, fontSize: '12px', cursor: claimLoading ? 'not-allowed' : 'pointer', fontWeight: 'bold', borderRadius: '6px', opacity: claimLoading ? 0.6 : 1 }}>{claimLoading ? '⏳ Claiming...' : '+50 Daily Bonus'}</button>
-        </div>
-
-        {/* Main Tabs */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-          <button onClick={() => setActiveTab('agents')} style={{ padding: '12px 32px', fontSize: '14px', fontWeight: 'bold', border: '2px solid ' + (activeTab === 'agents' ? T.accentColor : T.borderColor), backgroundColor: activeTab === 'agents' ? T.accentColor + '20' : 'transparent', color: activeTab === 'agents' ? T.accentColor : T.textColor, borderRadius: '8px 8px 0 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🤖</span> Agents <span style={{ padding: '2px 8px', backgroundColor: activeTab === 'agents' ? T.accentColor : T.borderColor, color: '#000', fontSize: '11px', borderRadius: '4px' }}>{stats.total}</span>
-          </button>
-          <button onClick={() => setActiveTab('coins')} style={{ padding: '12px 32px', fontSize: '14px', fontWeight: 'bold', border: '2px solid ' + (activeTab === 'coins' ? 'gold' : T.borderColor), backgroundColor: activeTab === 'coins' ? 'rgba(255,215,0,0.15)' : 'transparent', color: activeTab === 'coins' ? 'gold' : T.textColor, borderRadius: '8px 8px 0 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🪙</span> LiTBit Coins
-          </button>
-        </div>
-      </div>
-
-      {activeTab === 'agents' && (
-        <>
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid ' + T.borderColor, display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', backgroundColor: T.boxBg }}>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flex: 1, alignItems: 'center' }}>
-              <button onClick={() => setSelectedCategory('')} style={{ padding: '6px 14px', fontSize: '11px', borderRadius: '6px', border: '1px solid ' + (selectedCategory === '' ? T.accentColor : T.borderColor), backgroundColor: selectedCategory === '' ? 'rgba(255,255,0,0.15)' : 'transparent', color: selectedCategory === '' ? T.accentColor : T.textColor, cursor: 'pointer', fontFamily: 'monospace', fontWeight: selectedCategory === '' ? 'bold' : 'normal', transition: 'all 0.15s' }}>
-                All ({agents.length})
-              </button>
-              {categories.map(cat => (
-                <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)} style={{ padding: '6px 14px', fontSize: '11px', borderRadius: '6px', border: '1px solid ' + (selectedCategory === cat ? T.accentColor : T.borderColor), backgroundColor: selectedCategory === cat ? 'rgba(255,255,0,0.15)' : 'transparent', color: selectedCategory === cat ? T.accentColor : T.textColor, cursor: 'pointer', fontFamily: 'monospace', textTransform: 'capitalize', fontWeight: selectedCategory === cat ? 'bold' : 'normal', transition: 'all 0.15s' }}>
-                  {CATEGORY_LABELS[cat] || cat} ({agents.filter(a => a.category === cat).length})
-                </button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input type='text' value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder='Search agents...' style={{ padding: '8px 14px', backgroundColor: T.bgColor, border: '1px solid ' + T.borderColor, borderRadius: '6px', color: '#e0e0e0', fontSize: '12px', fontFamily: 'monospace', width: '200px', outline: 'none' }} />
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ padding: '8px 10px', backgroundColor: T.bgColor, border: '1px solid ' + T.borderColor, borderRadius: '6px', color: T.textColor, fontSize: '11px', fontFamily: 'monospace', cursor: 'pointer' }}>
-                <option value='featured'>Featured</option>
-                <option value='popular'>Popular</option>
-                <option value='rating'>Rating</option>
-                <option value='price'>Price</option>
-                <option value='name'>Name</option>
-              </select>
-              <Link href='/studio?tool=agents' style={{ padding: '8px 16px', backgroundColor: T.linkColor, color: 'white', textDecoration: 'none', fontSize: '11px', fontWeight: 'bold', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>🚀 My Dock</Link>
-            </div>
-          </div>
-
-          <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto' }}>
-            {featuredAgents.length > 0 && !searchQuery && (
-              <div style={{ marginBottom: '32px' }}>
-                <div style={{ color: T.accentColor, fontSize: '11px', letterSpacing: '2px', marginBottom: '12px', fontWeight: 'bold' }}>⭐ FEATURED AGENTS</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-                  {featuredAgents.map(agent => <AgentCard key={agent.id} agent={agent} isInstalled={installedAgents.has(agent.id)} onInstall={() => installAgent(agent.id)} onPreview={() => setPreviewAgent(agent)} theme={T} />)}
-                </div>
-              </div>
-            )}
-            <div>
-              <div style={{ color: T.accentColor, fontSize: '11px', letterSpacing: '2px', marginBottom: '12px', fontWeight: 'bold' }}>
-                {selectedCategory ? selectedCategory.toUpperCase() + ' AGENTS' : 'ALL AGENTS'}
-                <span style={{ color: T.textColor, opacity: 0.5, marginLeft: '8px' }}>({filteredAgents.length})</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-                {(searchQuery ? filteredAgents : regularAgents).map(agent => <AgentCard key={agent.id} agent={agent} isInstalled={installedAgents.has(agent.id)} onInstall={() => installAgent(agent.id)} onPreview={() => setPreviewAgent(agent)} theme={T} />)}
-              </div>
-            </div>
-            {filteredAgents.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '60px 20px', color: T.textColor, opacity: 0.5 }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '12px', color: T.headerColor }}>?</div>
-                <div>No agents found matching your search.</div>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {activeTab === 'coins' && (
-        <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto' }}>
-          {/* SMART COIN PACKS */}
-          <div style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
-              <div>
-                <div style={{ color: 'gold', fontSize: '14px', letterSpacing: '2px', marginBottom: '4px', fontWeight: 'bold' }}>🪙 BUY COINS</div>
-                <p style={{ color: T.textColor, fontSize: '12px', opacity: 0.7 }}>
-                  Purchase LiTBit Coins to unlock premium agents and features. 
-                  <strong style={{ color: T.accentColor }}>1 LBC = $0.01</strong>
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={earnCoins} disabled={claimLoading} style={{ padding: '10px 18px', backgroundColor: `${T.accentColor}20`, border: `2px solid ${T.accentColor}`, color: T.accentColor, fontSize: '12px', cursor: claimLoading ? 'not-allowed' : 'pointer', fontWeight: 'bold', borderRadius: '6px', opacity: claimLoading ? 0.6 : 1 }}>
-                  {claimLoading ? '⏳ Claiming...' : '⚡ Claim Daily +50'}
-                </button>
-              </div>
-            </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-              {CREDIT_PACKS.map((pack) => (
-                <div 
-                  key={pack.id}
-                  style={{ 
-                    position: 'relative',
-                    padding: '24px 20px', 
-                    border: `2px solid ${pack.popular ? 'gold' : T.borderColor}`, 
-                    backgroundColor: pack.popular ? 'rgba(255,215,0,0.12)' : T.boxBg,
-                    textAlign: 'center',
-                    borderRadius: '12px',
-                    transition: 'all 0.2s',
-                    boxShadow: pack.popular ? '0 8px 32px rgba(255,215,0,0.15)' : 'none',
-                  }}
-                >
-                  {pack.popular && (
-                    <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'gold', color: 'black', padding: '4px 16px', fontSize: '11px', fontWeight: 'bold', borderRadius: '4px' }}>
-                      ⭐ BEST VALUE
-                    </div>
-                  )}
-                  <div style={{ fontSize: '12px', color: T.textColor, opacity: 0.6, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>{pack.label}</div>
-                  <div style={{ color: pack.popular ? 'gold' : T.headerColor, fontSize: '36px', fontWeight: 'bold', marginBottom: '4px' }}>
-                    {pack.coins.toLocaleString()}
-                  </div>
-                  <div style={{ color: T.textColor, fontSize: '12px', marginBottom: '12px', opacity: 0.8 }}>LiTBit Coins</div>
-                  <div style={{ color: pack.popular ? 'gold' : T.accentColor, fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
-                    ${pack.price}
-                  </div>
-                  <div style={{ color: T.textColor, fontSize: '11px', opacity: 0.6, marginBottom: '16px' }}>
-                    {pack.savings}
-                  </div>
-                  <button onClick={() => buyPack(pack)} style={{ 
-                    width: '100%', 
-                    padding: '12px', 
-                    backgroundColor: pack.popular ? 'gold' : T.linkColor, 
-                    color: pack.popular ? 'black' : 'white', 
-                    border: 'none', 
-                    fontWeight: 'bold',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    borderRadius: '6px',
-                  }}>
-                    {pack.popular ? '⚡ Buy Best Value' : 'Buy Pack'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* SPEND COINS */}
-          <div style={{ borderTop: '2px solid ' + T.borderColor, paddingTop: '32px', marginBottom: '32px' }}>
-            <div style={{ color: T.accentColor, fontSize: '14px', letterSpacing: '2px', marginBottom: '20px', fontWeight: 'bold' }}>
-              💎 SPEND YOUR COINS
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              {SPEND_FEATURES.map((feat) => (
-                <div key={feat.id} style={{ padding: '20px', border: '1px solid ' + T.borderColor, backgroundColor: T.boxBg, borderRadius: '10px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 'bold', color: T.accentColor, marginBottom: '8px', letterSpacing: '1px' }}>{feat.title.toUpperCase()}</div>
-                  <div style={{ color: T.headerColor, fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>{feat.title}</div>
-                  <div style={{ color: T.textColor, fontSize: '11px', opacity: 0.7, lineHeight: 1.5, marginBottom: '12px', minHeight: '50px' }}>{feat.desc}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid ' + T.borderColor }}>
-                    <span style={{ color: 'gold', fontSize: '16px', fontWeight: 'bold' }}>{feat.cost} LBC</span>
-                    <button
-                      onClick={async () => {
-                        if (litBitCoins < feat.cost) {
-                          showToast(`Need ${feat.cost} LBC. You have ${litBitCoins}`, 'error');
-                          return;
-                        }
-                        const newBal = await syncWallet(-feat.cost);
-                        if (newBal === null) {
-                          showToast('Transaction failed. Could not deduct coins.', 'error');
-                          return;
-                        }
-                        showToast(`${feat.action} ${feat.title}. -${feat.cost} LBC. Balance: ${newBal}`, 'success');
-                      }}
-                      style={{ padding: '8px 16px', backgroundColor: T.linkColor, color: 'white', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', borderRadius: '6px' }}
-                    >
-                      {feat.action}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* PRICING EXAMPLES */}
-          <div style={{ borderTop: '2px solid ' + T.borderColor, paddingTop: '24px' }}>
-            <div style={{ color: T.textColor, fontSize: '12px', letterSpacing: '1px', marginBottom: '16px', fontWeight: 'bold', opacity: 0.8 }}>
-              📊 WHAT CAN YOU BUY?
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-              {[
-                { name: 'Support Agent', cost: 50, color: T.accentColor },
-                { name: 'Writing Coach', cost: 75, color: T.headerColor },
-                { name: 'Research Guru', cost: 100, color: '#60a5fa' },
-                { name: 'Social Dominator', cost: 250, color: '#34d399' },
-                { name: 'Data Slayer', cost: 300, color: '#a78bfa' },
-                { name: 'Pixel Forge', cost: 200, color: '#ec4899' },
-                { name: 'Music Producer', cost: 400, color: '#22d3ee' },
-                { name: 'Legal Shield', cost: 1000, color: '#ff6b35' },
-                { name: 'Security Guru', cost: 1200, color: '#f87171' },
-                { name: 'ML Engineer', cost: 1500, color: '#fbbf24' },
-              ].map((item) => (
-                <div key={item.name} style={{ padding: '10px 16px', border: '1px solid ' + T.borderColor, borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: item.color, fontWeight: 'bold', fontSize: '13px' }}>{item.name}</span>
-                  <span style={{ color: 'gold', fontSize: '12px', fontWeight: 'bold' }}>{item.cost} LBC</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {previewAgent && (
-        <div onClick={() => setPreviewAgent(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', width: '100%', backgroundColor: T.boxBg, border: '2px solid ' + T.borderColor, maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid ' + T.borderColor, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <AgentAvatar slug={previewAgent.slug} size={64} />
-                <div>
-                  <div style={{ color: T.headerColor, fontSize: '20px', fontWeight: 'bold' }}>{previewAgent.name}</div>
-                  <div style={{ color: T.textColor, fontSize: '11px', opacity: 0.7, textTransform: 'capitalize' }}>{previewAgent.category} · {previewAgent.personality}</div>
-                </div>
-              </div>
-              <button onClick={() => setPreviewAgent(null)} style={{ backgroundColor: 'transparent', border: 'none', color: T.textColor, cursor: 'pointer', fontSize: '18px' }}>✕</button>
-            </div>
-            <div style={{ padding: '24px' }}>
-              <p style={{ color: T.textColor, fontSize: '13px', lineHeight: 1.6, marginBottom: '20px' }}>{previewAgent.description}</p>
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ color: T.accentColor, fontSize: '10px', letterSpacing: '1px', marginBottom: '8px' }}>FEATURES</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {previewAgent.features.map((f, i) => <span key={i} style={{ padding: '4px 10px', backgroundColor: 'rgba(255,0,128,0.15)', border: '1px solid ' + T.linkColor, color: T.linkColor, fontSize: '11px' }}>{f}</span>)}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', fontSize: '12px' }}>
-                <span style={{ color: T.textColor }}>⭐ {previewAgent.rating}/5.0</span>
-                <span style={{ color: T.textColor }}>📥 {(previewAgent.installs || 0).toLocaleString()} installs</span>
-                <span style={{ color: previewAgent.price_cents === 0 ? T.accentColor : T.headerColor, fontWeight: 'bold' }}>{formatPrice(previewAgent.price_cents)}</span>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {installedAgents.has(previewAgent.id) ? (
-                  <>
-                    <button disabled style={{ flex: 1, padding: '12px', backgroundColor: '#333', color: '#666', border: 'none', fontWeight: 'bold' }}>✓ Installed</button>
-                    <button onClick={() => { uninstallAgent(previewAgent.id); setPreviewAgent(null); }} style={{ padding: '12px 14px', border: '1px solid #ff4444', color: '#ff4444', backgroundColor: 'rgba(255,68,68,0.1)', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>Uninstall</button>
-                    {!listedAgents.has(previewAgent.id) && (
-                      <button onClick={() => { setPreviewAgent(null); setSellModalAgent(previewAgent); }} style={{ padding: '12px 16px', border: '2px solid gold', color: 'gold', backgroundColor: 'rgba(255,215,0,0.1)', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>🏪 Sell</button>
-                    )}
-                  </>
-                ) : (
-                  <button onClick={() => { installAgent(previewAgent.id); if (previewAgent.price_cents === 0 || litBitCoins >= previewAgent.price_cents) setPreviewAgent(null); }} style={{ flex: 1, padding: '12px', backgroundColor: T.linkColor, color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-                    {previewAgent.price_cents === 0 ? '🚀 Install Free' : '🪙 Buy — ' + formatPrice(previewAgent.price_cents)}
-                  </button>
-                )}
-                <Link href='/studio?tool=agents' onClick={() => setPreviewAgent(null)} style={{ padding: '12px 20px', border: '2px solid ' + T.linkColor, color: T.linkColor, textDecoration: 'none', fontWeight: 'bold', fontSize: '12px', display: 'flex', alignItems: 'center' }}>Open Builder</Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sell Modal */}
-      {sellModalAgent && (
-        <div onClick={() => setSellModalAgent(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', width: '100%', backgroundColor: T.boxBg, border: '2px solid gold', padding: '28px' }}>
-            <h2 style={{ color: 'gold', fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>🏪 List Agent for Sale</h2>
-            <p style={{ color: T.textColor, fontSize: '12px', marginBottom: '20px', opacity: 0.8 }}>
-              List <strong style={{ color: T.headerColor }}>{sellModalAgent.name}</strong> on the marketplace. Other users can buy it with 🪙 LiTBit Coins. You earn 90% of each sale.
-            </p>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: T.accentColor, fontSize: '10px', letterSpacing: '1px', display: 'block', marginBottom: '6px' }}>SET PRICE (🪙 LiTBit Coins)</label>
-              <input
-                type='number'
-                min='1'
-                max='9999'
-                value={sellPrice}
-                onChange={e => setSellPrice(e.target.value)}
-                placeholder='e.g. 250'
-                style={{ width: '100%', padding: '10px', backgroundColor: T.bgColor, border: '1px solid gold', color: T.textColor, fontSize: '14px', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' }}
-              />
-              {sellPrice && (
-                <p style={{ color: T.textColor, fontSize: '10px', marginTop: '4px', opacity: 0.6 }}>
-                  You earn ~{Math.floor(Number(sellPrice) * 0.9)} 🪙 per sale (10% platform fee)
-                </p>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => { if (sellPrice && Number(sellPrice) > 0) listForSale(sellModalAgent.id, Number(sellPrice)); }}
-                disabled={!sellPrice || Number(sellPrice) <= 0}
-                style={{ flex: 1, padding: '12px', backgroundColor: Number(sellPrice) > 0 ? 'gold' : '#333', color: Number(sellPrice) > 0 ? 'black' : '#666', border: 'none', cursor: Number(sellPrice) > 0 ? 'pointer' : 'not-allowed', fontWeight: 'bold', fontSize: '13px' }}
-              >
-                🚀 List Now
-              </button>
-              <button onClick={() => setSellModalAgent(null)} style={{ padding: '12px 20px', border: '1px solid ' + T.borderColor, color: T.textColor, backgroundColor: 'transparent', cursor: 'pointer', fontSize: '12px' }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function AgentAvatar({ slug, size = 40 }: { slug: string; size?: number }) {
-  const meta: AgentAvatarMeta | undefined = AGENT_AVATAR_META[slug];
-  if (!meta) return (
-    <div style={{ width: size, height: size, borderRadius: size * 0.2, background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.45, border: '1px solid #555' }}>
-      🤖
-    </div>
-  );
-  return (
-    <div style={{ width: size, height: size, borderRadius: size * 0.2, background: meta.bg, border: `1.5px solid ${meta.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, lineHeight: 1 }}>
-      {meta.emoji}
-    </div>
-  );
-}
-
-function AgentCard({ agent, isInstalled, onInstall, onPreview, theme }: { agent: Agent; isInstalled: boolean; onInstall: () => void; onPreview: () => void; theme: Record<string, string> }) {
-  const T = theme;
-  const [hovered, setHovered] = useState(false);
-  const categoryColor = getCategoryColor(agent.category);
-  
-  return (
-    <div 
-      onMouseEnter={() => setHovered(true)} 
-      onMouseLeave={() => setHovered(false)} 
-      className="group relative rounded-2xl overflow-hidden transition-all duration-300"
-      style={{ 
-        background: hovered ? `linear-gradient(135deg, ${T.boxBg}, ${categoryColor}08)` : T.boxBg,
-        border: `1px solid ${hovered ? categoryColor : T.borderColor + '40'}`,
-        transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
-        boxShadow: hovered ? `0 20px 40px ${categoryColor}15` : '0 4px 20px rgba(0,0,0,0.2)',
-      }}
+    <PageShell
+      title="Neural Marketplace"
+      subtitle="Discover and deploy specialized AI agents to automate your complex workflows."
     >
-      {/* Category accent line */}
-      <div className="h-1 w-full" style={{ background: categoryColor }} />
-      
-      <div className="p-5">
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-4">
-          <AgentAvatar slug={agent.slug} size={48} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-bold truncate" style={{ color: T.textColor }}>{agent.name}</span>
-              {agent.is_featured && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: categoryColor + '20', color: categoryColor }}>★</span>}
+      <div className="max-w-[1600px] mx-auto px-4 lg:px-6 space-y-12 pb-20">
+        {/* Hero Section / Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 rounded-3xl bg-gradient-to-br from-indigo-600 to-indigo-900 p-10 text-white relative overflow-hidden shadow-2xl">
+            <div className="relative z-10 space-y-6 max-w-lg">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.2em] border border-white/30">
+                <Shield size={12} /> Neural Network Online
+              </div>
+              <h2 className="text-4xl font-black leading-tight">
+                Automate your business with neural agents.
+              </h2>
+              <p className="text-indigo-100 opacity-80 leading-relaxed">
+                Instantly deploy verified AI units capable of coding, designing,
+                researching, and marketing at scale.
+              </p>
+              <div className="flex gap-4">
+                <button className="px-8 py-3 bg-white text-indigo-900 rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all">
+                  Submit Agent
+                </button>
+                <button className="px-8 py-3 bg-indigo-500 text-white rounded-xl font-black text-xs uppercase tracking-widest border border-white/20 hover:bg-white/10 transition-all">
+                  Learn More
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-[10px]" style={{ color: T.textMuted }}>
-              <span className="capitalize">{CATEGORY_LABELS[agent.category] || agent.category}</span>
-              <span>·</span>
-              <span className="flex items-center gap-0.5">
-                <span className="text-yellow-400">★</span> {agent.rating}
-              </span>
-              <span>·</span>
-              <span>{(agent.installs || 0).toLocaleString()} installs</span>
-            </div>
+            <Bot className="absolute -bottom-20 -right-20 w-96 h-96 opacity-10" />
           </div>
-          <div 
-            className="px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0"
-            style={{ 
-              background: agent.price_cents === 0 ? categoryColor + '20' : categoryColor + '30',
-              color: agent.price_cents === 0 ? categoryColor : '#fff',
-              border: `1px solid ${categoryColor}50`
-            }}
-          >
-            {formatPrice(agent.price_cents)}
+
+          <div className="glass-card p-8 flex flex-col justify-between">
+            <div className="space-y-6">
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] opacity-40">
+                Agent Balance
+              </h3>
+              <div className="flex items-center gap-4 p-6 rounded-2xl bg-white/5 border border-white/10">
+                <div className="p-3 rounded-xl bg-yellow-500/20 text-yellow-500">
+                  <Coins size={32} />
+                </div>
+                <div>
+                  <div className="text-3xl font-black tracking-tight text-yellow-500">
+                    9,999
+                  </div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest opacity-40">
+                    LiTBit Coins Available
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button className="w-full py-4 rounded-2xl bg-white/5 border border-dashed border-white/20 text-xs font-black uppercase tracking-[.2em] opacity-60 hover:opacity-100 hover:bg-white/10 transition-all mt-8">
+              Claim Daily Bonus
+            </button>
           </div>
         </div>
-        
-        {/* Description */}
-        <p className="text-xs leading-relaxed mb-4 line-clamp-2" style={{ color: T.textMuted }}>
-          {agent.description}
-        </p>
-        
-        {/* Features */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {agent.features.slice(0, 3).map((f, i) => (
-            <span 
-              key={i} 
-              className="px-2 py-0.5 rounded-md text-[9px] font-medium"
-              style={{ 
-                background: categoryColor + '10',
-                color: categoryColor,
-                border: `1px solid ${categoryColor}20`
-              }}
-            >
-              {f}
-            </span>
-          ))}
+
+        {/* Filters & Search */}
+        <div className="glass-card p-2 flex flex-col md:flex-row items-center gap-2">
+          <div className="flex-1 w-full relative">
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30"
+              size={18}
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by agent name or specialized capability..."
+              className="w-full bg-transparent p-4 pl-12 outline-none text-sm font-medium"
+            />
+          </div>
+          <div className="w-full md:w-auto h-12 flex gap-1 p-1 bg-white/5 rounded-xl">
+            {CATEGORIES.slice(0, 4).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-6 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                  selectedCategory === cat
+                    ? "bg-indigo-500 text-white shadow-lg"
+                    : "opacity-40 hover:opacity-100"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+            <div className="w-px h-full bg-white/10 mx-1" />
+            <button className="px-4 rounded-lg opacity-40 hover:opacity-100">
+              <Filter size={18} />
+            </button>
+          </div>
         </div>
-        
-        {/* Actions */}
-        <div className="flex gap-2">
-          <button 
-            onClick={onPreview}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
-            style={{ 
-              background: T.bgColor,
-              color: T.textColor,
-              border: `1px solid ${T.borderColor}40`
-            }}
-          >
-            Preview
-          </button>
-          {isInstalled ? (
-            <button 
-              disabled 
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold cursor-not-allowed"
-              style={{ 
-                background: T.borderColor + '30',
-                color: T.textMuted,
-                border: `1px solid ${T.borderColor}30`
-              }}
-            >
-              <span className="flex items-center justify-center gap-1">
-                <Check size={12} /> Installed
+
+        {/* Agent Grid */}
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-black tracking-tight flex items-center gap-2">
+              <Layers size={20} className="text-indigo-500" />
+              {CATEGORY_LABELS[selectedCategory] || "Results"}
+              <span className="text-xs font-bold opacity-30 bg-white/5 px-2 py-1 rounded-lg ml-2">
+                {filteredAgents.length}
               </span>
-            </button>
-          ) : (
-            <button 
-              onClick={onInstall}
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{ 
-                background: categoryColor,
-                color: '#000',
-              }}
-            >
-              {agent.price_cents === 0 ? 'Install Free' : 'Buy Now'}
-            </button>
+            </h3>
+            <div className="flex items-center gap-2 text-[10px] font-bold opacity-40 uppercase tracking-widest">
+              Sort by:
+              <button className="flex items-center gap-1 opacity-100 text-white">
+                Popularity <ChevronDown size={12} />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredAgents.map((agent) => (
+              <AgentCard
+                key={agent.id}
+                agent={agent}
+                isInstalled={installedAgents.has(agent.id)}
+                onInstall={() => {
+                  const newSet = new Set(installedAgents);
+                  newSet.add(agent.id);
+                  setInstalledAgents(newSet);
+                }}
+                theme={T}
+              />
+            ))}
+          </div>
+
+          {filteredAgents.length === 0 && (
+            <div className="py-20 text-center space-y-4">
+              <div className="p-4 bg-white/5 rounded-full inline-block">
+                <Search size={32} className="opacity-20" />
+              </div>
+              <p className="text-sm opacity-40 font-bold uppercase tracking-widest">
+                No neural units found matching your query
+              </p>
+            </div>
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-/* Wrap in Suspense for useSearchParams */
-export default function Marketplace() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0a0a0f' }}>
-        <div className="text-center">
-          <div className="text-3xl mb-4 animate-pulse">⚡</div>
-          <div className="text-sm font-bold opacity-60">Loading Marketplace...</div>
-        </div>
-      </div>
-    }>
-      <MarketplaceInner />
-    </Suspense>
+    </PageShell>
   );
 }

@@ -7,80 +7,94 @@ import { useTheme } from "@/context/ThemeContext";
 import { useClerkAuth } from "@/hooks/useClerkAuth";
 import Link from "next/link";
 import lazyLoad from "next/dynamic";
-import { Zap, Command, Monitor, Coins } from "lucide-react";
+import {
+  Zap,
+  Command,
+  Monitor,
+  Coins,
+  Layers,
+  Cpu,
+  Activity,
+  Shield,
+  ChevronRight, Loader2,
+} from "lucide-react";
 import StudioSidebar, { StudioTool } from "./components/StudioSidebar";
 import { MEDIA_PROVIDERS } from "@/lib/media";
 import { useCrtToggle } from "@/context/ThemeContext";
 
 /* Lazy-load tools to keep bundle reasonable */
-const ImageTool  = lazyLoad(() => import("./tools/ImageTool"), { ssr: false });
-const VideoTool  = lazyLoad(() => import("./tools/VideoTool"), { ssr: false });
-const AudioTool  = lazyLoad(() => import("./tools/AudioTool"), { ssr: false });
-const AgentTool  = lazyLoad(() => import("./tools/AgentTool"), { ssr: false });
-const AgentsTerminalTool = lazyLoad(() => import("./tools/AgentsTerminalTool"), { ssr: false });
-const CLIBridgeTool = lazyLoad(() => import("./tools/CLIBridgeTool"), { ssr: false });
-const GalleryTool = lazyLoad(() => import("./tools/GalleryTool"), { ssr: false });
-const SpaceTool  = lazyLoad(() => import("./tools/SpaceTool"), { ssr: false });
-const PipelineTool = lazyLoad(() => import("./tools/PipelineTool"), { ssr: false });
+const ImageTool = lazyLoad(() => import("./tools/ImageTool"), { ssr: false });
+const VideoTool = lazyLoad(() => import("./tools/VideoTool"), { ssr: false });
+const AudioTool = lazyLoad(() => import("./tools/AudioTool"), { ssr: false });
+const AgentTool = lazyLoad(() => import("./tools/AgentTool"), { ssr: false });
+const AgentsTerminalTool = lazyLoad(
+  () => import("./tools/AgentsTerminalTool"),
+  { ssr: false },
+);
+const CLIBridgeTool = lazyLoad(() => import("./tools/CLIBridgeTool"), {
+  ssr: false,
+});
+const GalleryTool = lazyLoad(() => import("./tools/GalleryTool"), {
+  ssr: false,
+});
+const SpaceTool = lazyLoad(() => import("./tools/SpaceTool"), { ssr: false });
+const PipelineTool = lazyLoad(() => import("./tools/PipelineTool"), {
+  ssr: false,
+});
 
 /* ------------------------------------------------------------------ */
 /*  Model Badge — shows active provider per tool                        */
 /* ------------------------------------------------------------------ */
-const STATIC_MODEL_MAP: Record<StudioTool, { provider: string; color: string }> = {
-  image:   { provider: "Gemini Imagen 3", color: "#6366f1" },
-  video:   { provider: "Wan 2.1", color: "#ff6b6b" },
-  clibridge: { provider: "Local CLI", color: "#00f0ff" },
-  audio:   { provider: "TTS / Music", color: "#9b59b6" },
-  agents:  { provider: "Gemini 2.5 Flash", color: "#ffff00" },
-  terminal:{ provider: "Gemini 2.5 Flash", color: "#00ffff" },
+const STATIC_MODEL_MAP: Record<
+  StudioTool,
+  { provider: string; color: string }
+> = {
+  image: { provider: "Gemini Imagen 3", color: "#6366f1" },
+  video: { provider: "Wan 2.1", color: "#38bdf8" },
+  clibridge: { provider: "Local CLI", color: "#10b981" },
+  audio: { provider: "TTS / Music", color: "#f472b6" },
+  agents: { provider: "Gemini 2.5 Flash", color: "#f59e0b" },
+  terminal: { provider: "Gemini 2.5 Flash", color: "#00ffff" },
   pipeline: { provider: "Gemini Orchestrator", color: "#d946ef" },
   gallery: { provider: "Asset Bucket", color: "#d2a8ff" },
-  space:   { provider: "MiniMax Space", color: "#ff6b35" },
+  space: { provider: "MiniMax Space", color: "#ff6b35" },
 };
 
-function ModelBadge({ tool, T }: { tool: StudioTool; T: ReturnType<typeof useTheme>["resolvedColors"] }) {
+function ModelBadge({ tool, T }: { tool: StudioTool; T: any }) {
   const info = STATIC_MODEL_MAP[tool];
   const [providerLabel, setProviderLabel] = useState(info.provider);
   const [label, setLabel] = useState(info.provider);
 
   useEffect(() => {
-    // Only agent/terminal tools need dynamic provider from server health
     if (tool !== "agents" && tool !== "terminal") {
       setLabel(
-        tool === "image" ? (MEDIA_PROVIDERS.find(p => p.id === "gemini")?.label.split(" ")[0] ?? "Gemini")
-        : tool === "video" ? "Wan 2.1"
-        : tool === "audio" ? "TTS / Music"
-        : tool === "pipeline" ? "Gemini Orchestrator"
-        : tool === "gallery" ? "Asset Bucket"
-        : tool === "space" ? "MiniMax Space"
-        : info.provider
+        tool === "image"
+          ? (MEDIA_PROVIDERS.find((p) => p.id === "gemini")?.label.split(
+              " ",
+            )[0] ?? "Gemini")
+          : tool === "video"
+            ? "Wan 2.1"
+            : tool === "audio"
+              ? "TTS / Music"
+              : tool === "pipeline"
+                ? "Gemini Orchestrator"
+                : tool === "gallery"
+                  ? "Asset Bucket"
+                  : tool === "space"
+                    ? "MiniMax Space"
+                    : info.provider,
       );
       return;
     }
-    // Fetch real health from server (env vars are server-side only)
     fetch("/api/llm/health")
-      .then(r => r.json())
-      .then((health: { gemini?: { available: boolean; model: string }; openrouter?: { available: boolean; model: string }; freeModels?: { id: string; name: string; provider: string; task: string }[]; hasGemini?: boolean; hasOpenRouter?: boolean }) => {
+      .then((r) => r.json())
+      .then((health: any) => {
         const gemini = health?.gemini;
-        const orouter = health?.openrouter;
-        const freeModels = health?.freeModels ?? [];
         if (gemini?.available) {
           setProviderLabel("Google Gemini");
-          setLabel((gemini?.model || "gemini-2.5-flash").replace("gemini-", "Gemini "));
-        } else if (orouter?.available && freeModels.length > 0) {
-          // Show the best free model for the task
-          const taskMatch = freeModels.find(m => m.task === (tool === "terminal" ? "code" : "chat"));
-          const fallback = freeModels[0];
-          const model = taskMatch || fallback;
-          setProviderLabel(model.provider);
-          setLabel(model.name);
-        } else if (freeModels.length > 0) {
-          // No keys but free models listed — show first free one
-          setProviderLabel("OpenRouter Free");
-          setLabel(freeModels[0].name);
-        } else {
-          setProviderLabel("No API Key");
-          setLabel("Add Gemini or OpenRouter");
+          setLabel(
+            (gemini?.model || "gemini-2.5-flash").replace("gemini-", "Gemini "),
+          );
         }
       })
       .catch(() => {
@@ -90,191 +104,199 @@ function ModelBadge({ tool, T }: { tool: StudioTool; T: ReturnType<typeof useThe
   }, [tool, info.provider]);
 
   return (
-    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-bold" style={{ backgroundColor: info.color + "12", border: `1px solid ${info.color}25`, color: info.color }}>
-      <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: info.color }} />
-      {providerLabel} · {label}
+    <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold">
+      <div
+        className="w-1.5 h-1.5 rounded-full animate-pulse shadow-[0_0_8px_currentColor]"
+        style={{ backgroundColor: info.color, color: info.color }}
+      />
+      <span className="opacity-40 uppercase tracking-widest">
+        {providerLabel}
+      </span>
+      <span className="opacity-10">|</span>
+      <span style={{ color: info.color }}>{label}</span>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Status Bar (bottom)                                                */
-/* ------------------------------------------------------------------ */
-function StatusBar({ T }: { T: ReturnType<typeof useTheme>["resolvedColors"] }) {
+function StatusBar({ T }: { T: any }) {
   return (
     <div
-      className="w-full flex shrink-0 h-7 items-center justify-center gap-3 px-3"
-      style={{ borderTop: `1px solid ${T.borderColor}15`, backgroundColor: T.bgColor + "60" }}
+      className="w-full flex shrink-0 h-10 items-center justify-between px-4 border-t"
+      style={{ borderColor: T.borderColor + "15", backgroundColor: T.boxBg }}
     >
-      <span className="text-[9px] font-bold uppercase tracking-wider opacity-40" style={{ color: T.accentColor }}>LiTree Studio</span>
-      <span className="text-[9px] opacity-20">·</span>
-      <span className="text-[9px] opacity-30" style={{ color: T.textMuted }}>Image · Video · Audio · Agents</span>
-      <span className="text-[9px] opacity-20">·</span>
-      <span className="text-[9px] opacity-30" style={{ color: T.textMuted }}>v1.0</span>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-40">
+          <Activity size={12} className="text-green-500" />
+          System Operational
+        </div>
+        <div className="h-3 w-px bg-white/10" />
+        <div className="text-[9px] font-bold opacity-30 uppercase tracking-tighter">
+          Region: USE-1 • 24ms
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-[10px] font-black opacity-30">
+          LiTree Studio v2.0.1
+        </span>
+      </div>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Tool Router — memoized so switching CRT etc doesn't remount tools  */
-/* ------------------------------------------------------------------ */
 const ToolRouter = memo(function ToolRouter({ tool }: { tool: StudioTool }) {
   switch (tool) {
-    case "image":    return <ImageTool />;
-    case "video":    return <VideoTool />;
-    case "audio":    return <AudioTool />;
-    case "agents":   return <AgentTool />;
-    case "terminal": return <AgentsTerminalTool />;
-    case "clibridge": return <CLIBridgeTool />;
-    case "pipeline": return <PipelineTool />;
-    case "gallery":  return <GalleryTool />;
-    case "space":    return <SpaceTool />;
-    default:         return <ImageTool />;
+    case "image":
+      return <ImageTool />;
+    case "video":
+      return <VideoTool />;
+    case "audio":
+      return <AudioTool />;
+    case "agents":
+      return <AgentTool />;
+    case "terminal":
+      return <AgentsTerminalTool />;
+    case "clibridge":
+      return <CLIBridgeTool />;
+    case "pipeline":
+      return <PipelineTool />;
+    case "gallery":
+      return <GalleryTool />;
+    case "space":
+      return <SpaceTool />;
+    default:
+      return <ImageTool />;
   }
 });
 
-/* ------------------------------------------------------------------ */
-/*  Main Page                                                          */
-/* ------------------------------------------------------------------ */
 function StudioInner() {
+  const { resolvedColors: T, theme } = useTheme();
+  const { userId, isLoaded, isSignedIn } = useClerkAuth();
+  const { crtEnabled, toggleCrt } = useCrtToggle();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { resolvedColors: T } = useTheme();
-  const { isLoaded, isSignedIn } = useClerkAuth();
-  const { crtEnabled, toggleCrt } = useCrtToggle();
-  const [litcoins, setLitcoins] = useState(500);
-  useEffect(() => { try { const raw = localStorage.getItem("litcoins"); if (raw) setLitcoins(Number(raw)); } catch {} }, []);
 
-  const toolParam = searchParams?.get("tool") as StudioTool | null;
-  const activeTool: StudioTool =
-    toolParam && ["image", "video", "audio", "agents", "terminal", "pipeline", "gallery", "space"].includes(toolParam)
-      ? toolParam
-      : "image";
+  const activeTool = (searchParams?.get("tool") as StudioTool) || "image";
+  const [litcoins, setLitcoins] = useState(9999);
 
-  /* Keyboard shortcuts */
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        const map: Record<string, StudioTool> = {
-          "1": "image",
-          "2": "video",
-          "3": "audio",
-          "4": "agents",
-          "5": "terminal",
-          "6": "pipeline",
-          "7": "gallery",
-          "8": "space",
-        };
-        if (map[e.key]) {
-          e.preventDefault();
-          router.push(`/studio?tool=${map[e.key]}`, { scroll: false });
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [router]);
+    fetch("/api/wallet")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.balance) setLitcoins(d.balance);
+      });
+  }, []);
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center font-mono" style={{ backgroundColor: T.bgColor, color: T.accentColor }}>
-        <div className="text-center">
-          <div className="text-3xl mb-4 animate-pulse">⚡</div>
-          <div>Loading Studio...</div>
-        </div>
-      </div>
-    );
-  }
+  if (!isLoaded) return null;
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <p className="text-sm opacity-60">Please sign in to use the Studio.</p>
-        <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
-          Sign In
+      <div className="h-full flex flex-col items-center justify-center gap-6 p-8 text-center">
+        <div className="p-6 rounded-full bg-white/5 border border-white/10">
+          <Shield size={48} className="opacity-20" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black tracking-tight">
+            Studio Encrypted
+          </h2>
+          <p className="text-sm opacity-50 max-w-xs">
+            Please authorize your account to access the creative neural engines.
+          </p>
+        </div>
+        <Link href="/login" className="btn-primary">
+          Sign In to Unlock
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full" style={{ backgroundColor: T.bgColor, color: T.textColor, fontFamily: "monospace" }}>
-      {/* CRT overlay */}
+    <div
+      className="flex flex-col h-full overflow-hidden"
+      style={{ backgroundColor: T.bgColor }}
+    >
       {crtEnabled && (
-        <div className="fixed inset-0 pointer-events-none z-40 opacity-[0.05]" style={{ background: "repeating-linear-gradient(0deg, rgba(0,0,0,0.12), rgba(0,0,0,0.12) 1px, transparent 1px, transparent 2px)", boxShadow: "inset 0 0 100px rgba(0,255,0,0.15)" }} />
+        <div
+          className="fixed inset-0 pointer-events-none z-[100] opacity-[0.03]"
+          style={{
+            background:
+              "repeating-linear-gradient(0deg, #000 0px, #000 1px, transparent 1px, transparent 2px)",
+          }}
+        />
       )}
 
-      {/* Main workspace */}
-      <div className="flex flex-1 min-w-0">
-        <StudioSidebar activeTool={activeTool} onToolChange={(t) => router.push(`/studio?tool=${t}`, { scroll: false })} />
-        {/* Content area — compositor layer for smooth scroll */}
-        <main className="flex-1 min-w-0 flex flex-col" style={{ backgroundColor: T.bgColor, willChange: "transform" }}>
-          {/* Zed-style top bar */}
+      <div className="flex flex-1 min-w-0 overflow-hidden">
+        <StudioSidebar
+          activeTool={activeTool}
+          onToolChange={(t) =>
+            router.push(`/studio?tool=${t}`, { scroll: false })
+          }
+        />
+
+        <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          {/* Top Bar */}
           <div
-            className="flex items-center justify-between px-3 h-9 shrink-0"
-            style={{ borderBottom: `1px solid ${T.borderColor}12`, backgroundColor: T.boxBg + "40" }}
+            className="flex items-center justify-between px-6 h-16 shrink-0 border-b"
+            style={{
+              borderColor: T.borderColor + "20",
+              backgroundColor: T.boxBg + "40",
+            }}
           >
-            {/* Left: breadcrumb */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-[0.12em] opacity-40" style={{ color: T.textMuted }}>
-                Workspace
-              </span>
-              <span className="text-[10px] opacity-20" style={{ color: T.textMuted }}>/</span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: T.accentColor }}>
-                {activeTool}
-              </span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] opacity-30">
+                <Layers size={14} />
+                Studio
+              </div>
+              <ChevronRight size={12} className="opacity-20" />
+              <div
+                className="text-sm font-black tracking-tight uppercase"
+                style={{ color: T.accentColor }}
+              >
+                {activeTool.replace("-", " ")}
+              </div>
             </div>
 
-            {/* Center: model badge */}
             <ModelBadge tool={activeTool} T={T} />
 
-            {/* Right: actions */}
-            <div className="flex items-center gap-2">
-              {/* Coin balance */}
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ backgroundColor: T.accentColor + "10", color: T.accentColor }}>
-                <Coins size={10} /> {litcoins.toLocaleString()} <span className="opacity-60">LiTBit Coins</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-[11px] font-black text-yellow-500">
+                <Coins size={14} /> {litcoins.toLocaleString()}
               </div>
 
-              {/* CRT toggle */}
               <button
                 onClick={() => toggleCrt()}
-                className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition-all hover:opacity-80"
+                className="p-2.5 rounded-xl border transition-all hover:bg-white/5"
                 style={{
-                  backgroundColor: crtEnabled ? T.accentColor + "12" : "transparent",
-                  color: crtEnabled ? T.accentColor : T.textMuted + "60",
-                  border: `1px solid ${crtEnabled ? T.accentColor + "30" : T.borderColor + "15"}`,
+                  borderColor: crtEnabled
+                    ? T.accentColor
+                    : T.borderColor + "40",
+                  color: crtEnabled ? T.accentColor : T.textMuted,
+                  boxShadow: crtEnabled
+                    ? `0 0 15px ${T.accentColor}20`
+                    : "none",
                 }}
+                title="Toggle Monitor Filter"
               >
-                <Monitor size={10} /> {crtEnabled ? "CRT" : "CRT"}
+                <Monitor size={18} />
               </button>
             </div>
           </div>
 
-          {/* Tool content — canvas, GPU composited for smooth scroll */}
-          <div className="flex-1 min-w-0 studio-scroll" style={{ transform: "translateZ(0)", willChange: "transform" }}>
-            <Suspense fallback={
-              <div className="min-h-[600px] p-6 space-y-4 animate-pulse">
-                    <div className="w-32 h-4 rounded" style={{ backgroundColor: T.accentColor + "12" }} />
-                    <div className="w-48 h-3 rounded" style={{ backgroundColor: T.accentColor + "08" }} />
-                {/* Skeleton cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="h-40 rounded-xl" style={{ backgroundColor: T.boxBg + "30", border: `1px solid ${T.borderColor}10` }} />
-                  <div className="h-40 rounded-xl" style={{ backgroundColor: T.boxBg + "30", border: `1px solid ${T.borderColor}10` }} />
-                  <div className="h-40 rounded-xl" style={{ backgroundColor: T.boxBg + "30", border: `1px solid ${T.borderColor}10` }} />
-                  <div className="h-40 rounded-xl" style={{ backgroundColor: T.boxBg + "30", border: `1px solid ${T.borderColor}10` }} />
+          {/* Content Area */}
+          <div className="flex-1 min-w-0 overflow-y-auto studio-scroll p-6 lg:p-8">
+            <Suspense
+              fallback={
+                <div className="h-full flex flex-col items-center justify-center gap-4 opacity-20">
+                  <Loader2 className="animate-spin" size={32} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em]">
+                    Initializing Node
+                  </span>
                 </div>
-                {/* Skeleton footer */}
-                <div className="flex gap-3 pt-4">
-                  <div className="w-24 h-8 rounded-lg" style={{ backgroundColor: T.accentColor + "10" }} />
-                  <div className="w-24 h-8 rounded-lg" style={{ backgroundColor: T.accentColor + "10" }} />
-                </div>
-              </div>
-            }>
+              }
+            >
               <ToolRouter tool={activeTool} />
             </Suspense>
           </div>
 
-          {/* Bottom status bar */}
           <StatusBar T={T} />
         </main>
       </div>
@@ -282,17 +304,9 @@ function StudioInner() {
   );
 }
 
-/* Wrap in Suspense for useSearchParams */
 export default function StudioPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center font-mono bg-black text-cyan-400">
-        <div className="text-center">
-          <div className="text-3xl mb-4 animate-pulse">⚡</div>
-          <div>Initializing Studio...</div>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={null}>
       <StudioInner />
     </Suspense>
   );

@@ -10,37 +10,45 @@ import { useClerkAuth } from "@/hooks/useClerkAuth";
 import { useSessionAuth } from "@/hooks/useSessionAuth";
 import dynamic from "next/dynamic";
 import {
-  Home, ShoppingBag, Sparkles,
-  Settings, Sun, Moon, Zap,
+  Home,
+  ShoppingBag,
+  Sparkles,
+  Settings,
+  Sun,
+  Moon,
+  Zap,
   Bot,
-  ChevronDown, X, Menu, Bell, Coins, User,
-  Gamepad as GamepadIcon, Code2
+  ChevronDown,
+  X,
+  Menu,
+  Bell,
+  Coins,
+  User,
+  Gamepad as GamepadIcon,
+  Code2,
+  Layout,
+  Search,
+  Command,
 } from "lucide-react";
 
 const NavAuth = dynamic(
   () => import("@/components/ClerkAuth").then((m) => ({ default: m.NavAuth })),
-  { ssr: false }
+  { ssr: false },
 );
 
-/* ------------------------------------------------------------------ */
-/*  Primary nav links — ALL surfaced, no hidden dropdown               */
-/* ------------------------------------------------------------------ */
 const navLinks = [
-  { href: "/", label: "Home", icon: Home },
+  { href: "/", label: "Dashboard", icon: Layout },
   { href: "/studio", label: "Studio", icon: Zap },
   { href: "/gallery", label: "Gallery", icon: Sparkles },
-  { href: "/agent", label: "Agent", icon: Bot },
-  { href: "/games", label: "Games", icon: GamepadIcon },
+  { href: "/agent", label: "Jarvis", icon: Bot },
   { href: "/marketplace", label: "Market", icon: ShoppingBag },
+  { href: "/games", label: "Play", icon: GamepadIcon },
 ];
 
-/* ------------------------------------------------------------------ */
-/*  Utility items for mobile / user dropdown                           */
-/* ------------------------------------------------------------------ */
 const userLinks = [
-  { href: "/profile", label: "Profile", icon: User },
-  { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/code", label: "Code Scanner", icon: Code2 },
+  { href: "/profile", label: "My Profile", icon: User },
+  { href: "/settings", label: "System Config", icon: Settings },
+  { href: "/code", label: "Scanner", icon: Code2 },
   { href: "/showcase", label: "Showcase", icon: Sparkles },
 ];
 
@@ -55,17 +63,18 @@ function WalletBadge({ accentColor }: { accentColor: string }) {
       .catch(() => setBalance(null));
   }, []);
   return (
-    <span
-      className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold"
+    <div
+      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:scale-105"
       style={{
         backgroundColor: accentColor + "15",
         color: accentColor,
         border: `1px solid ${accentColor}30`,
       }}
-      title="Your LiTBit Coins balance"
+      title="LiTBit Balance"
     >
-      <Coins size={10} /> {balance === null ? "—" : balance.toLocaleString()}
-    </span>
+      <Coins size={14} />
+      <span>{balance === null ? "—" : balance.toLocaleString()}</span>
+    </div>
   );
 }
 
@@ -81,385 +90,223 @@ function useLocalStorageNumber(key: string, fallback: number) {
 }
 
 export default function Navbar() {
-  const { theme, resolvedColors, setMode } = useTheme();
+  const { resolvedColors: T, setMode, theme } = useTheme();
   const { profile } = useProfile();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const hamburgerRef = useRef<HTMLButtonElement>(null);
   const [userOpen, setUserOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
   const userRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
-  const litcoins = useLocalStorageNumber("litcoins", 500);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+
   const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
-  const { isLoaded: sessionLoaded, isSignedIn: sessionSignedIn } = useSessionAuth();
+  const { isLoaded: sessionLoaded, isSignedIn: sessionSignedIn } =
+    useSessionAuth();
   const authLoaded = clerkLoaded || sessionLoaded;
   const isSignedIn = clerkSignedIn || sessionSignedIn;
 
-  const fetchNotifications = async () => {
-    if (!isSignedIn) return;
-    try {
-      const [listRes, countRes] = await Promise.all([
-        fetch('/api/notifications?limit=20'),
-        fetch('/api/notifications/count'),
-      ]);
-      const listData = await listRes.json();
-      const countData = await countRes.json();
-      setNotifications(listData.notifications || []);
-      setUnreadCount(countData.count || 0);
-    } catch { /* ignore */ }
+  const isActive = (path: string) => {
+    if (path === "/" && pathname !== "/") return false;
+    return pathname?.startsWith(path);
   };
 
-  const markAllRead = async () => {
-    try {
-      await fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mark_all: true }) });
-      setUnreadCount(0);
-      setNotifications(prev => prev.map(n => ({ ...n, read_at: new Date().toISOString() })));
-    } catch { /* ignore */ }
-  };
-
-  useEffect(() => {
-    if (isSignedIn) {
-      fetchNotifications();
-      const interval = setInterval(fetchNotifications, 15000);
-      return () => clearInterval(interval);
-    }
-  }, [isSignedIn]);
-
-  /* Close dropdowns on outside click + close mobile drawer on desktop resize */
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
-      if (mobileOpen && !hamburgerRef.current?.contains(e.target as Node)) setMobileOpen(false);
-    };
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) setMobileOpen(false);
+      if (userRef.current && !userRef.current.contains(e.target as Node))
+        setUserOpen(false);
+      if (notifRef.current && !notifRef.current.contains(e.target as Node))
+        setNotifOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
-    window.addEventListener("resize", handleResize);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      window.removeEventListener("resize", handleResize);
-    };
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
-
-  /* Close mobile menu on route change */
-  useEffect(() => {
-    setMobileOpen(false);
-    setUserOpen(false);
-    setNotifOpen(false);
-  }, [pathname]);
-
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname?.startsWith(href) ?? false;
 
   return (
     <nav
-      className="sticky top-0 z-50"
+      className="sticky top-0 z-[60] w-full backdrop-blur-xl border-b transition-all duration-300"
       style={{
-        borderBottom: `1px solid ${resolvedColors.borderColor}25`,
-        backgroundColor: resolvedColors.bgColor + "cc",
-        backdropFilter: "blur(24px) saturate(180%)",
-        WebkitBackdropFilter: "blur(24px) saturate(180%)",
-        boxShadow: `0 1px 0 ${resolvedColors.accentColor}10, 0 4px 20px rgba(0,0,0,0.3)`,
+        backgroundColor: T.bgColor + "cc",
+        borderColor: T.borderColor + "40",
       }}
     >
-      <div className="max-w-[1600px] mx-auto px-4">
-        <div className="flex items-center justify-between h-14">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-            <div className="relative w-8 h-8 rounded-lg overflow-hidden transition-transform duration-300 group-hover:scale-105" style={{ border: `1px solid ${resolvedColors.accentColor}40` }}>
-              <Image src="/logo.png" alt="LiTree Lab Studios" fill className="object-contain p-0.5" unoptimized />
-            </div>
-            <div className="hidden sm:flex flex-col leading-none px-2 py-1 rounded-lg"
-              style={{ 
-                backgroundColor: resolvedColors.bgColor + '60',
-                backdropFilter: 'blur(4px)',
-              }}>
-              <span className="font-black text-[13px] tracking-tight" 
-                style={{ 
-                  color: resolvedColors.textColor,
-                  textShadow: `0 0 12px ${resolvedColors.accentColor}60, 0 1px 2px ${resolvedColors.bgColor}`,
-                }}>
-                LiTree Labs
-              </span>
-              <span className="text-[9px] font-bold tracking-widest uppercase" 
-                style={{ 
-                  color: resolvedColors.textMuted,
-                  opacity: 0.9,
-                  textShadow: `0 0 8px ${resolvedColors.bgColor}`,
-                }}>AI Platform</span>
-            </div>
-          </Link>
-
-          {/* Desktop Nav */}
-          <div className="hidden lg:flex items-center gap-1 bg-opacity-40 px-1 py-1 rounded-xl" style={{ backgroundColor: resolvedColors.boxBg + "40", border: `1px solid ${resolvedColors.borderColor}20` }}>
-            {navLinks.map((link) => {
-              const active = isActive(link.href);
-              const Icon = link.icon;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="relative flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all duration-200"
-                  style={{
-                    color: active ? resolvedColors.bgColor : resolvedColors.textMuted,
-                    backgroundColor: active ? resolvedColors.accentColor : "transparent",
-                    boxShadow: active ? `0 0 12px ${resolvedColors.accentColor}50` : "none",
-                  }}
-                >
-                  <Icon size={12} strokeWidth={active ? 2.5 : 2} />
-                  <span>{link.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Right side */}
-          <div className="flex items-center gap-2">
-            {/* LitCoins wallet — only when signed in */}
-            {authLoaded && isSignedIn && <WalletBadge accentColor={resolvedColors.accentColor} />}
-
-            {/* Notification bell */}
-            <div className="relative" ref={notifRef}>
-              <button
-                onClick={() => { setNotifOpen((v) => !v); if (!notifOpen && unreadCount > 0) markAllRead(); }}
-                className="p-1.5 rounded-md transition-all duration-200 hover:scale-110 relative"
-                style={{
-                  border: `1px solid ${resolvedColors.accentColor}30`,
-                  color: resolvedColors.accentColor,
-                  backgroundColor: resolvedColors.accentColor + "08",
-                }}
-                title="Notifications"
+      <div className="max-w-[1600px] mx-auto px-4 lg:px-6">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-3 group shrink-0">
+              <div
+                className="relative w-9 h-9 rounded-xl overflow-hidden transition-all duration-500 group-hover:scale-110 shadow-lg"
+                style={{ border: `2px solid ${T.accentColor}40` }}
               >
-                <Bell size={14} />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-black px-1"
-                    style={{ backgroundColor: resolvedColors.headerColor, color: '#fff' }}>
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </button>
-              {notifOpen && (
-                <div
-                  className="absolute top-full right-0 mt-2 py-2 rounded-lg border min-w-[280px] max-h-[400px] overflow-y-auto z-50"
-                  style={{
-                    backgroundColor: resolvedColors.boxBg + "f0",
-                    borderColor: resolvedColors.borderColor + "40",
-                    backdropFilter: "blur(12px)",
-                  }}
+                <Image
+                  src="/logo.png"
+                  alt="LiTree"
+                  fill
+                  className="object-contain p-1"
+                  unoptimized
+                />
+              </div>
+              <div className="hidden md:flex flex-col">
+                <span
+                  className="font-black text-lg tracking-tight leading-none"
+                  style={{ color: T.textColor }}
                 >
-                  <div className="flex items-center justify-between px-3 py-1.5 mb-1">
-                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: resolvedColors.textMuted }}>Notifications</span>
-                    {notifications.length > 0 && (
-                      <button onClick={markAllRead} className="text-[9px] font-bold hover:opacity-70 transition-opacity" style={{ color: resolvedColors.linkColor }}>
-                        Mark all read
-                      </button>
-                    )}
-                  </div>
-                  {notifications.length === 0 ? (
-                    <div className="px-3 py-4 text-[11px] text-center" style={{ color: resolvedColors.textMuted }}>
-                      No notifications yet
-                    </div>
-                  ) : (
-                    <div className="space-y-0.5">
-                      {notifications.map((n) => (
-                        <div key={n.id} className="flex items-start gap-2 px-3 py-2 rounded-lg mx-1 transition-colors hover:bg-white/[0.03]"
-                          style={{ opacity: n.read_at ? 0.5 : 1 }}>
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] shrink-0"
-                            style={{ backgroundColor: resolvedColors.accentColor + '12' }}>
-                            {n.type === 'follow' ? '👤' : n.type === 'like' ? '❤' : n.type === 'comment' ? '💬' : '🔔'}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] leading-snug" style={{ color: resolvedColors.textColor }}>
-                              <span className="font-bold">{n.users?.name || 'Someone'}</span> {n.content}
-                            </div>
-                            <div className="text-[9px] opacity-40 mt-0.5">{new Date(n.created_at).toLocaleDateString()}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Theme toggle */}
-            <button
-              onClick={() => setMode(theme.mode === "dark" ? "light" : "dark")}
-              aria-label={theme.mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              className="p-1.5 rounded-md transition-all duration-200 hover:scale-110"
-              style={{
-                border: `1px solid ${resolvedColors.accentColor}30`,
-                color: resolvedColors.accentColor,
-                backgroundColor: resolvedColors.accentColor + "08",
-              }}
-              title="Toggle dark/light"
-            >
-              {theme.mode === "dark" ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
-
-            {/* User dropdown (profile/settings links) — desktop, signed-in only */}
-            {authLoaded && isSignedIn && (
-              <div className="hidden md:block relative" ref={userRef}>
-                <button
-                  onClick={() => setUserOpen((v) => !v)}
-                  aria-label="Navigation menu"
-                  aria-expanded={userOpen}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all hover:opacity-80"
-                  style={{
-                    border: `1px solid ${resolvedColors.borderColor}30`,
-                    backgroundColor: resolvedColors.boxBg + "60",
-                  }}
-                  title="Menu"
+                  LiTree Lab
+                </span>
+                <span
+                  className="text-[10px] font-bold tracking-[.25em] uppercase opacity-40"
+                  style={{ color: T.textMuted }}
                 >
-                  {profile?.avatarUrl ? (
-                    <img src={profile.avatarUrl} alt="Profile" className="w-5 h-5 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black" style={{ backgroundColor: resolvedColors.accentColor + "30", color: resolvedColors.accentColor }}>
-                      {profile?.displayName?.[0]?.toUpperCase() || "U"}
-                    </div>
-                  )}
-                  <ChevronDown size={10} style={{ color: resolvedColors.textMuted }} />
-                </button>
-                {userOpen && (
-                  <div
-                    className="absolute top-full right-0 mt-2 py-1 rounded-lg border min-w-[160px] z-50"
+                  Studios
+                </span>
+              </div>
+            </Link>
+
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center gap-1">
+              {navLinks.map((link) => {
+                const active = isActive(link.href);
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="relative flex items-center gap-2 px-4 py-2 text-[13px] font-bold rounded-xl transition-all duration-300 group"
                     style={{
-                      backgroundColor: resolvedColors.boxBg + "f0",
-                      borderColor: resolvedColors.borderColor + "40",
-                      backdropFilter: "blur(12px)",
+                      color: active ? T.accentColor : T.textColor,
+                      backgroundColor: active
+                        ? T.accentColor + "10"
+                        : "transparent",
                     }}
                   >
-                    {userLinks.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className="flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors hover:opacity-80"
-                          style={{ color: resolvedColors.textColor }}
-                        >
-                          <Icon size={13} />
-                          <span>{item.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                    <Icon
+                      size={16}
+                      className={`transition-transform duration-300 ${active ? "scale-110" : "group-hover:scale-110 opacity-60"}`}
+                    />
+                    <span
+                      className={
+                        active ? "" : "opacity-70 group-hover:opacity-100"
+                      }
+                    >
+                      {link.label}
+                    </span>
+                    {active && (
+                      <span
+                        className="absolute bottom-1 left-4 right-4 h-0.5 rounded-full"
+                        style={{ backgroundColor: T.accentColor }}
+                      />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right Section Actions */}
+          <div className="flex items-center gap-3">
+            {/* Search Button (UI Only) */}
+            <button className="p-2.5 rounded-xl hover:bg-white/5 opacity-60 transition-all hidden sm:flex">
+              <Search size={18} />
+            </button>
+
+            {/* Theme Toggle */}
+            <button
+              onClick={() => setMode(theme.mode === "dark" ? "light" : "dark")}
+              className="p-2.5 rounded-xl hover:bg-white/5 transition-all"
+              style={{ color: T.textMuted }}
+            >
+              {theme.mode === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
+            {/* Wallet & Auth */}
+            {authLoaded && isSignedIn && (
+              <WalletBadge accentColor={T.accentColor} />
             )}
 
-            {/* Auth — always visible: avatar+name when signed in, Sign In button when not */}
-            <NavAuth linkColor={resolvedColors.accentColor} />
+            <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />
 
-            {/* Mobile hamburger */}
+            <div className="relative flex items-center">
+              <NavAuth />
+            </div>
+
+            {/* Mobile Hamburger */}
             <button
               ref={hamburgerRef}
-              onClick={(e) => { e.stopPropagation(); setMobileOpen((v) => !v); }}
-              aria-label={mobileOpen ? "Close menu" : "Open menu"}
-              aria-expanded={mobileOpen}
-              className="lg:hidden p-1.5 rounded-md"
-              style={{ color: resolvedColors.linkColor }}
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="lg:hidden p-2.5 rounded-xl hover:bg-white/5 transition-all"
+              style={{ color: T.textColor }}
             >
-              {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile drawer — slide down from nav bottom */}
+      {/* Mobile Sidebar Overlay */}
       {mobileOpen && (
-        <>
-          {/* Tap-outside scrim */}
+        <div className="fixed inset-0 z-[100] lg:hidden animate-fadeIn">
           <div
-            className="lg:hidden fixed inset-0 z-[48]"
-            style={{ top: "56px", backgroundColor: "rgba(0,0,0,0.6)" }}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
-            onTouchStart={() => setMobileOpen(false)}
           />
-          {/* Drawer panel */}
           <div
-            className="lg:hidden fixed left-0 right-0 z-[49] flex flex-col overflow-y-auto"
+            className="absolute top-0 right-0 bottom-0 w-[280px] p-6 shadow-2xl flex flex-col gap-8 animate-slideInRight"
             style={{
-              top: "56px",
-              maxHeight: "calc(100dvh - 56px)",
-              backgroundColor: resolvedColors.bgColor,
-              borderBottom: `2px solid ${resolvedColors.accentColor}30`,
-              boxShadow: `0 8px 32px rgba(0,0,0,0.5)`,
+              backgroundColor: T.bgColor,
+              borderLeft: `1px solid ${T.borderColor}40`,
             }}
           >
-            <div className="px-4 pt-5 pb-2 space-y-1">
-              {navLinks.map((link) => {
-                const Icon = link.icon;
-                const active = isActive(link.href);
-                return (
+            <div className="flex items-center justify-between">
+              <span className="font-black text-lg">Menu</span>
+              <button onClick={() => setMobileOpen(false)}>
+                <X />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-4 p-4 rounded-2xl font-bold transition-all active:scale-95"
+                  style={{
+                    backgroundColor: isActive(link.href)
+                      ? T.accentColor + "15"
+                      : "transparent",
+                    color: isActive(link.href) ? T.accentColor : T.textColor,
+                  }}
+                >
+                  <link.icon size={20} />
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+
+            <div
+              className="mt-auto pt-6 border-t"
+              style={{ borderColor: T.borderColor + "20" }}
+            >
+              <div className="flex flex-col gap-2">
+                {userLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="flex items-center gap-3 px-4 py-3.5 text-sm font-bold rounded-xl transition-all active:scale-95"
-                    style={{
-                      color: active ? resolvedColors.bgColor : resolvedColors.textColor,
-                      backgroundColor: active ? resolvedColors.accentColor : resolvedColors.boxBg + "80",
-                      boxShadow: active ? `0 0 12px ${resolvedColors.accentColor}40` : "none",
-                    }}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 p-3 text-sm opacity-70 hover:opacity-100"
                   >
-                    <Icon size={18} />
+                    <link.icon size={16} />
                     {link.label}
                   </Link>
-                );
-              })}
-            </div>
-
-            {authLoaded && isSignedIn && (
-              <div className="px-4 pb-2 space-y-1">
-                <div className="text-[10px] font-bold uppercase tracking-widest px-4 py-2 opacity-50" style={{ color: resolvedColors.textMuted }}>Account</div>
-                {userLinks.map((link) => {
-                  const Icon = link.icon;
-                  const active = isActive(link.href);
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all active:scale-95"
-                      style={{
-                        color: active ? resolvedColors.headerColor : resolvedColors.textColor,
-                        backgroundColor: active ? resolvedColors.accentColor + "15" : resolvedColors.boxBg + "80",
-                      }}
-                    >
-                      <Icon size={18} />
-                      {link.label}
-                    </Link>
-                  );
-                })}
+                ))}
               </div>
-            )}
-
-            <div className="px-4 py-4 mt-2 border-t flex items-center justify-between" style={{ borderColor: resolvedColors.borderColor + "30" }}>
-              <div className="flex items-center gap-2">
-                {authLoaded && isSignedIn ? (
-                  <WalletBadge accentColor={resolvedColors.accentColor} />
-                ) : (
-                  <>
-                    <Coins size={12} style={{ color: resolvedColors.accentColor }} />
-                    <span className="text-xs font-bold" style={{ color: resolvedColors.accentColor }}>Sign In</span>
-                  </>
-                )}
-              </div>
-              <button
-                onClick={() => setMode(theme.mode === "dark" ? "light" : "dark")}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border"
-                style={{ borderColor: resolvedColors.borderColor + "40", color: resolvedColors.textMuted }}
-              >
-                {theme.mode === "dark" ? <Sun size={13} /> : <Moon size={13} />}
-                {theme.mode === "dark" ? "Light Mode" : "Dark Mode"}
-              </button>
             </div>
           </div>
-        </>
+        </div>
       )}
     </nav>
   );

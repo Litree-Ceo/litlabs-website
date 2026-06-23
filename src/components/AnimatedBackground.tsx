@@ -4,10 +4,13 @@ import { useEffect, useRef } from "react";
 import { useTheme } from "@/context/ThemeContext";
 
 interface Orb {
-  x: number; y: number;
-  baseX: number; baseY: number;
+  x: number;
+  y: number;
+  baseX: number;
+  baseY: number;
   radius: number;
-  vx: number; vy: number;
+  vx: number;
+  vy: number;
   hue: number;
   hueSpeed: number;
   pulse: number;
@@ -26,7 +29,8 @@ interface AuroraRibbon {
 }
 
 interface Sparkle {
-  x: number; y: number;
+  x: number;
+  y: number;
   size: number;
   alpha: number;
   targetAlpha: number;
@@ -34,12 +38,19 @@ interface Sparkle {
   hue: number;
 }
 
-export type BackgroundMode = "constellation" | "nebula" | "waves" | "minimal" | "holo";
+export type BackgroundMode =
+  | "constellation"
+  | "nebula"
+  | "waves"
+  | "minimal"
+  | "holo";
 
-export default function AnimatedBackground({ mode = "holo" }: { mode?: BackgroundMode }) {
+export default function AnimatedBackground({
+  mode = "nebula",
+}: {
+  mode?: BackgroundMode;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const scanlineRef = useRef<HTMLDivElement>(null);
-  const noiseRef = useRef<HTMLDivElement>(null);
   const { resolvedColors } = useTheme();
   const colorsRef = useRef(resolvedColors);
   colorsRef.current = resolvedColors;
@@ -54,7 +65,8 @@ export default function AnimatedBackground({ mode = "holo" }: { mode?: Backgroun
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let animId: number;
-    let w = 0, h = 0;
+    let w = 0,
+      h = 0;
     let time = 0;
     let lastFrame = 0;
     const FRAME_INTERVAL = 1000 / 30; // throttle to 30fps
@@ -73,103 +85,66 @@ export default function AnimatedBackground({ mode = "holo" }: { mode?: Backgroun
       const b = parseInt(hex.slice(5, 7), 16);
       return { r, g, b };
     }
-    function rgbToHsl(r: number, g: number, b: number) {
-      r /= 255; g /= 255; b /= 255;
-      const max = Math.max(r, g, b), min = Math.min(r, g, b);
-      let h = 0, s = 0, l = (max + min) / 2;
-      if (max !== min) {
-        const d = max - min;
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        switch (max) {
-          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-          case g: h = (b - r) / d + 2; break;
-          case b: h = (r - g) / d + 4; break;
-        }
-        h /= 6;
-      }
-      return { h: h * 360, s: s * 100, l: l * 100 };
-    }
-    function hslToRgb(h: number, s: number, l: number) {
-      s /= 100; l /= 100;
-      const k = (n: number) => (n + h / 30) % 12;
-      const a = s * Math.min(l, 1 - l);
-      const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-      return { r: Math.round(f(0) * 255), g: Math.round(f(8) * 255), b: Math.round(f(4) * 255) };
-    }
 
     /* ── Resize ── */
     function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      w = canvas!.width = window.innerWidth * dpr;
-      h = canvas!.height = window.innerHeight * dpr;
-      ctx!.setTransform(1, 0, 0, 1, 0, 0);
-      ctx!.scale(dpr, dpr);
-      w = window.innerWidth;
-      h = window.innerHeight;
+      if (!canvas) return;
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
     }
 
-    /* ── Init Orbs ── */
-    const orbs: Orb[] = [];
+    /* ── State ── */
+    let orbs: Orb[] = [];
+    let auroras: AuroraRibbon[] = [];
+    let sparkles: Sparkle[] = [];
+
     function initOrbs() {
-      orbs.length = 0;
-      const count = 9;
-      for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2;
-        const dist = 80 + Math.random() * 250;
-        orbs.push({
-          x: w / 2 + Math.cos(angle) * dist,
-          y: h / 2 + Math.sin(angle) * dist,
-          baseX: w / 2 + Math.cos(angle) * dist,
-          baseY: h / 2 + Math.sin(angle) * dist,
-          radius: 40 + Math.random() * 80,
-          vx: (Math.random() - 0.5) * 0.15,
-          vy: (Math.random() - 0.5) * 0.15,
-          hue: Math.random() * 360,
-          hueSpeed: 0.1 + Math.random() * 0.3,
-          pulse: Math.random() * Math.PI * 2,
-          pulseSpeed: 0.005 + Math.random() * 0.01,
-          orbitAngle: angle,
-          orbitRadius: dist,
-          orbitSpeed: (Math.random() - 0.5) * 0.0008,
-        });
-      }
+      orbs = Array.from({ length: mode === "minimal" ? 4 : 10 }).map(() => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        baseX: Math.random() * w,
+        baseY: Math.random() * h,
+        radius: Math.random() * 200 + 100,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        hue: Math.random() * 360,
+        hueSpeed: (Math.random() - 0.5) * 0.1,
+        pulse: Math.random() * Math.PI * 2,
+        pulseSpeed: 0.005 + Math.random() * 0.01,
+        orbitAngle: Math.random() * Math.PI * 2,
+        orbitRadius: Math.random() * 100,
+        orbitSpeed: (Math.random() - 0.5) * 0.002,
+      }));
     }
 
-    /* ── Init Auroras ── */
-    const auroras: AuroraRibbon[] = [];
     function initAuroras() {
-      auroras.length = 0;
-      for (let i = 0; i < 3; i++) {
-        const pts = 12;
-        const points: Array<{ x: number; y: number; offset: number }> = [];
-        for (let p = 0; p <= pts; p++) {
-          points.push({ x: (p / pts) * w, y: 0, offset: Math.random() * Math.PI * 2 });
-        }
-        auroras.push({
-          points,
-          amplitude: 30 + Math.random() * 50,
-          speed: 0.3 + Math.random() * 0.5,
-          hue: i * 60,
-          yBase: h * (0.25 + i * 0.25),
-        });
-      }
+      auroras = Array.from({ length: mode === "minimal" ? 0 : 2 }).map(
+        (_, i) => ({
+          points: Array.from({ length: 8 }).map((__, j) => ({
+            x: (j / 7) * w,
+            y: h * (0.3 + i * 0.4),
+            offset: Math.random() * Math.PI * 2,
+          })),
+          amplitude: 50 + Math.random() * 100,
+          speed: 0.001 + Math.random() * 0.002,
+          hue: Math.random() * 360,
+          yBase: h * (0.3 + i * 0.4),
+        }),
+      );
     }
 
-    /* ── Init Sparkles ── */
-    const sparkles: Sparkle[] = [];
     function initSparkles() {
-      sparkles.length = 0;
-      for (let i = 0; i < 15; i++) {
-        sparkles.push({
+      sparkles = Array.from({ length: mode === "minimal" ? 20 : 60 }).map(
+        () => ({
           x: Math.random() * w,
           y: Math.random() * h,
-          size: 0.5 + Math.random() * 2,
+          size: Math.random() * 2,
           alpha: 0,
-          targetAlpha: Math.random() * 0.6,
-          fadeSpeed: 0.005 + Math.random() * 0.015,
+          targetAlpha: Math.random() * 0.5,
+          fadeSpeed: 0.005 + Math.random() * 0.01,
           hue: Math.random() * 360,
-        });
-      }
+        }),
+      );
     }
 
     /* ── Draw ── */
@@ -178,124 +153,102 @@ export default function AnimatedBackground({ mode = "holo" }: { mode?: Backgroun
         animId = requestAnimationFrame(draw);
         return;
       }
-      const elapsed = now - lastFrame;
-      if (elapsed < FRAME_INTERVAL) {
+
+      const delta = now - lastFrame;
+      if (delta < FRAME_INTERVAL) {
         animId = requestAnimationFrame(draw);
         return;
       }
-      lastFrame = now - (elapsed % FRAME_INTERVAL);
+      lastFrame = now;
+      time += 0.01;
 
-      const cols = colorsRef.current;
-      const linkRgb = hexToRgb(cols.linkColor);
-      const accentRgb = hexToRgb(cols.accentColor);
-      const baseHsl = rgbToHsl(linkRgb.r, linkRgb.g, linkRgb.b);
+      if (!ctx) return;
+      ctx.clearRect(0, 0, w, h);
 
-      // Trail effect — don't fully clear
-      ctx!.globalCompositeOperation = "source-over";
-      ctx!.fillStyle = `rgba(10, 10, 15, 0.18)`;
-      ctx!.fillRect(0, 0, w, h);
+      // 1. Draw Mesh Orbs (Nebula effect)
+      if (mode !== "minimal") {
+        orbs.forEach((orb) => {
+          orb.pulse += orb.pulseSpeed;
+          orb.orbitAngle += orb.orbitSpeed;
+          orb.hue += orb.hueSpeed;
 
-      time += 1;
+          const pulseScale = 1 + Math.sin(orb.pulse) * 0.2;
+          const ox = orb.baseX + Math.cos(orb.orbitAngle) * orb.orbitRadius;
+          const oy = orb.baseY + Math.sin(orb.orbitAngle) * orb.orbitRadius;
 
-      // Mouse spotlight (soft radial glow)
-      if (mouse.x > -100) {
-        const spot = ctx!.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 350);
-        spot.addColorStop(0, `rgba(${linkRgb.r},${linkRgb.g},${linkRgb.b},0.06)`);
-        spot.addColorStop(0.5, `rgba(${accentRgb.r},${accentRgb.g},${accentRgb.b},0.02)`);
-        spot.addColorStop(1, "transparent");
-        ctx!.fillStyle = spot;
-        ctx!.fillRect(0, 0, w, h);
+          orb.x += (ox - orb.x) * 0.02;
+          orb.y += (oy - orb.y) * 0.02;
+
+          const grad = ctx.createRadialGradient(
+            orb.x,
+            orb.y,
+            0,
+            orb.x,
+            orb.y,
+            orb.radius * pulseScale,
+          );
+          const rgb = hexToRgb(colorsRef.current.accentColor);
+          grad.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08)`);
+          grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(orb.x, orb.y, orb.radius * pulseScale, 0, Math.PI * 2);
+          ctx.fill();
+        });
       }
 
-      // ── Auroras ──
-      ctx!.globalCompositeOperation = "screen";
-      for (const aurora of auroras) {
-        const { h: ah, s, l } = baseHsl;
-        const ribbonHue = (ah + aurora.hue + time * 0.05) % 360;
-        const rgb = hslToRgb(ribbonHue, s * 0.8, l * 0.6);
+      // 2. Draw Auroras
+      if (mode === "nebula" || mode === "waves") {
+        auroras.forEach((aurora) => {
+          ctx.beginPath();
+          ctx.moveTo(0, aurora.yBase);
 
-        ctx!.beginPath();
-        for (let i = 0; i < aurora.points.length; i++) {
-          const pt = aurora.points[i];
-          const wave = Math.sin(pt.offset + time * aurora.speed * 0.01) * aurora.amplitude;
-          const y = aurora.yBase + wave + Math.sin(time * 0.003 + i) * 20;
-          if (i === 0) ctx!.moveTo(pt.x, y);
-          else ctx!.lineTo(pt.x, y);
+          aurora.points.forEach((p, i) => {
+            p.offset += aurora.speed;
+            const y =
+              aurora.yBase + Math.sin(p.offset + time) * aurora.amplitude;
+            if (i === 0) ctx.moveTo(p.x, y);
+            else {
+              const prev = aurora.points[i - 1];
+              const prevY =
+                aurora.yBase + Math.sin(prev.offset + time) * aurora.amplitude;
+              ctx.bezierCurveTo(
+                prev.x + (p.x - prev.x) / 2,
+                prevY,
+                prev.x + (p.x - prev.x) / 2,
+                y,
+                p.x,
+                y,
+              );
+            }
+          });
+
+          const rgb = hexToRgb(colorsRef.current.linkColor);
+          ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.05)`;
+          ctx.lineWidth = 200;
+          ctx.lineCap = "round";
+          ctx.stroke();
+        });
+      }
+
+      // 3. Draw Sparkles
+      sparkles.forEach((s) => {
+        if (s.alpha < s.targetAlpha) s.alpha += s.fadeSpeed;
+        else {
+          s.alpha -= s.fadeSpeed * 0.5;
+          if (s.alpha <= 0) {
+            s.x = Math.random() * w;
+            s.y = Math.random() * h;
+            s.targetAlpha = Math.random() * 0.5;
+          }
         }
-        ctx!.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.08)`;
-        ctx!.lineWidth = 60;
-        ctx!.lineCap = "round";
-        ctx!.stroke();
 
-        ctx!.beginPath();
-        for (let i = 0; i < aurora.points.length; i++) {
-          const pt = aurora.points[i];
-          const wave = Math.sin(pt.offset + time * aurora.speed * 0.01) * aurora.amplitude;
-          const y = aurora.yBase + wave + Math.sin(time * 0.003 + i) * 20;
-          if (i === 0) ctx!.moveTo(pt.x, y);
-          else ctx!.lineTo(pt.x, y);
-        }
-        ctx!.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`;
-        ctx!.lineWidth = 20;
-        ctx!.stroke();
-      }
-
-      // ── Orbs ──
-      ctx!.globalCompositeOperation = "screen";
-      for (const orb of orbs) {
-        // Orbit drift
-        orb.orbitAngle += orb.orbitSpeed;
-        orb.baseX = w / 2 + Math.cos(orb.orbitAngle) * orb.orbitRadius;
-        orb.baseY = h / 2 + Math.sin(orb.orbitAngle) * orb.orbitRadius * 0.6;
-        orb.x += orb.vx + Math.sin(time * 0.002 + orb.orbitAngle) * 0.1;
-        orb.y += orb.vy + Math.cos(time * 0.003 + orb.orbitAngle) * 0.1;
-        orb.pulse += orb.pulseSpeed;
-        orb.hue = (baseHsl.h + orb.hue + time * orb.hueSpeed) % 360;
-
-        const pulseScale = 1 + Math.sin(orb.pulse) * 0.2;
-        const r = orb.radius * pulseScale;
-        const rgb = hslToRgb(orb.hue, 70, 55);
-
-        // Outer glow
-        const grad = ctx!.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, r * 3);
-        grad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.25)`);
-        grad.addColorStop(0.4, `rgba(${rgb.r},${rgb.g},${rgb.b},0.08)`);
-        grad.addColorStop(1, "transparent");
-        ctx!.fillStyle = grad;
-        ctx!.fillRect(orb.x - r * 3, orb.y - r * 3, r * 6, r * 6);
-
-        // Core orb
-        const core = ctx!.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, r);
-        core.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)`);
-        core.addColorStop(0.5, `rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`);
-        core.addColorStop(1, "transparent");
-        ctx!.fillStyle = core;
-        ctx!.beginPath();
-        ctx!.arc(orb.x, orb.y, r, 0, Math.PI * 2);
-        ctx!.fill();
-      }
-
-      // ── Sparkles ──
-      ctx!.globalCompositeOperation = "screen";
-      for (const s of sparkles) {
-        s.alpha += (s.targetAlpha - s.alpha) * s.fadeSpeed;
-        if (Math.abs(s.alpha - s.targetAlpha) < 0.01) {
-          s.targetAlpha = s.targetAlpha > 0.1 ? 0 : Math.random() * 0.6;
-        }
-        const rgb = hslToRgb((baseHsl.h + s.hue) % 360, 60, 70);
-        ctx!.beginPath();
-        ctx!.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${s.alpha})`;
-        ctx!.fill();
-      }
-
-      // ── Subtle grid overlay (fades at edges) ──
-      ctx!.globalCompositeOperation = "source-over";
-      const gridGrad = ctx!.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.7);
-      gridGrad.addColorStop(0, `rgba(${linkRgb.r},${linkRgb.g},${linkRgb.b},0.02)`);
-      gridGrad.addColorStop(1, "transparent");
-      ctx!.fillStyle = gridGrad;
-      ctx!.fillRect(0, 0, w, h);
+        ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
 
       animId = requestAnimationFrame(draw);
     }
@@ -303,10 +256,6 @@ export default function AnimatedBackground({ mode = "holo" }: { mode?: Backgroun
     function onMouseMove(e: MouseEvent) {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
-    }
-    function onMouseLeave() {
-      mouse.x = -1000;
-      mouse.y = -1000;
     }
     function onResize() {
       resize();
@@ -323,42 +272,28 @@ export default function AnimatedBackground({ mode = "holo" }: { mode?: Backgroun
 
     window.addEventListener("resize", onResize);
     window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseleave", onMouseLeave);
 
     return () => {
       cancelAnimationFrame(animId);
       document.removeEventListener("visibilitychange", onVisChange);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseleave", onMouseLeave);
     };
-  }, []);
+  }, [mode]);
 
   return (
-    <>
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          zIndex: 0,
-          pointerEvents: "none",
-          willChange: "transform",
-        }}
-      />
-      {/* Static scanlines — lightweight, no animation */}
-      <div
-        ref={scanlineRef}
-        className="fixed inset-0 pointer-events-none z-[1]"
-        style={{
-          background: "repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 3px)",
-          backgroundSize: "100% 4px",
-          opacity: 0.25,
-        }}
-      />
-    </>
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        zIndex: 0,
+        pointerEvents: "none",
+        willChange: "transform",
+      }}
+    />
   );
 }

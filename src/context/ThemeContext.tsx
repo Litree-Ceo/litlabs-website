@@ -5,8 +5,8 @@ import type { BackgroundMode } from "@/components/AnimatedBackground";
 
 // Skin presets
 export type SkinPreset =
+  | "midnight"
   | "cyberpunk"
-  | "retro"
   | "ocean"
   | "sunset"
   | "matrix"
@@ -16,20 +16,20 @@ export type SkinPreset =
   | "gold"
   | "arctic"
   | "emerald"
-  | "midnight"
   | "neon"
   | "blood"
   | "cosmic"
-  | "miami";
+  | "miami"
+  | "minimal";
 
 // Theme mode
 export type ThemeMode = "dark" | "light" | "system";
 
 // Accent colors
 export type AccentColor = 
+  | "electric-blue" 
   | "neon-green" 
   | "hot-pink" 
-  | "electric-blue" 
   | "cyber-yellow" 
   | "matrix-green" 
   | "sunset-orange" 
@@ -53,8 +53,17 @@ export interface Theme {
   };
 }
 
-// Default dark skins
-const darkSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkColor: string; headerColor: string; borderColor: string; accentColor: string; boxBg: string }> = {
+// Default dark skins - Updated with modern colors
+export const darkSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkColor: string; headerColor: string; borderColor: string; accentColor: string; boxBg: string }> = {
+  midnight: {
+    bgColor: "#08080c",
+    textColor: "#e2e2e9",
+    linkColor: "#38bdf8",
+    headerColor: "#f8fafc",
+    borderColor: "#26262e",
+    accentColor: "#6366f1",
+    boxBg: "#12121a",
+  },
   cyberpunk: {
     bgColor: "#0c0c14",
     textColor: "#d4d4e8",
@@ -63,15 +72,6 @@ const darkSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkCo
     borderColor: "#334155",
     accentColor: "#38bdf8",
     boxBg: "#131320",
-  },
-  retro: {
-    bgColor: "#141414",
-    textColor: "#e8e6e1",
-    linkColor: "#f0ab3c",
-    headerColor: "#ffb347",
-    borderColor: "#3d3529",
-    accentColor: "#f4a460",
-    boxBg: "#1c1c1c",
   },
   ocean: {
     bgColor: "#081c2e",
@@ -154,15 +154,6 @@ const darkSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkCo
     accentColor: "#34d399",
     boxBg: "#131e18",
   },
-  midnight: {
-    bgColor: "#080a12",
-    textColor: "#c7cee8",
-    linkColor: "#60a5fa",
-    headerColor: "#93c5fd",
-    borderColor: "#1e293b",
-    accentColor: "#3b82f6",
-    boxBg: "#0f1220",
-  },
   neon: {
     bgColor: "#0a0a0a",
     textColor: "#e0e0e0",
@@ -199,10 +190,28 @@ const darkSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkCo
     accentColor: "#14b8a6",
     boxBg: "#15252a",
   },
+  minimal: {
+    bgColor: "#050505",
+    textColor: "#ffffff",
+    linkColor: "#ffffff",
+    headerColor: "#ffffff",
+    borderColor: "#222222",
+    accentColor: "#ffffff",
+    boxBg: "#0a0a0a",
+  }
 };
 
 // Light mode variants
-const lightSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkColor: string; headerColor: string; borderColor: string; accentColor: string; boxBg: string }> = {
+export const lightSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkColor: string; headerColor: string; borderColor: string; accentColor: string; boxBg: string }> = {
+  midnight: {
+    bgColor: "#f8f9fa",
+    textColor: "#1a1a1a",
+    linkColor: "#2563eb",
+    headerColor: "#111827",
+    borderColor: "#e5e7eb",
+    accentColor: "#3b82f6",
+    boxBg: "#ffffff",
+  },
   cyberpunk: {
     bgColor: "#f5f5fa",
     textColor: "#1e1e2e",
@@ -210,15 +219,6 @@ const lightSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkC
     headerColor: "#0284c7",
     borderColor: "#d1d5db",
     accentColor: "#0ea5e9",
-    boxBg: "#ffffff",
-  },
-  retro: {
-    bgColor: "#faf9f6",
-    textColor: "#2a2a2a",
-    linkColor: "#d97706",
-    headerColor: "#b45309",
-    borderColor: "#e5e0d8",
-    accentColor: "#f59e0b",
     boxBg: "#ffffff",
   },
   ocean: {
@@ -302,15 +302,6 @@ const lightSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkC
     accentColor: "#34d399",
     boxBg: "#ffffff",
   },
-  midnight: {
-    bgColor: "#f5f6ff",
-    textColor: "#1e1b4b",
-    linkColor: "#4f46e5",
-    headerColor: "#4338ca",
-    borderColor: "#c7d2fe",
-    accentColor: "#6366f1",
-    boxBg: "#ffffff",
-  },
   neon: {
     bgColor: "#fafafa",
     textColor: "#171717",
@@ -347,13 +338,22 @@ const lightSkins: Record<SkinPreset, { bgColor: string; textColor: string; linkC
     accentColor: "#14b8a6",
     boxBg: "#ffffff",
   },
+  minimal: {
+    bgColor: "#ffffff",
+    textColor: "#000000",
+    linkColor: "#000000",
+    headerColor: "#000000",
+    borderColor: "#eeeeee",
+    accentColor: "#000000",
+    boxBg: "#ffffff",
+  }
 };
 
 // Accent color overrides
 const accentOverrides: Record<AccentColor, { linkColor: string; headerColor: string; accentColor: string }> = {
+  "electric-blue": { linkColor: "#60a5fa", headerColor: "#93c5fd", accentColor: "#3b82f6" },
   "neon-green": { linkColor: "#22d3ee", headerColor: "#67e8f9", accentColor: "#06b6d4" },
   "hot-pink": { linkColor: "#f472b6", headerColor: "#fbcfe8", accentColor: "#ec4899" },
-  "electric-blue": { linkColor: "#60a5fa", headerColor: "#93c5fd", accentColor: "#3b82f6" },
   "cyber-yellow": { linkColor: "#fbbf24", headerColor: "#fcd34d", accentColor: "#f59e0b" },
   "matrix-green": { linkColor: "#a78bfa", headerColor: "#c4b5fd", accentColor: "#8b5cf6" },
   "sunset-orange": { linkColor: "#fb923c", headerColor: "#fdba74", accentColor: "#f97316" },
@@ -364,20 +364,22 @@ const accentOverrides: Record<AccentColor, { linkColor: string; headerColor: str
 // Default theme
 const defaultTheme: Theme = {
   mode: "dark",
-  skin: "volcanic",
-  accent: "sunset-orange",
-  backgroundMode: "constellation",
+  skin: "midnight",
+  accent: "electric-blue",
+  backgroundMode: "nebula",
 };
 
 // Context
 interface ThemeContextType {
   theme: Theme;
   resolvedColors: { bgColor: string; textColor: string; textMuted: string; linkColor: string; headerColor: string; borderColor: string; accentColor: string; boxBg: string; success: string; warning: string };
+  crtEnabled: boolean;
   setMode: (mode: ThemeMode) => void;
   setSkin: (skin: SkinPreset) => void;
   setAccent: (accent: AccentColor) => void;
   setBackgroundMode: (mode: BackgroundMode) => void;
   setCustomColors: (colors: { bgColor?: string; textColor?: string; linkColor?: string; headerColor?: string; borderColor?: string; accentColor?: string; boxBg?: string }) => void;
+  toggleCrt: () => void;
   resetTheme: () => void;
 }
 
@@ -385,6 +387,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [crtEnabled, setCrtEnabled] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Load from localStorage on mount
@@ -397,6 +400,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         console.error("Failed to parse theme", e);
       }
     }
+    const crt = localStorage.getItem("litlabs-crt");
+    if (crt === "true") setCrtEnabled(true);
     setMounted(true);
   }, []);
 
@@ -404,6 +409,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (mounted) {
       localStorage.setItem("litlabs-theme", JSON.stringify(theme));
+      localStorage.setItem("litlabs-crt", String(crtEnabled));
       // Apply CSS variables
       const root = document.documentElement;
       const colors = getResolvedColors(theme);
@@ -415,12 +421,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       root.style.setProperty("--accent-color", colors.accentColor);
       root.style.setProperty("--box-bg", colors.boxBg);
     }
-  }, [theme, mounted]);
+  }, [theme, crtEnabled, mounted]);
 
   const getResolvedColors = (t: Theme) => {
     // Get base skin based on mode
     const baseSkins = t.mode === "light" ? lightSkins : darkSkins;
-    const skinColors = baseSkins[t.skin];
+    const skinColors = baseSkins[t.skin] || baseSkins["midnight"];
 
     // Apply custom colors if set
     const custom = t.customColors || {};
@@ -431,14 +437,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return {
       bgColor: custom.bgColor || skinColors.bgColor,
       textColor: custom.textColor || skinColors.textColor,
-      textMuted: "#a8a8c0",
+      textMuted: t.mode === "light" ? "#6b7280" : "#8e8e9f",
       linkColor: accent?.linkColor || custom.linkColor || skinColors.linkColor,
       headerColor: accent?.headerColor || custom.headerColor || skinColors.headerColor,
       borderColor: custom.borderColor || skinColors.borderColor,
       accentColor: accent?.accentColor || custom.accentColor || skinColors.accentColor,
       boxBg: custom.boxBg || skinColors.boxBg,
-      success: "#25e08a",
-      warning: "#ffb020",
+      success: "#10b981",
+      warning: "#f59e0b",
     };
   };
 
@@ -464,8 +470,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme((prev) => ({ ...prev, customColors: { ...prev.customColors, ...colors } }));
   };
 
+  const toggleCrt = () => {
+    setCrtEnabled(!crtEnabled);
+  };
+
   const resetTheme = () => {
     setTheme(defaultTheme);
+    setCrtEnabled(false);
   };
 
   return (
@@ -473,11 +484,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       value={{
         theme,
         resolvedColors,
+        crtEnabled,
         setMode,
         setSkin,
         setAccent,
         setBackgroundMode,
         setCustomColors,
+        toggleCrt,
         resetTheme,
       }}
     >
@@ -494,37 +507,19 @@ export function useTheme() {
   return context;
 }
 
+// Helper hook for CRT toggle (used in Studio)
+export function useCrtToggle() {
+  const { crtEnabled, toggleCrt } = useTheme();
+  return { crtEnabled, toggleCrt };
+}
+
 export const ACCENT_MAP: Record<AccentColor, { hex: string }> = {
+  "electric-blue": { hex: "#3b82f6" },
   "neon-green": { hex: "#06b6d4" },
   "hot-pink": { hex: "#ec4899" },
-  "electric-blue": { hex: "#3b82f6" },
   "cyber-yellow": { hex: "#f59e0b" },
   "matrix-green": { hex: "#8b5cf6" },
   "sunset-orange": { hex: "#f97316" },
   "ocean-blue": { hex: "#0ea5e9" },
   "purple-haze": { hex: "#a855f7" },
 };
-
-export { darkSkins, lightSkins, accentOverrides };
-
-/* ------------------------------------------------------------------ */
-/*  Global CRT Toggle — single source of truth for scanline overlay    */
-/* ------------------------------------------------------------------ */
-export function useCrtToggle() {
-  const [crtEnabled, setCrtEnabled] = useState(true);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    const val = localStorage.getItem("crt_global_scanlines");
-    setCrtEnabled(val === null ? true : val === "true");
-    setHydrated(true);
-  }, []);
-
-  const toggleCrt = useCallback((next?: boolean) => {
-    const nextVal = next !== undefined ? next : !crtEnabled;
-    setCrtEnabled(nextVal);
-    localStorage.setItem("crt_global_scanlines", String(nextVal));
-  }, [crtEnabled]);
-
-  return { crtEnabled: hydrated ? crtEnabled : true, toggleCrt };
-}
