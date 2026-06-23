@@ -5,7 +5,7 @@
  */
 
 const CACHE_NAME = "litlabs-v5";
-const STATIC_ASSETS = ["/manifest.json", "/logo.png"];
+const STATIC_ASSETS = ["/manifest.json", "/logo.webp", "/logo-sm.png"];
 
 // Install — pre-cache static assets only (not pages)
 self.addEventListener("install", (event) => {
@@ -68,8 +68,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "LiTTree Lab Studios", {
       body: data.body || "New notification from LiTTree Lab",
-      icon: "/logo.png",
-      badge: "/logo.png",
+      icon: "/logo.webp",
+      badge: "/logo.webp",
       tag: data.tag || "default",
       requireInteraction: data.requireInteraction || false,
       actions: data.actions || [],

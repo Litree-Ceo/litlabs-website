@@ -204,11 +204,12 @@ export default function Navbar() {
               style={{ border: `1px solid ${resolvedColors.accentColor}40` }}
             >
               <Image
-                src="/logo.png"
+                src="/logo-sm.png"
                 alt="LiTree Lab Studios"
                 fill
+                sizes="32px"
                 className="object-contain p-0.5"
-                unoptimized
+                priority
               />
             </div>
             <div
