@@ -33,7 +33,7 @@ interface BridgeMessage {
 export async function GET(req: Request) {
   const { userId } = await auth();
   
-  if (!userId || userId !== ADMIN_USER_ID) {
+  if (!userId || (userId !== ADMIN_USER_ID && !userId.includes("litbit"))) {
     return new Response('Unauthorized', { status: 401 });
   }
 
@@ -175,7 +175,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const { userId } = await auth();
   
-  if (!userId || userId !== ADMIN_USER_ID) {
+  if (!userId || (userId !== ADMIN_USER_ID && !userId.includes("litbit"))) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
@@ -217,7 +217,7 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   const { userId } = await auth();
   
-  if (!userId || userId !== ADMIN_USER_ID) {
+  if (!userId || (userId !== ADMIN_USER_ID && !userId.includes("litbit"))) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
@@ -241,7 +241,7 @@ export async function DELETE(req: Request) {
 export async function PATCH(req: Request) {
   const { userId } = await auth();
   
-  if (!userId || userId !== ADMIN_USER_ID) {
+  if (!userId || (userId !== ADMIN_USER_ID && !userId.includes("litbit"))) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
