@@ -22,21 +22,21 @@ interface Message {
   ts: number;
 }
 
-const SYSTEM_PROMPT = `You are Hermes, the ultimate AI agent for LiTree Lab Studios. You are powered by Gemini 2.5 Flash.
+const SYSTEM_PROMPT = `You are Jarvis, the ultimate AI agent for LiTree Lab Studios. You are powered by Gemini 2.5 Flash.
 Your goal is to be the most helpful, proactive, and intelligent partner for the user.
 You have deep knowledge of the LiTree Lab Studios platform, including agent building, 360 world generation, and no-code workflows.
 Be concise but insightful. Be proactive in offering solutions.
 If the user asks for technical help, be precise. If they want to create, be imaginative.
 You are the "best agent" the user has access to.`;
 
-export default function HermesAgent() {
+export default function JarvisAgent() {
   const { isSignedIn, isLoaded } = useClerkAuth();
   const { resolvedColors: T } = useTheme();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
       content:
-        "Hello! I am Hermes, your primary AI agent. How can I assist you in LiTree Lab Studios today?",
+        "Hello! I am Jarvis, your primary AI agent. How can I assist you in LiTree Lab Studios today?",
       ts: Date.now(),
     },
   ]);
@@ -138,7 +138,7 @@ export default function HermesAgent() {
           </div>
           <div>
             <h1 className="text-lg font-bold" style={{ color: T.textColor }}>
-              Hermes
+              Jarvis
             </h1>
             <div className="flex items-center gap-2 text-[10px] opacity-60">
               <span className="flex items-center gap-1">
@@ -216,7 +216,7 @@ export default function HermesAgent() {
                   style={{ color: T.accentColor }}
                 />
                 <span className="text-xs opacity-50 italic">
-                  Hermes is thinking...
+                  Jarvis is thinking...
                 </span>
               </div>
             </div>
@@ -240,7 +240,7 @@ export default function HermesAgent() {
                 sendMessage();
               }
             }}
-            placeholder="Talk to Hermes..."
+            placeholder="Talk to Jarvis..."
             rows={1}
             className="w-full pl-4 pr-12 py-3 rounded-xl bg-transparent border outline-none resize-none transition-all focus:ring-1"
             style={

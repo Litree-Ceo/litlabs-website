@@ -12,6 +12,7 @@ import dynamic from "next/dynamic";
 import {
   Home, ShoppingBag, Sparkles,
   Settings, Sun, Moon, Zap,
+  Bot,
   ChevronDown, X, Menu, Bell, Coins, User,
   Gamepad as GamepadIcon, Code2
 } from "lucide-react";
@@ -28,6 +29,7 @@ const navLinks = [
   { href: "/", label: "Home", icon: Home },
   { href: "/studio", label: "Studio", icon: Zap },
   { href: "/gallery", label: "Gallery", icon: Sparkles },
+  { href: "/agent", label: "Agent", icon: Bot },
   { href: "/games", label: "Games", icon: GamepadIcon },
   { href: "/marketplace", label: "Market", icon: ShoppingBag },
 ];

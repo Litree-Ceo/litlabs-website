@@ -9,6 +9,7 @@ import CookieConsent from "@/components/CookieConsent";
 import UserSync from "@/components/UserSync";
 import AnimatedBackgroundWrapper from "@/components/AnimatedBackgroundWrapper";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import NpcGuide from "@/components/NpcGuide";
 import "./globals.css";
 
 const inter = Inter({
@@ -93,6 +94,7 @@ export default function RootLayout({
           <Footer />
           <CookieConsent />
           <ServiceWorkerRegistration />
+          <NpcGuide />
         </div>
       </ProfileProvider>
     </ThemeProvider>

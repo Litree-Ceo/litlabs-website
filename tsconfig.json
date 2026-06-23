@@ -38,8 +38,11 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "node_modules",
     "src/mobile",
-    "android"
+    "tests",
+    "playwright.config.ts",
+    "capacitor.config.ts",
+    "android",
+    "node_modules"
   ]
 }
