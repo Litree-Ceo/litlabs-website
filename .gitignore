@@ -74,3 +74,4 @@ add-external-ssh.ps1
 .backup/
 android/
 src/mobile/
+.venv
