@@ -20,6 +20,22 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
   return Buffer.from(buffer).toString("base64");
 }
 
+async function enhancePromptWithPython(prompt: string): Promise<string> {
+  try {
+    const res = await fetch("http://127.0.0.1:8000/agent/prompt-enhance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    if (!res.ok) return prompt;
+    const data = await res.json();
+    return data.enhanced || prompt;
+  } catch {
+    return prompt;
+  }
+}
+
+
 type MediaRequest = {
   prompt?: string;
   negativePrompt?: string;
@@ -399,7 +415,7 @@ async function handler(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid request body — send JSON" }, { status: 400 });
   }
-  const prompt = body.prompt?.trim();
+  let prompt = body.prompt?.trim();
   if (!prompt || prompt.length < 3) {
     return NextResponse.json({ error: "Prompt must be at least 3 characters" }, { status: 400 });
   }
