@@ -1,15 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import { ThemeProvider } from "@/context/ThemeContext";
-import { ProfileProvider } from "@/context/ProfileContext";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import CookieConsent from "@/components/CookieConsent";
-import UserSync from "@/components/UserSync";
-import AnimatedBackgroundWrapper from "@/components/AnimatedBackgroundWrapper";
-import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
-import NpcGuide from "@/components/NpcGuide";
+import MainLayout from "@/components/MainLayout";
 import "./globals.css";
 
 const inter = Inter({
@@ -48,32 +40,24 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://litlabs.net",
     siteName: "LiTTree Lab Studios",
-    title: "LiTTree Lab Studios — AI Agent Platform",
-    description: "Deploy specialized AI agents, build no-code workflows, and automate your business with LiTTree Lab Studios.",
-    images: [{
-      url: "/og-image.png",
-      width: 1200,
-      height: 630,
-      alt: "LiTTree Lab Studios — AI Agent Platform",
-    }],
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "LiTTree Lab Studios" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "LiTTree Lab Studios — AI Agent Platform",
-    description: "Deploy specialized AI agents, build no-code workflows, and automate your business.",
-    creator: "@litlabs",
+    description: "Deploy specialized AI agents and automate your business.",
     images: ["/og-image.png"],
   },
   icons: {
     icon: [
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
     ],
   },
-  manifest: '/manifest.json',
+  manifest: "/manifest.json",
 };
 
 const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
@@ -83,23 +67,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const inner = (
-    <ThemeProvider>
-      <ProfileProvider>
-        <AnimatedBackgroundWrapper />
-        <div className="relative z-10 flex flex-col min-h-screen">
-          <UserSync />
-          <Navbar />
-          <main className="flex-1 mx-auto max-w-[100vw] overflow-x-hidden">{children}</main>
-          <Footer />
-          <CookieConsent />
-          <ServiceWorkerRegistration />
-          <NpcGuide />
-        </div>
-      </ProfileProvider>
-    </ThemeProvider>
-  );
-
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased min-h-screen" style={{ backgroundColor: "#0a0a0f" }}>
@@ -112,39 +79,39 @@ export default function RootLayout({
             signUpFallbackRedirectUrl={process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL ?? "/studio"}
             appearance={{
               variables: {
-                colorPrimary: '#00f0ff',
-                colorBackground: '#0a0a12',
-                colorText: '#e0e0ff',
-                colorTextSecondary: '#8888aa',
-                colorDanger: '#ff00a0',
-                colorSuccess: '#00ff41',
-                borderRadius: '8px',
+                colorPrimary: "#00f0ff",
+                colorBackground: "#0a0a12",
+                colorText: "#e0e0ff",
+                colorTextSecondary: "#8888aa",
+                colorDanger: "#ff00a0",
+                colorSuccess: "#00ff41",
+                borderRadius: "8px",
               },
               elements: {
                 card: {
-                  backgroundColor: '#151520',
-                  border: '1px solid #2a2a45',
-                  boxShadow: '0 4px 20px rgba(0,240,255,0.1)',
+                  backgroundColor: "#151520",
+                  border: "1px solid #2a2a45",
+                  boxShadow: "0 4px 20px rgba(0,240,255,0.1)",
                 },
                 userButtonPopoverCard: {
-                  backgroundColor: '#151520',
-                  border: '1px solid #2a2a45',
+                  backgroundColor: "#151520",
+                  border: "1px solid #2a2a45",
                 },
                 userButtonPopoverActionButton: {
-                  '&:hover': {
-                    backgroundColor: 'rgba(0,240,255,0.1)',
+                  "&:hover": {
+                    backgroundColor: "rgba(0,240,255,0.1)",
                   },
                 },
                 badge: {
-                  backgroundColor: '#ff00a0',
+                  backgroundColor: "#ff00a0",
                 },
               },
             }}
           >
-            {inner}
+            <MainLayout>{children}</MainLayout>
           </ClerkProvider>
         ) : (
-          inner
+          <MainLayout>{children}</MainLayout>
         )}
       </body>
     </html>

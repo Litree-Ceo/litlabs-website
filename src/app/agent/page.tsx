@@ -115,7 +115,7 @@ export default function JarvisAgent() {
 
   return (
     <div
-      className="flex flex-col h-[calc(100vh-3.5rem)]"
+      className="flex flex-col h-full"
       style={{ backgroundColor: T.bgColor }}
     >
       {/* Header */}

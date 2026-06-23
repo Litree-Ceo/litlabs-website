@@ -167,7 +167,7 @@ export default function Navbar() {
         boxShadow: `0 1px 0 ${resolvedColors.accentColor}10, 0 4px 20px rgba(0,0,0,0.3)`,
       }}
     >
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-[1600px] mx-auto px-4">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group shrink-0">

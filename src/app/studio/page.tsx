@@ -198,7 +198,7 @@ function StudioInner() {
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]" style={{ backgroundColor: T.bgColor, color: T.textColor, fontFamily: "monospace" }}>
+    <div className="flex flex-col h-full" style={{ backgroundColor: T.bgColor, color: T.textColor, fontFamily: "monospace" }}>
       {/* CRT overlay */}
       {crtEnabled && (
         <div className="fixed inset-0 pointer-events-none z-40 opacity-[0.05]" style={{ background: "repeating-linear-gradient(0deg, rgba(0,0,0,0.12), rgba(0,0,0,0.12) 1px, transparent 1px, transparent 2px)", boxShadow: "inset 0 0 100px rgba(0,255,0,0.15)" }} />
