@@ -131,7 +131,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Main Grid Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6 grid md:grid-cols-12 gap-6">
+      <div className="max-w-[1600px] mx-auto px-4 py-6 grid md:grid-cols-12 gap-6">
         
         {/* LEFT COLUMN — PROFILE AVATAR & DIRECTIVES */}
         <div className="md:col-span-4 space-y-4">

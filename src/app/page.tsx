@@ -388,7 +388,7 @@ export default function HomePage() {
         <Dashboard />
       ) : (
         /* PUBLIC FEED - Shows content even when not signed in */
-        <main className="relative z-10 max-w-[1400px] mx-auto px-3 pt-4 pb-24">
+        <main className="relative z-10 max-w-[1600px] mx-auto px-3 pt-4 pb-24">
           {/* Header */}
           <div className="mb-6 p-4 border-2 text-center" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
             <div className="text-2xl mb-2">⚡</div>

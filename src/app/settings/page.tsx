@@ -257,7 +257,7 @@ export default function SettingsPage() {
 
   return (
     <PageShell title="Settings" className="font-mono">
-      <div className="max-w-6xl mx-auto px-3 py-4">
+      <div className="max-w-[1600px] mx-auto px-3 py-4">
         {/* Terminal Header */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
           <div>

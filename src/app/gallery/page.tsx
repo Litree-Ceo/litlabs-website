@@ -348,7 +348,7 @@ export default function Gallery() {
 
               {/* Hero content */}
               <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
-                <div className="max-w-6xl mx-auto">
+                <div className="max-w-[1600px] mx-auto">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-0.5 rounded" style={{ backgroundColor: T.accentColor + '20', color: T.accentColor, border: `1px solid ${T.accentColor}40` }}>Featured</span>
                     <span className="text-[10px] font-bold uppercase tracking-wider opacity-50" style={{ color: T.textColor }}>{featured.artist}</span>
@@ -394,7 +394,7 @@ export default function Gallery() {
 
       {/* ── Trending Strip ── */}
       <div style={{ borderBottom: `1px solid ${T.borderColor}30`, backgroundColor: T.boxBg + '30' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3 mb-3">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40" style={{ color: T.accentColor }}>Trending Now</span>
             <div className="flex-1 h-px" style={{ backgroundColor: T.borderColor + '20' }} />
@@ -567,7 +567,7 @@ export default function Gallery() {
       )}
 
       {/* ── Enhanced Masonry Gallery ── */}
-      <div className="px-4 py-6 sm:px-6 max-w-7xl mx-auto">
+      <div className="px-4 py-6 sm:px-6 max-w-[1600px] mx-auto">
         <div className="gallery-masonry">
           {filteredItems.map((item, idx) => {
             const aspect = [1, 1.25, 0.85, 1.1, 1.3, 0.9, 1.15, 1, 1.2, 0.8, 1.05, 1.35][idx % 12];
@@ -726,6 +726,8 @@ export default function Gallery() {
         @media (min-width: 640px) { .gallery-masonry { columns: 2; } }
         @media (min-width: 1024px) { .gallery-masonry { columns: 3; } }
         @media (min-width: 1400px) { .gallery-masonry { columns: 4; } }
+        @media (min-width: 1800px) { .gallery-masonry { columns: 5; } }
+        @media (min-width: 2200px) { .gallery-masonry { columns: 6; } }
         .gallery-item { break-inside: avoid; page-break-inside: avoid; }
       `}</style>
     </PageShell>

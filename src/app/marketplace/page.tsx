@@ -427,7 +427,7 @@ function MarketplaceInner() {
           <h1 style={{ color: T.headerColor, fontSize: '28px', fontWeight: 'bold', letterSpacing: '3px', margin: 0 }}>🤖 AGENT MARKETPLACE</h1>
           <span style={{ padding: '4px 10px', backgroundColor: 'rgba(255,107,107,0.2)', border: '1px solid #ff6b6b', color: '#ff6b6b', fontSize: '10px', fontWeight: 'bold', borderRadius: '6px', letterSpacing: '1px', textTransform: 'uppercase' }}>Beta</span>
         </div>
-        <p style={{ color: T.textColor, fontSize: '13px', opacity: 0.7, maxWidth: '500px', margin: '0 auto 16px' }}>Discover, install, and deploy AI agents to your workspace</p>
+        <p style={{ color: T.textColor, fontSize: '13px', opacity: 0.7, maxWidth: '800px', margin: '0 auto 16px' }}>Discover, install, and deploy AI agents to your workspace</p>
         
         {/* Smart Wallet Bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '20px' }}>
@@ -478,11 +478,11 @@ function MarketplaceInner() {
             </div>
           </div>
 
-          <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto' }}>
             {featuredAgents.length > 0 && !searchQuery && (
               <div style={{ marginBottom: '32px' }}>
                 <div style={{ color: T.accentColor, fontSize: '11px', letterSpacing: '2px', marginBottom: '12px', fontWeight: 'bold' }}>⭐ FEATURED AGENTS</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
                   {featuredAgents.map(agent => <AgentCard key={agent.id} agent={agent} isInstalled={installedAgents.has(agent.id)} onInstall={() => installAgent(agent.id)} onPreview={() => setPreviewAgent(agent)} theme={T} />)}
                 </div>
               </div>
@@ -492,7 +492,7 @@ function MarketplaceInner() {
                 {selectedCategory ? selectedCategory.toUpperCase() + ' AGENTS' : 'ALL AGENTS'}
                 <span style={{ color: T.textColor, opacity: 0.5, marginLeft: '8px' }}>({filteredAgents.length})</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
                 {(searchQuery ? filteredAgents : regularAgents).map(agent => <AgentCard key={agent.id} agent={agent} isInstalled={installedAgents.has(agent.id)} onInstall={() => installAgent(agent.id)} onPreview={() => setPreviewAgent(agent)} theme={T} />)}
               </div>
             </div>
@@ -507,7 +507,7 @@ function MarketplaceInner() {
       )}
 
       {activeTab === 'coins' && (
-        <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto' }}>
           {/* SMART COIN PACKS */}
           <div style={{ marginBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>

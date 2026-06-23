@@ -150,7 +150,7 @@ export default function GamesPage() {
           className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ backgroundColor: T.bgColor + "f0" }}
         >
-          <div className="w-full max-w-6xl mx-4">
+          <div className="w-full max-w-[1600px] mx-4">
             {/* Player Header */}
             <div
               className="flex items-center justify-between p-4 border-2 mb-2"
