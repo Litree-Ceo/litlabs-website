@@ -69,21 +69,6 @@ export default function SignInPage() {
     }
   };
 
-  if (!isLoaded) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: "#0a0a0f" }}
-      >
-        <Loader2
-          className="animate-spin"
-          size={24}
-          style={{ color: "#00f0ff" }}
-        />
-      </div>
-    );
-  }
-
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
@@ -217,7 +202,7 @@ export default function SignInPage() {
 
             <button
               onClick={handleSignIn}
-              disabled={!email.trim() || !password || pending}
+              disabled={!isLoaded || !email.trim() || !password || pending}
               className="w-full rounded-lg py-2.5 text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-30 border"
               style={{
                 backgroundColor: "rgba(0,240,255,0.1)",

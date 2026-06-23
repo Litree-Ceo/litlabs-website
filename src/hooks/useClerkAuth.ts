@@ -24,18 +24,15 @@ export function useClerkAuth() {
     name: string | null;
     email: string;
   } | null>(null);
-  const [sessionLoaded, setSessionLoaded] = useState(false);
+
+  // Start as true so pages never block on this —
+  // Clerk's own isLoaded drives auth state once it resolves.
+  const [sessionLoaded, setSessionLoaded] = useState(true);
 
   useEffect(() => {
-    // If Clerk already says signed in, no need to check custom session
-    if (clerk.isSignedIn) {
-      setSessionLoaded(true);
-      return;
-    }
-    // If Clerk is still loading, wait
-    if (!clerk.isLoaded) return;
+    // Only check custom session when Clerk is loaded but NOT signed in
+    if (!clerk.isLoaded || clerk.isSignedIn) return;
 
-    // Clerk loaded and not signed in — check custom JWT session
     fetch("/api/auth/session", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -46,13 +43,13 @@ export function useClerkAuth() {
             email: data.user.email,
           });
         }
-        setSessionLoaded(true);
       })
       .catch(() => {
-        setSessionLoaded(true);
+        // Session check failed — treat as unauthenticated
       });
   }, [clerk.isLoaded, clerk.isSignedIn]);
 
+  // isLoaded: true once Clerk resolves OR immediately (sessionLoaded=true by default)
   const isLoaded = clerk.isLoaded || sessionLoaded;
   const isSignedIn = clerk.isSignedIn || !!sessionUser;
   const userId = clerk.userId || sessionUser?.id || null;

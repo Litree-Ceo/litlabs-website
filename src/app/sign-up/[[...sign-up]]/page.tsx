@@ -139,21 +139,6 @@ export default function SignUpPage() {
   const canStep1 = firstName.trim() && validEmail;
   const canStep2 = validPassword;
 
-  if (!isLoaded) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: "#0a0a0f" }}
-      >
-        <Loader2
-          className="animate-spin"
-          size={24}
-          style={{ color: "#00f0ff" }}
-        />
-      </div>
-    );
-  }
-
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
