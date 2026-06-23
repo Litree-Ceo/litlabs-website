@@ -123,6 +123,8 @@ export default function RootLayout({
         className="antialiased min-h-screen"
         style={{ backgroundColor: "#0a0a0f" }}
       >
+        {/* ClerkProvider: conditional so SSG works without key at build time.
+            In production (Vercel), NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is always set. */}
         {clerkKey ? (
           <ClerkProvider
             publishableKey={clerkKey}

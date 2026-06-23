@@ -3,15 +3,9 @@
 import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 
-const CLERK_CONFIGURED = !!(
-  typeof process !== "undefined" &&
-  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-);
-
-// Safe wrapper — returns a no-op stub when Clerk is not configured (e.g. during SSG)
-function useSafeAuth() {
+// Safe wrapper — useAuth() throws when ClerkProvider isn't mounted (SSG without key)
+function useSafeAuth(): ReturnType<typeof useAuth> {
   try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     return useAuth();
   } catch {
     return {
@@ -19,19 +13,12 @@ function useSafeAuth() {
       isSignedIn: false,
       userId: null,
       sessionClaims: undefined,
-    } as ReturnType<typeof useAuth>;
+    } as unknown as ReturnType<typeof useAuth>;
   }
 }
 
 export function useClerkAuth() {
-  const clerk = CLERK_CONFIGURED
-    ? useSafeAuth()
-    : ({
-        isLoaded: true,
-        isSignedIn: false,
-        userId: null,
-        sessionClaims: undefined,
-      } as ReturnType<typeof useAuth>);
+  const clerk = useSafeAuth();
   const [sessionUser, setSessionUser] = useState<{
     id: string;
     name: string | null;

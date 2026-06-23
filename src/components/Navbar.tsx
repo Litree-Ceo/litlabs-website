@@ -24,7 +24,6 @@ import {
   Bell,
   Coins,
   User,
-  Gamepad as GamepadIcon,
   Code2,
   Download,
   Bot,
