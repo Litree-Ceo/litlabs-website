@@ -289,7 +289,7 @@ export default function Navbar() {
                   setNotifOpen((v) => !v);
                   if (!notifOpen && unreadCount > 0) markAllRead();
                 }}
-                className="p-1.5 rounded-md transition-all duration-200 hover:scale-110 relative"
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md transition-all duration-200 hover:scale-110 relative"
                 style={{
                   border: `1px solid ${resolvedColors.accentColor}30`,
                   color: resolvedColors.accentColor,
@@ -396,7 +396,7 @@ export default function Navbar() {
                   ? "Switch to light mode"
                   : "Switch to dark mode"
               }
-              className="p-1.5 rounded-md transition-all duration-200 hover:scale-110"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md transition-all duration-200 hover:scale-110"
               style={{
                 border: `1px solid ${resolvedColors.accentColor}30`,
                 color: resolvedColors.accentColor,
@@ -414,7 +414,7 @@ export default function Navbar() {
                   onClick={() => setUserOpen((v) => !v)}
                   aria-label="Navigation menu"
                   aria-expanded={userOpen}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all hover:opacity-80"
+                  className="flex items-center gap-1.5 px-2 py-2 min-h-[44px] rounded-lg transition-all hover:opacity-80"
                   style={{
                     border: `1px solid ${resolvedColors.borderColor}30`,
                     backgroundColor: resolvedColors.boxBg + "60",
@@ -496,7 +496,7 @@ export default function Navbar() {
               }}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
-              className="lg:hidden p-1.5 rounded-md"
+              className="lg:hidden p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md"
               style={{ color: resolvedColors.linkColor }}
             >
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}

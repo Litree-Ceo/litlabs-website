@@ -1,149 +1,103 @@
 /**
- * LiTTree Lab Studios - Service Worker
- * Provides offline support and caching for PWA
+ * LiTTree Lab Studios - Service Worker v5
+ * Asset caching only — navigation requests pass through to the network
+ * so Lighthouse and browser devtools can record traces correctly.
  */
 
-const CACHE_NAME = 'litlabs-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/manifest.json',
-  '/logo.png',
-];
+const CACHE_NAME = "litlabs-v5";
+const STATIC_ASSETS = ["/manifest.json", "/logo.png"];
 
-// Install event - cache static assets
-self.addEventListener('install', (event) => {
+// Install — pre-cache static assets only (not pages)
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .catch((err) => {
-        console.error('Cache install failed:', err);
-      })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
   );
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
+// Activate — purge old caches
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
-    })
+    caches
+      .keys()
+      .then((names) =>
+        Promise.all(
+          names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)),
+        ),
+      ),
   );
   self.clients.claim();
 });
 
-// Fetch event - serve from cache or network
-self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') return;
+// Fetch — network-first for navigation, cache-first for static assets
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
 
-  // Skip API requests
-  if (event.request.url.includes('/api/')) return;
+  const url = event.request.url;
 
-  // Skip external requests
-  if (!event.request.url.startsWith(self.location.origin)) return;
+  // Always pass navigation requests straight to the network
+  // (prevents NO_NAVSTART in Lighthouse and keeps pages fresh)
+  if (event.request.mode === "navigate") return;
 
+  // Skip API, external, and non-basic requests
+  if (url.includes("/api/")) return;
+  if (!url.startsWith(self.location.origin)) return;
+
+  // Cache-first with background revalidation for static assets
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      // Return cached version if available
-      if (cached) {
-        // Fetch fresh version in background
-        fetch(event.request)
-          .then((response) => {
-            if (response.ok) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, response.clone());
-              });
-            }
-          })
-          .catch(() => {});
-        return cached;
-      }
-
-      // Otherwise fetch from network
-      return fetch(event.request)
+      const networkFetch = fetch(event.request)
         .then((response) => {
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
+          if (response.ok && response.type === "basic") {
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.put(event.request, response.clone()));
           }
-
-          // Cache the response
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
           return response;
         })
-        .catch(() => {
-          // Return offline fallback for navigation requests
-          if (event.request.mode === 'navigate') {
-            return caches.match('/');
-          }
-          return new Response('Offline', { status: 503 });
-        });
-    })
+        .catch(() => cached || new Response("Offline", { status: 503 }));
+
+      return cached || networkFetch;
+    }),
   );
 });
 
-// Push notification support
-self.addEventListener('push', (event) => {
+// Push notifications
+self.addEventListener("push", (event) => {
   const data = event.data?.json() || {};
-  
-  const options = {
-    body: data.body || 'New notification from LiTTree Lab',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/badge-72x72.png',
-    tag: data.tag || 'default',
-    requireInteraction: data.requireInteraction || false,
-    actions: data.actions || [],
-    data: data.data || {},
-  };
-
   event.waitUntil(
-    self.registration.showNotification(
-      data.title || 'LiTTree Lab Studios',
-      options
-    )
+    self.registration.showNotification(data.title || "LiTTree Lab Studios", {
+      body: data.body || "New notification from LiTTree Lab",
+      icon: "/logo.png",
+      badge: "/logo.png",
+      tag: data.tag || "default",
+      requireInteraction: data.requireInteraction || false,
+      actions: data.actions || [],
+      data: data.data || {},
+    }),
   );
 });
 
-// Notification click handler
-self.addEventListener('notificationclick', (event) => {
+// Notification click
+self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-
-  const urlToOpen = event.notification.data?.url || '/';
-
+  const urlToOpen = event.notification.data?.url || "/";
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Focus existing window if open
-      for (const client of clientList) {
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (client.url === urlToOpen && "focus" in client)
+            return client.focus();
         }
-      }
-      // Open new window
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
+        if (clients.openWindow) return clients.openWindow(urlToOpen);
+      }),
   );
 });
 
-// Background sync for offline form submissions
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-forms') {
-    event.waitUntil(syncFormSubmissions());
+// Background sync
+self.addEventListener("sync", (event) => {
+  if (event.tag === "sync-forms") {
+    event.waitUntil(Promise.resolve());
   }
 });
-
-async function syncFormSubmissions() {
-  // Implement form sync logic here
-  console.log('Background sync executed');
-}
