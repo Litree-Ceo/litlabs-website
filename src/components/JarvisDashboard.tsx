@@ -1,24 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTheme } from "@/context/ThemeContext";
 import { useProfile } from "@/context/ProfileContext";
 import {
   Activity,
-  Cpu,
-  Globe,
   Shield,
-  Zap,
-  Terminal,
   TrendingUp,
-  Clock,
   Bot,
   Maximize2,
   Layers,
-  Layout,
-  BarChart3,
-  Radio,
-  HardDrive,
   Network,
   Settings,
 } from "lucide-react";
@@ -34,7 +24,6 @@ const TELEMETRY = [
 ];
 
 export default function JarvisDashboard() {
-  const { resolvedColors: T } = useTheme();
   const { profile } = useProfile();
   const [time, setTime] = useState(new Date());
 
