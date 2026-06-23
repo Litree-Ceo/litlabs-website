@@ -75,3 +75,5 @@ add-external-ssh.ps1
 android/
 src/mobile/
 .venv
+__pycache__/
+*.pyc
