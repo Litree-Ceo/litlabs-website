@@ -3,22 +3,9 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import lazyLoad from "next/dynamic";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useClerkAuth } from "@/hooks/useClerkAuth";
 import { useProfile } from "@/context/ProfileContext";
-
-const YoutubeWidget = lazyLoad(() => import("@/components/YoutubeWidget"), {
-  ssr: false,
-});
-const SpotifyWidget = lazyLoad(() => import("@/components/SpotifyWidget"), {
-  ssr: false,
-});
-const JarvisWidget = lazyLoad(() => import("@/components/JarvisWidget"), {
-  ssr: false,
-});
-const WidgetPanel = lazyLoad(() => import("@/components/WidgetPanel"), {
-  ssr: false,
-});
 import {
   Zap,
   Sparkles,
@@ -35,6 +22,19 @@ import {
   Send,
   Minus,
 } from "lucide-react";
+
+const YoutubeWidget = lazyLoad(() => import("@/components/YoutubeWidget"), {
+  ssr: false,
+});
+const SpotifyWidget = lazyLoad(() => import("@/components/SpotifyWidget"), {
+  ssr: false,
+});
+const JarvisWidget = lazyLoad(() => import("@/components/JarvisWidget"), {
+  ssr: false,
+});
+const WidgetPanel = lazyLoad(() => import("@/components/WidgetPanel"), {
+  ssr: false,
+});
 
 // TypeScript interfaces
 interface ChatMessage {
@@ -67,18 +67,6 @@ interface FeedPost {
   timestamp: number;
   likes: number;
   agentReplies?: AgentReply[];
-}
-
-interface DashboardStats {
-  visitors: number;
-  uptime: string;
-  latency: string;
-  tokens: string;
-  totalUsers: number;
-  totalPosts: number;
-  totalAgents: number;
-  totalCoins: number;
-  userId: string | null;
 }
 
 function CRTOverlay({ enabled }: { enabled: boolean }) {
@@ -213,7 +201,6 @@ export default function HomePage() {
     },
   ]);
   const [newPost, setNewPost] = useState("");
-  const [feedLoading, setFeedLoading] = useState(false);
   const [feedPosting, setFeedPosting] = useState(false);
   const displayName = profile?.displayName || "Builder";
 
