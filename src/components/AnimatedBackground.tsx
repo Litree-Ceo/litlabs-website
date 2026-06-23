@@ -141,7 +141,7 @@ export default function AnimatedBackground({ mode = "holo" }: { mode?: Backgroun
       auroras.length = 0;
       for (let i = 0; i < 3; i++) {
         const pts = 12;
-        const points = [];
+        const points: Array<{ x: number; y: number; offset: number }> = [];
         for (let p = 0; p <= pts; p++) {
           points.push({ x: (p / pts) * w, y: 0, offset: Math.random() * Math.PI * 2 });
         }

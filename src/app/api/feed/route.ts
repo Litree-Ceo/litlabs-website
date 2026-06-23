@@ -113,6 +113,7 @@ async function postHandler(req: NextRequest) {
       }
       
       user = newUser;
+      if (!user) { return NextResponse.json({ error: "Failed to create user" }, { status: 500 }); }
       await sb.from("wallets").insert({ user_id: user.id, balance: 500, lifetime_earned: 500 });
     }
 

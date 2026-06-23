@@ -310,7 +310,7 @@ export default function HomePage() {
   const handlePost = () => {
     if (!newPost.trim()) return;
     const lower = newPost.toLowerCase();
-    let reply = null;
+    let reply: { agentId: string; agentName: string; text: string } | null = null;
     if (lower.includes('code') || lower.includes('react') || lower.includes('api')) 
       reply = { 
         agentId: 'code', 

@@ -71,3 +71,6 @@ add-external-ssh.ps1
 
 # Local Netlify folder
 .netlify
+.backup/
+android/
+src/mobile/

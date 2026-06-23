@@ -145,7 +145,7 @@ function StudioInner() {
   const [litcoins, setLitcoins] = useState(500);
   useEffect(() => { try { const raw = localStorage.getItem("litcoins"); if (raw) setLitcoins(Number(raw)); } catch {} }, []);
 
-  const toolParam = searchParams.get("tool") as StudioTool | null;
+  const toolParam = searchParams?.get("tool") as StudioTool | null;
   const activeTool: StudioTool =
     toolParam && ["image", "video", "audio", "agents", "terminal", "pipeline", "gallery", "space"].includes(toolParam)
       ? toolParam
@@ -198,18 +198,17 @@ function StudioInner() {
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] overflow-hidden" style={{ backgroundColor: T.bgColor, color: T.textColor, fontFamily: "monospace" }}>
+    <div className="flex flex-col min-h-[calc(100vh-4rem)]" style={{ backgroundColor: T.bgColor, color: T.textColor, fontFamily: "monospace" }}>
       {/* CRT overlay */}
       {crtEnabled && (
         <div className="fixed inset-0 pointer-events-none z-40 opacity-[0.05]" style={{ background: "repeating-linear-gradient(0deg, rgba(0,0,0,0.12), rgba(0,0,0,0.12) 1px, transparent 1px, transparent 2px)", boxShadow: "inset 0 0 100px rgba(0,255,0,0.15)" }} />
       )}
 
       {/* Main workspace */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-w-0">
         <StudioSidebar activeTool={activeTool} onToolChange={(t) => router.push(`/studio?tool=${t}`, { scroll: false })} />
-
         {/* Content area — compositor layer for smooth scroll */}
-        <main className="flex-1 overflow-hidden flex flex-col" style={{ backgroundColor: T.bgColor, willChange: "transform" }}>
+        <main className="flex-1 min-w-0 flex flex-col" style={{ backgroundColor: T.bgColor, willChange: "transform" }}>
           {/* Zed-style top bar */}
           <div
             className="flex items-center justify-between px-3 h-9 shrink-0"
@@ -252,17 +251,11 @@ function StudioInner() {
           </div>
 
           {/* Tool content — canvas, GPU composited for smooth scroll */}
-          <div className="flex-1 overflow-auto studio-scroll" style={{ transform: "translateZ(0)", willChange: "transform" }}>
+          <div className="flex-1 min-w-0" style={{ transform: "translateZ(0)", willChange: "transform" }}>
             <Suspense fallback={
               <div className="min-h-[600px] p-6 space-y-4 animate-pulse">
-                {/* Skeleton header */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-8 h-8 rounded-md" style={{ backgroundColor: T.accentColor + "15" }} />
-                  <div className="space-y-2">
                     <div className="w-32 h-4 rounded" style={{ backgroundColor: T.accentColor + "12" }} />
                     <div className="w-48 h-3 rounded" style={{ backgroundColor: T.accentColor + "08" }} />
-                  </div>
-                </div>
                 {/* Skeleton cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="h-40 rounded-xl" style={{ backgroundColor: T.boxBg + "30", border: `1px solid ${T.borderColor}10` }} />

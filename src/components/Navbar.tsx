@@ -152,7 +152,7 @@ export default function Navbar() {
   }, [pathname]);
 
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+    href === "/" ? pathname === "/" : pathname?.startsWith(href) ?? false;
 
   return (
     <nav

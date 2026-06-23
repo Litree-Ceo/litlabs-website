@@ -8,7 +8,6 @@ import Footer from "@/components/Footer";
 import CookieConsent from "@/components/CookieConsent";
 import UserSync from "@/components/UserSync";
 import AnimatedBackgroundWrapper from "@/components/AnimatedBackgroundWrapper";
-import MusicPlayer from "@/components/MusicPlayer";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import "./globals.css";
 
@@ -92,7 +91,6 @@ export default function RootLayout({
           <Navbar />
           <main className="flex-1 mx-auto max-w-[100vw] overflow-x-hidden">{children}</main>
           <Footer />
-          <MusicPlayer />
           <CookieConsent />
           <ServiceWorkerRegistration />
         </div>

@@ -22,7 +22,7 @@ type Agent = {
 
 export default function AgentDetail() {
   const params = useParams();
-  const slug = params.slug as string;
+  const slug = params?.slug as string;
   const { resolvedColors: theme } = useTheme();
   const [agent, setAgent] = useState<Agent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);

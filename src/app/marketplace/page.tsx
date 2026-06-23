@@ -190,8 +190,8 @@ function MarketplaceInner() {
     fetchWallet();
 
     // Stripe return detection
-    const success = searchParams.get('success');
-    const canceled = searchParams.get('canceled');
+    const success = searchParams?.get('success');
+    const canceled = searchParams?.get('canceled');
     if (success === 'true') {
       showToast('Payment successful! Your LiTBit Coins will be credited shortly.', 'success');
     } else if (canceled === 'true') {

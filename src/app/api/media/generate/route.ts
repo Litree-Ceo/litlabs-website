@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { getUserWallet, updateWalletBalance } from "@/lib/user-db";
+import { getUserWallet, updateWalletBalance, Wallet } from "@/lib/user-db";
 import { withRateLimit } from "@/lib/rate-limiter";
 import { MEDIA_PROVIDERS, MediaFormat, MediaProviderId, getProvider, defaultProviderFor } from "@/lib/media";
 
@@ -422,7 +422,7 @@ async function handler(req: NextRequest) {
   const cost = provider.cost(format);
 
   // Check wallet and deduct up-front (free providers skip)
-  let wallet = null;
+  let wallet: Wallet | null = null;
   if (!provider.free) {
     wallet = await getUserWallet(userId);
     if (wallet.balance < cost) {

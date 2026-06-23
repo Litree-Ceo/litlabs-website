@@ -34,7 +34,7 @@ async function handler(req: NextRequest) {
     const agentMessage = orchestrator.sendMessage(from, to, message, type, metadata);
 
     // If simulating, generate a response
-    let response = null;
+    let response: string | null = null;
     if (body.simulateResponse) {
       response = await orchestrator.simulateAgentResponse(to, message);
       const reply = orchestrator.sendMessage(to, from, response, "chat");
