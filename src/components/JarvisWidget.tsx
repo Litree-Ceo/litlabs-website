@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useTheme } from '@/context/ThemeContext';
 import { X, Mic, Send, Loader2, Minimize, Maximize, Cpu, Activity, Globe, Shield, Bot } from 'lucide-react';
 
 const STORAGE_KEY = 'litlabs_jarvis';
@@ -49,11 +50,64 @@ export default function JarvisWidget() {
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
+  const { setSkin, setAccent, setBackgroundMode } = useTheme();
+
   // WebRTC Refs
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+
+  // Tool Handlers
+  const handleToolCall = async (call: any) => {
+    const { name, arguments: argsJson, call_id } = call;
+    const args = JSON.parse(argsJson);
+    let result = { success: true };
+
+    console.log(`Jarvis Tool Call: ${name}`, args);
+
+    try {
+      switch (name) {
+        case "change_theme":
+          if (args.skin) setSkin(args.skin);
+          if (args.accent) setAccent(args.accent);
+          if (args.backgroundMode) setBackgroundMode(args.backgroundMode);
+          break;
+        case "get_platform_stats":
+          const res = await fetch("/api/stats");
+          result = await res.json();
+          break;
+        case "send_system_alert":
+          await fetch("/api/jarvis/notify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "system_alert",
+              priority: args.priority || "high",
+              title: args.title,
+              body: args.message,
+            }),
+          });
+          break;
+      }
+    } catch (err) {
+      console.error("Tool execution error:", err);
+      result = { success: false, error: "Tool execution failed" } as any;
+    }
+
+    // Send result back to OpenAI
+    if (dcRef.current?.readyState === "open") {
+      dcRef.current.send(JSON.stringify({
+        type: "conversation.item.create",
+        item: {
+          type: "function_call_output",
+          call_id,
+          output: JSON.stringify(result),
+        }
+      }));
+      dcRef.current.send(JSON.stringify({ type: "response.create" }));
+    }
+  };
 
   useEffect(() => {
     try {
@@ -110,6 +164,11 @@ export default function JarvisWidget() {
 
       dc.onmessage = (e) => {
         const event = JSON.parse(e.data);
+
+        if (event.type === "response.function_call_arguments.done") {
+          handleToolCall(event);
+        }
+
         if (event.type === "response.audio_transcript.delta") {
           // Could update live transcript here
         }

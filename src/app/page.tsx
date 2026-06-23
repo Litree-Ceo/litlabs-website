@@ -29,9 +29,6 @@ const YoutubeWidget = lazyLoad(() => import("@/components/YoutubeWidget"), {
 const SpotifyWidget = lazyLoad(() => import("@/components/SpotifyWidget"), {
   ssr: false,
 });
-const JarvisWidget = lazyLoad(() => import("@/components/JarvisWidget"), {
-  ssr: false,
-});
 const WidgetPanel = lazyLoad(() => import("@/components/WidgetPanel"), {
   ssr: false,
 });
@@ -1406,7 +1403,6 @@ export default function HomePage() {
           ))}
         </div>
       )}
-      <JarvisWidget />
     </div>
   );
 }

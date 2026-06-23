@@ -222,6 +222,7 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 ## 🛠️ LiTTree Lab Studios — Repo-Specific Context
 
 ### Tech Stack & Build
+
 - **Next.js 16.2.9** with **Turbopack** build (`next build` in `vercel.json`, no `--webpack` flag)
 - **React 19**, **TypeScript**, **Tailwind CSS v4**
 - **Clerk** for auth (wraps entire app in `layout.tsx` via `ClerkProvider`)
@@ -229,29 +230,31 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - Build: `npm run build` (runs `next build`)
 
 ### Pages Overview (29 total)
-| Route | Status |
-|-------|--------|
-| `/` | Full homepage with chat, widgets, feed |
-| `/studio` | Creative studio hub (image/video/audio/agents) |
-| `/social` | Full social feed with posts, likes, comments |
-| `/marketplace` | Agent marketplace with Stripe checkout |
-| `/agents`, `/agents/[slug]` | Agent listing and detail with chat |
-| `/agent-chat` | Multi-agent chat interface |
-| `/flow` | Visual pipeline builder (drag-and-drop nodes) |
-| `/gallery`, `/gallery/[id]` | Gallery showcase with lightbox |
-| `/dashboard` | User dashboard with stats |
-| `/profile`, `/profile/[username]` | Profile editor + public profile |
-| `/settings` | Settings panel (6 tabs) |
-| `/admin` | Admin dashboard with live stats |
-| `/builder` | Image forge/remix builder |
-| `/code` | Code scanner/explorer |
-| `/games` | Game library browser |
-| `/generate` | AI Generation Hub (redirects to studio tools) |
-| `/sign-in`, `/sign-up`, `/login` | Auth pages |
-| `/cookies`, `/privacy`, `/terms` | Legal pages |
-| `/showcase` | Portfolio showcase |
+
+| Route                             | Status                                         |
+| --------------------------------- | ---------------------------------------------- |
+| `/`                               | Full homepage with chat, widgets, feed         |
+| `/studio`                         | Creative studio hub (image/video/audio/agents) |
+| `/social`                         | Full social feed with posts, likes, comments   |
+| `/marketplace`                    | Agent marketplace with Stripe checkout         |
+| `/agents`, `/agents/[slug]`       | Agent listing and detail with chat             |
+| `/agent-chat`                     | Multi-agent chat interface                     |
+| `/flow`                           | Visual pipeline builder (drag-and-drop nodes)  |
+| `/gallery`, `/gallery/[id]`       | Gallery showcase with lightbox                 |
+| `/dashboard`                      | User dashboard with stats                      |
+| `/profile`, `/profile/[username]` | Profile editor + public profile                |
+| `/settings`                       | Settings panel (6 tabs)                        |
+| `/admin`                          | Admin dashboard with live stats                |
+| `/builder`                        | Image forge/remix builder                      |
+| `/code`                           | Code scanner/explorer                          |
+| `/games`                          | Game library browser                           |
+| `/generate`                       | AI Generation Hub (redirects to studio tools)  |
+| `/sign-in`, `/sign-up`, `/login`  | Auth pages                                     |
+| `/cookies`, `/privacy`, `/terms`  | Legal pages                                    |
+| `/showcase`                       | Portfolio showcase                             |
 
 ### API Routes (68 total)
+
 - Auth (4): login, logout, session, user ensure
 - Agents (11): CRUD, activity, backlog, commits, logs, services, status, tasks
 - AI/LLM (5): Gemini chat, code generation, streaming chat, health, orchestration
@@ -266,29 +269,35 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - Utilities (6): Upload, audio, flow, jarvis, CLI bridge, queue
 
 ### Critical Auth Architecture
-- `ClerkProvider` wraps the app in `layout.tsx` — always rendered
-- `middleware.ts` uses Clerk middleware with protected routes and public paths
-- `AuthContext` (`src/context/AuthContext.tsx`) manages client-side session state
-- `PUBLIC_PATHS` in `middleware.ts` lists all public routes
+
+- `ClerkProvider` in `layout.tsx` is **conditionally rendered** — only mounts when `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is set. This allows `next build` to succeed locally without the key. In Vercel production, the key is always present so ClerkProvider always mounts.
+- `useClerkAuth` in `src/hooks/useClerkAuth.ts` wraps `useAuth()` in a try-catch (`useSafeAuth`) so it doesn't throw when ClerkProvider isn't mounted (SSG path).
+- Pages using Clerk hooks must have `export const dynamic = "force-dynamic"` to prevent SSG prerendering.
+- No global `middleware.ts` — auth is handled per-route in API handlers and by Clerk components.
+- `AuthContext` (`src/context/AuthContext.tsx`) manages client-side session state.
 
 ### Database Schema
+
 - **Use `supabase/schema.sql`** for the main schema (10 tables: users, user_preferences, user_agents, subscriptions, wallets, transactions, posts, post_likes, post_comments, user_media)
 - **Agent platform migrations** in `supabase/migrations/` (conversations, sessions, analytics, notifications, sales, earnings, reviews, CLI sessions)
 - **Run in order:** `supabase/schema.sql` → `supabase/migrations/20240614_social_graph.sql` → `20260116000000_agent_platform_schema.sql`
 - All tables use `users` table (not `profiles`)
 
 ### Performance Notes
+
 - `AnimatedBackground.tsx` — 30fps canvas, pauses on tab hidden, respects `prefers-reduced-motion`
 - Rate limiter is in-memory (single-process), resets on restart
 - Many pages use demo/fallback data when DB or API keys are unavailable
 
 ### Deploy Pipeline
+
 - **Vercel project:** `prj_EnE4JStJUENM89PWov574Y9q7mTy`
 - **Deploy:** `git push origin main` or manual `npx vercel --prod`
 - **Auto-deploy agent:** `agents/deploy-agent/deploy.sh`
 - Configuration in `vercel.json`
 
 ### Required Env Vars (Set in Vercel)
+
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET`
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
@@ -298,9 +307,11 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - AI provider keys: `HUGGING_FACE_API_KEY`, `TOGETHER_API_KEY`, `FAL_KEY` (optional)
 
 ### Console Logging Policy
+
 - **Minimize `console.log`/`console.warn`/`console.error` in server-side code** (API routes, `src/lib/*.ts`)
 - Client-side (`src/components/`, `src/context/`) is more acceptable but should still be minimal
 
 ### Shell Environment Issue (This Workspace)
+
 - The custom shell prompt (`GOD-CORE` banner) swallows command output and returns exit code 127 for many commands
 - **Workaround:** Use file redirection (`> output.log`) and then `cat output.log` to see results, or run in standard terminal outside this wrapper

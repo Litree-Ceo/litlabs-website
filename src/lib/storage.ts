@@ -33,7 +33,10 @@ function getEndpoint(): string {
   return `https://${config.accountId}.r2.cloudflarestorage.com`;
 }
 
-async function getUploadUrl(key: string, contentType: string): Promise<{ url: string; headers: Record<string, string> } | null> {
+async function getUploadUrl(
+  key: string,
+  contentType: string,
+): Promise<{ url: string; headers: Record<string, string> } | null> {
   if (!config.accountId || !config.accessKeyId || !config.secretAccessKey) {
     return null;
   }
@@ -67,7 +70,11 @@ async function getUploadUrl(key: string, contentType: string): Promise<{ url: st
     await sha256(canonicalRequest),
   ].join("\n");
 
-  const signature = await hmacSha256(stringToSign, config.secretAccessKey, date);
+  const signature = await hmacSha256(
+    stringToSign,
+    config.secretAccessKey,
+    date,
+  );
 
   const authHeader = `AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
@@ -86,7 +93,7 @@ async function getUploadUrl(key: string, contentType: string): Promise<{ url: st
 export async function uploadFile(
   file: File | Blob,
   key: string,
-  contentType: string
+  contentType: string,
 ): Promise<UploadResult> {
   if (!config.accountId || !config.accessKeyId) {
     return { url: "", key, success: false };
@@ -112,10 +119,10 @@ export async function uploadFile(
       return { url, key, success: true };
     }
 
-    console.error("R2 upload failed:", res.status, await res.text());
+    // R2 upload failed — returning failure to caller
     return { url: "", key, success: false };
   } catch (err) {
-    console.error("R2 upload error:", err);
+    // R2 upload error — returning failure to caller
     return { url: "", key, success: false };
   }
 }
@@ -127,32 +134,58 @@ async function sha256(message: string): Promise<string> {
   return bufferToHex(hashBuffer);
 }
 
-async function hmacSha256(message: string, secret: string, date: string): Promise<string> {
+async function hmacSha256(
+  message: string,
+  secret: string,
+  date: string,
+): Promise<string> {
   const encoder = new TextEncoder();
   const dateKey = await crypto.subtle.importKey(
     "raw",
     encoder.encode(`AWS4${secret}`),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
 
-  const dateRegionKey = await crypto.subtle.sign("HMAC", dateKey, encoder.encode(getDateString(date)));
+  const dateRegionKey = await crypto.subtle.sign(
+    "HMAC",
+    dateKey,
+    encoder.encode(getDateString(date)),
+  );
   const dateRegionServiceKey = await crypto.subtle.sign(
     "HMAC",
-    await crypto.subtle.importKey("raw", dateRegionKey, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]),
-    encoder.encode("s3")
+    await crypto.subtle.importKey(
+      "raw",
+      dateRegionKey,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    ),
+    encoder.encode("s3"),
   );
   const signingKey = await crypto.subtle.sign(
     "HMAC",
-    await crypto.subtle.importKey("raw", dateRegionServiceKey, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]),
-    encoder.encode("aws4_request")
+    await crypto.subtle.importKey(
+      "raw",
+      dateRegionServiceKey,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    ),
+    encoder.encode("aws4_request"),
   );
 
   const signature = await crypto.subtle.sign(
     "HMAC",
-    await crypto.subtle.importKey("raw", signingKey, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]),
-    encoder.encode(message)
+    await crypto.subtle.importKey(
+      "raw",
+      signingKey,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    ),
+    encoder.encode(message),
   );
 
   return bufferToHex(signature);

@@ -3,14 +3,14 @@
  * Multi-channel webhook notifications for events
  */
 
-export type NotificationChannel = 
-  | 'general'
-  | 'admin'
-  | 'security'
-  | 'sales'
-  | 'errors'
-  | 'agents'
-  | 'system';
+export type NotificationChannel =
+  | "general"
+  | "admin"
+  | "security"
+  | "sales"
+  | "errors"
+  | "agents"
+  | "system";
 
 export interface DiscordEmbed {
   title?: string;
@@ -35,12 +35,12 @@ export interface DiscordMessage {
 
 // Color codes for different message types
 export const DISCORD_COLORS = {
-  info: 0x00f0ff,      // Cyan
-  success: 0x00ff41,   // Green
-  warning: 0xffff00,   // Yellow
-  error: 0xff0040,     // Red
-  accent: 0xff00a0,    // Pink
-  neutral: 0x8888aa,   // Gray
+  info: 0x00f0ff, // Cyan
+  success: 0x00ff41, // Green
+  warning: 0xffff00, // Yellow
+  error: 0xff0040, // Red
+  accent: 0xff00a0, // Pink
+  neutral: 0x8888aa, // Gray
 };
 
 // Channel-specific webhook URLs (loaded from env)
@@ -59,28 +59,30 @@ const WEBHOOK_URLS: Record<NotificationChannel, string | undefined> = {
  */
 export async function sendDiscordMessage(
   channel: NotificationChannel,
-  message: DiscordMessage
+  message: DiscordMessage,
 ): Promise<boolean> {
   const url = WEBHOOK_URLS[channel];
   if (!url) {
-    console.warn(`Discord webhook not configured for channel: ${channel}`);
+    // Discord webhook not configured for this channel
     return false;
   }
 
   try {
     const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...message,
-        username: message.username || 'Jarvis',
-        avatar_url: message.avatar_url || `${process.env.NEXT_PUBLIC_SITE_URL || "https://litlabs.net"}/jarvis-avatar.png`,
+        username: message.username || "Jarvis",
+        avatar_url:
+          message.avatar_url ||
+          `${process.env.NEXT_PUBLIC_SITE_URL || "https://litlabs.net"}/jarvis-avatar.png`,
       }),
     });
 
     return response.ok;
   } catch (error) {
-    console.error('Failed to send Discord message:', error);
+    // Failed to send Discord message — returning false
     return false;
   }
 }
@@ -91,20 +93,26 @@ export async function sendDiscordMessage(
 export async function notifyLogin(
   username: string,
   ip?: string,
-  userAgent?: string
+  userAgent?: string,
 ): Promise<void> {
-  await sendDiscordMessage('security', {
-    embeds: [{
-      title: '🔐 User Login',
-      description: `**${username}** has logged in.`,
-      color: DISCORD_COLORS.info,
-      timestamp: new Date().toISOString(),
-      fields: [
-        { name: 'User', value: username, inline: true },
-        { name: 'IP', value: ip || 'Unknown', inline: true },
-        { name: 'Device', value: userAgent?.slice(0, 100) || 'Unknown', inline: false },
-      ],
-    }],
+  await sendDiscordMessage("security", {
+    embeds: [
+      {
+        title: "🔐 User Login",
+        description: `**${username}** has logged in.`,
+        color: DISCORD_COLORS.info,
+        timestamp: new Date().toISOString(),
+        fields: [
+          { name: "User", value: username, inline: true },
+          { name: "IP", value: ip || "Unknown", inline: true },
+          {
+            name: "Device",
+            value: userAgent?.slice(0, 100) || "Unknown",
+            inline: false,
+          },
+        ],
+      },
+    ],
   });
 }
 
@@ -112,60 +120,70 @@ export async function notifyPurchase(
   username: string,
   item: string,
   amount: number,
-  currency: string
+  currency: string,
 ): Promise<void> {
-  await sendDiscordMessage('sales', {
-    embeds: [{
-      title: '💰 New Purchase',
-      description: `**${username}** purchased **${item}**`,
-      color: DISCORD_COLORS.success,
-      timestamp: new Date().toISOString(),
-      fields: [
-        { name: 'Item', value: item, inline: true },
-        { name: 'Amount', value: `${amount} ${currency}`, inline: true },
-        { name: 'Buyer', value: username, inline: true },
-      ],
-    }],
+  await sendDiscordMessage("sales", {
+    embeds: [
+      {
+        title: "💰 New Purchase",
+        description: `**${username}** purchased **${item}**`,
+        color: DISCORD_COLORS.success,
+        timestamp: new Date().toISOString(),
+        fields: [
+          { name: "Item", value: item, inline: true },
+          { name: "Amount", value: `${amount} ${currency}`, inline: true },
+          { name: "Buyer", value: username, inline: true },
+        ],
+      },
+    ],
   });
 }
 
 export async function notifyAgentActivity(
   agentName: string,
   action: string,
-  details?: string
+  details?: string,
 ): Promise<void> {
-  await sendDiscordMessage('agents', {
-    embeds: [{
-      title: '🤖 Agent Activity',
-      description: `**${agentName}** ${action}`,
-      color: DISCORD_COLORS.accent,
-      timestamp: new Date().toISOString(),
-      fields: details ? [{ name: 'Details', value: details }] : undefined,
-    }],
+  await sendDiscordMessage("agents", {
+    embeds: [
+      {
+        title: "🤖 Agent Activity",
+        description: `**${agentName}** ${action}`,
+        color: DISCORD_COLORS.accent,
+        timestamp: new Date().toISOString(),
+        fields: details ? [{ name: "Details", value: details }] : undefined,
+      },
+    ],
   });
 }
 
 export async function notifyError(
   error: Error,
-  context?: string
+  context?: string,
 ): Promise<void> {
-  await sendDiscordMessage('errors', {
-    embeds: [{
-      title: '⚠️ System Error',
-      description: error.message,
-      color: DISCORD_COLORS.error,
-      timestamp: new Date().toISOString(),
-      fields: [
-        { name: 'Context', value: context || 'Unknown', inline: true },
-        { name: 'Stack', value: error.stack?.slice(0, 1000) || 'No stack trace', inline: false },
-      ],
-    }],
+  await sendDiscordMessage("errors", {
+    embeds: [
+      {
+        title: "⚠️ System Error",
+        description: error.message,
+        color: DISCORD_COLORS.error,
+        timestamp: new Date().toISOString(),
+        fields: [
+          { name: "Context", value: context || "Unknown", inline: true },
+          {
+            name: "Stack",
+            value: error.stack?.slice(0, 1000) || "No stack trace",
+            inline: false,
+          },
+        ],
+      },
+    ],
   });
 }
 
 export async function notifySystemStatus(
-  status: 'online' | 'offline' | 'maintenance' | 'update',
-  message?: string
+  status: "online" | "offline" | "maintenance" | "update",
+  message?: string,
 ): Promise<void> {
   const colors = {
     online: DISCORD_COLORS.success,
@@ -175,25 +193,28 @@ export async function notifySystemStatus(
   };
 
   const emojis = {
-    online: '✅',
-    offline: '❌',
-    maintenance: '🔧',
-    update: '🔄',
+    online: "✅",
+    offline: "❌",
+    maintenance: "🔧",
+    update: "🔄",
   };
 
-  await sendDiscordMessage('system', {
-    embeds: [{
-      title: `${emojis[status]} System ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-      description: message || `System is now ${status}`,
-      color: colors[status],
-      timestamp: new Date().toISOString(),
-    }],
+  await sendDiscordMessage("system", {
+    embeds: [
+      {
+        title: `${emojis[status]} System ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+        description: message || `System is now ${status}`,
+        color: colors[status],
+        timestamp: new Date().toISOString(),
+      },
+    ],
   });
 }
 
 // Queue for batching messages
 class DiscordQueue {
-  private queue: { channel: NotificationChannel; message: DiscordMessage }[] = [];
+  private queue: { channel: NotificationChannel; message: DiscordMessage }[] =
+    [];
   private timer: NodeJS.Timeout | null = null;
 
   add(channel: NotificationChannel, message: DiscordMessage): void {
@@ -211,7 +232,7 @@ class DiscordQueue {
     const batch = this.queue.splice(0, 10); // Process up to 10 at a time
 
     await Promise.all(
-      batch.map(({ channel, message }) => sendDiscordMessage(channel, message))
+      batch.map(({ channel, message }) => sendDiscordMessage(channel, message)),
     );
 
     if (this.queue.length > 0) {

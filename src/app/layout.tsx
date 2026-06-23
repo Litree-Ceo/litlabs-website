@@ -9,6 +9,7 @@ import CookieConsent from "@/components/CookieConsent";
 import UserSync from "@/components/UserSync";
 import AnimatedBackgroundWrapper from "@/components/AnimatedBackgroundWrapper";
 import MusicPlayer from "@/components/MusicPlayer";
+import JarvisWidget from "@/components/JarvisWidget";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { SITE_URL } from "@/lib/siteConfig";
 import "./globals.css";
@@ -110,6 +111,7 @@ export default function RootLayout({
           </main>
           <Footer />
           <MusicPlayer />
+          <JarvisWidget />
           <CookieConsent />
           <ServiceWorkerRegistration />
         </div>

@@ -46,7 +46,7 @@ class Jarvis {
 
   async notify(payload: NotificationPayload): Promise<boolean> {
     if (!this.initialized) {
-      console.warn("Jarvis not initialized, using default config");
+      // Jarvis not initialized — using default config
     }
 
     const channels = payload.channels || ["discord"];
@@ -62,9 +62,9 @@ class Jarvis {
         data: payload.data || {},
         channels: channels,
       });
-      if (error) console.error("Failed to save notification:", error);
+      // DB error saving notification — continuing
     } catch (err) {
-      console.error("Error saving notification:", err);
+      // Error saving notification — continuing
     }
 
     for (const channel of channels) {
@@ -84,7 +84,7 @@ class Jarvis {
             break;
         }
       } catch (err) {
-        console.error(`Failed to send ${channel} notification:`, err);
+        // Failed to send notification on this channel — continuing
         results.push(false);
       }
     }
@@ -192,7 +192,7 @@ class Jarvis {
               data: payload.data || {},
             }),
           });
-        })
+        }),
       );
 
       return results.some((r) => r.status === "fulfilled");
@@ -232,13 +232,25 @@ class Jarvis {
     }
   }
 
-  async sale(data: { buyerName: string; agentName: string; priceLBC: number; priceUSD?: number; sellerName?: string }) {
+  async sale(data: {
+    buyerName: string;
+    agentName: string;
+    priceLBC: number;
+    priceUSD?: number;
+    sellerName?: string;
+  }) {
     return this.notify({
       type: "sale",
       priority: "high",
       title: "New Sale! \uD83C\uDF89",
       body: `${data.buyerName} bought ${data.agentName} for ${data.priceLBC} LBC`,
-      data: { buyer: data.buyerName, agent: data.agentName, price_lbc: data.priceLBC, price_usd: data.priceUSD || 0, seller: data.sellerName || "Platform" },
+      data: {
+        buyer: data.buyerName,
+        agent: data.agentName,
+        price_lbc: data.priceLBC,
+        price_usd: data.priceUSD || 0,
+        seller: data.sellerName || "Platform",
+      },
       channels: ["discord", "webhook"],
     });
   }
@@ -249,23 +261,39 @@ class Jarvis {
       priority: "medium",
       title: "New User Signup",
       body: `${data.userName} (${data.userEmail}) just joined`,
-      data: { name: data.userName, email: data.userEmail, source: data.source || "website" },
+      data: {
+        name: data.userName,
+        email: data.userEmail,
+        source: data.source || "website",
+      },
       channels: ["discord"],
     });
   }
 
-  async agentCreated(data: { creatorName: string; agentName: string; category: string }) {
+  async agentCreated(data: {
+    creatorName: string;
+    agentName: string;
+    category: string;
+  }) {
     return this.notify({
       type: "agent_created",
       priority: "medium",
       title: "New Agent Created",
       body: `${data.creatorName} created ${data.agentName}`,
-      data: { creator: data.creatorName, agent: data.agentName, category: data.category },
+      data: {
+        creator: data.creatorName,
+        agent: data.agentName,
+        category: data.category,
+      },
       channels: ["discord"],
     });
   }
 
-  async systemAlert(data: { message: string; severity: NotificationPriority; details?: Record<string, unknown> }) {
+  async systemAlert(data: {
+    message: string;
+    severity: NotificationPriority;
+    details?: Record<string, unknown>;
+  }) {
     return this.notify({
       type: "system_alert",
       priority: data.severity,
@@ -276,13 +304,25 @@ class Jarvis {
     });
   }
 
-  async cliEvent(data: { tool: string; command: string; output: string; success: boolean }) {
+  async cliEvent(data: {
+    tool: string;
+    command: string;
+    output: string;
+    success: boolean;
+  }) {
     return this.notify({
       type: "cli_event",
       priority: data.success ? "low" : "high",
       title: `CLI: ${data.tool}`,
-      body: data.success ? "Command executed successfully" : `Failed: ${data.output}`,
-      data: { tool: data.tool, command: data.command, output: data.output.substring(0, 500), success: data.success },
+      body: data.success
+        ? "Command executed successfully"
+        : `Failed: ${data.output}`,
+      data: {
+        tool: data.tool,
+        command: data.command,
+        output: data.output.substring(0, 500),
+        success: data.success,
+      },
       channels: ["discord"],
     });
   }
