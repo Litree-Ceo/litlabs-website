@@ -246,8 +246,7 @@ main {
 
 /* Tool preview areas should be responsive */
 .studio-scroll .aspect-video,
-.studio-scroll .aspect-square,
- {
+.studio-scroll .aspect-square {
   max-width: 100%;
 }
 
