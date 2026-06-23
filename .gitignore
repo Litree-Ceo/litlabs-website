@@ -90,3 +90,10 @@ vercel-deploy.txt
 env-keys.txt
 env_backup.txt
 env_dump.txt
+
+# IDE
+.idea/
+
+# Capacitor native builds
+android/
+ios/

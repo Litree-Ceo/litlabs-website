@@ -68,7 +68,8 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()",
+            value:
+              "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()",
           },
           {
             key: "Cross-Origin-Opener-Policy",
@@ -92,6 +93,7 @@ const nextConfig: NextConfig = {
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
+              "manifest-src 'self'",
               "upgrade-insecure-requests",
             ].join("; "),
           },
@@ -161,7 +163,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/builder", destination: "/studio", permanent: true },
-      { source: "/generate", destination: "/studio?tool=image", permanent: false },
+      {
+        source: "/generate",
+        destination: "/studio?tool=image",
+        permanent: false,
+      },
     ];
   },
 
@@ -172,7 +178,6 @@ const nextConfig: NextConfig = {
       fallback: [],
     };
   },
-
 };
 
 export default nextConfig;

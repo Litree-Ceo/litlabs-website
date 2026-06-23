@@ -6,12 +6,8 @@
 const CACHE_NAME = 'litlabs-v1';
 const STATIC_ASSETS = [
   '/',
-  '/studio',
-  '/marketplace',
-  '/gallery',
-  '/profile',
-  '/settings',
-  '/globals.css',
+  '/manifest.json',
+  '/logo.png',
 ];
 
 // Install event - cache static assets
