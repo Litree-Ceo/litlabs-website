@@ -1,0 +1,103 @@
+#cloud-config
+# Oracle Cloud ARM (VM.Standard.A1.Flex) — Ubuntu 22.04
+# Paste this in "User data" when creating the instance.
+# On first boot it installs Docker, clones the repo, writes .env, and starts everything.
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - git
+  - curl
+  - wget
+  - unzip
+  - htop
+  - ufw
+  - fail2ban
+  - netfilter-persistent
+  - iptables-persistent
+
+runcmd:
+  # ── Docker ────────────────────────────────────────────────────────────────────
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ubuntu
+
+  # ── Firewall: open ports (Oracle VCN security lists must match) ───────────────
+  - ufw allow 22/tcp    # SSH
+  - ufw allow 80/tcp    # HTTP
+  - ufw allow 443/tcp   # HTTPS
+  - ufw allow 5678/tcp  # n8n (optional, can remove if nginx handles it)
+  - ufw --force enable
+  # Also needed for Oracle's iptables wrapper:
+  - iptables -I INPUT 6 -p tcp -m multiport --dports 22,80,443,5678 -j ACCEPT
+  - netfilter-persistent save
+
+  # ── Clone repo ───────────────────────────────────────────────────────────────
+  - git clone https://github.com/Litree-Ceo/litlabs-website.git /opt/litlabs
+  - chown -R ubuntu:ubuntu /opt/litlabs
+
+  # ── Write .env (FILL IN your real values before launching) ───────────────────
+  - |
+    cat > /opt/litlabs/.env << 'EOF'
+    NEXT_PUBLIC_SITE_URL=https://litlabs.net
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=REPLACE_ME
+    CLERK_SECRET_KEY=REPLACE_ME
+    CLERK_WEBHOOK_SECRET=REPLACE_ME
+    NEXT_PUBLIC_SUPABASE_URL=https://rokbfvuoqildggnhappy.supabase.co
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=REPLACE_ME
+    SUPABASE_SERVICE_ROLE_KEY=REPLACE_ME
+    GEMINI_API_KEY=REPLACE_ME
+    OPENROUTER_API_KEY=REPLACE_ME
+    OPENAI_API_KEY=REPLACE_ME
+    STRIPE_SECRET_KEY=REPLACE_ME
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=REPLACE_ME
+    STRIPE_WEBHOOK_SECRET=REPLACE_ME
+    STRIPE_PRO_PRICE_ID=REPLACE_ME
+    DISCORD_WEBHOOK_URL=REPLACE_ME
+    N8N_WEBHOOK_URL=https://n8n.litlabs.net
+    N8N_USER=admin
+    N8N_PASSWORD=REPLACE_ME
+    AUTH_SECRET=REPLACE_ME
+    ADMIN_EMAIL=REPLACE_ME
+    R2_ACCOUNT_ID=REPLACE_ME
+    R2_ACCESS_KEY_ID=REPLACE_ME
+    R2_SECRET_ACCESS_KEY=REPLACE_ME
+    R2_BUCKET_NAME=litlabs-media
+    NEXT_PUBLIC_MEDIA_BASE=REPLACE_ME
+    EOF
+
+  # ── SSL placeholder (replace with real certs via certbot or Cloudflare) ───────
+  - mkdir -p /opt/litlabs/ssl
+  - openssl req -x509 -nodes -days 365 -newkey rsa:2048
+    -keyout /opt/litlabs/ssl/litlabs.net.key
+    -out /opt/litlabs/ssl/litlabs.net.crt
+    -subj "/CN=litlabs.net"
+
+  # ── Pull Ollama model after containers start (runs in background) ────────────
+  - |
+    cat > /opt/litlabs/pull-models.sh << 'EOF'
+    #!/bin/bash
+    sleep 30  # wait for ollama container to be ready
+    docker exec ollama ollama pull gemma3:4b
+    docker exec ollama ollama pull llama3.2:3b
+    EOF
+  - chmod +x /opt/litlabs/pull-models.sh
+
+  # ── Start everything ─────────────────────────────────────────────────────────
+  - cd /opt/litlabs && docker compose pull
+  - cd /opt/litlabs && docker compose up -d
+  - nohup /opt/litlabs/pull-models.sh &
+
+  # ── Auto-update on reboot via cron ───────────────────────────────────────────
+  - |
+    echo "@reboot ubuntu cd /opt/litlabs && docker compose up -d" >> /etc/crontab
+  - |
+    echo "0 3 * * * ubuntu cd /opt/litlabs && git pull && docker compose pull && docker compose up -d --remove-orphans" >> /etc/crontab
+
+final_message: |
+  LiTree Labs is up. Visit http://<your-oracle-ip> to verify.
+  Next steps:
+  1. Point litlabs.net DNS A record to this IP
+  2. Replace REPLACE_ME values in /opt/litlabs/.env
+  3. Get real SSL: apt install certbot && certbot --nginx -d litlabs.net -d n8n.litlabs.net
+  4. Restart: cd /opt/litlabs && docker compose up -d
