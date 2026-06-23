@@ -251,7 +251,7 @@ function StudioInner() {
           </div>
 
           {/* Tool content — canvas, GPU composited for smooth scroll */}
-          <div className="flex-1 min-w-0" style={{ transform: "translateZ(0)", willChange: "transform" }}>
+          <div className="flex-1 min-w-0 studio-scroll" style={{ transform: "translateZ(0)", willChange: "transform" }}>
             <Suspense fallback={
               <div className="min-h-[600px] p-6 space-y-4 animate-pulse">
                     <div className="w-32 h-4 rounded" style={{ backgroundColor: T.accentColor + "12" }} />

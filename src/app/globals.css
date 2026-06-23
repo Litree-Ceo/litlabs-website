@@ -1774,3 +1774,76 @@ main {
     padding: 12px;
   }
 }
+
+
+/* ============================================================
+   STUDIO RESPONSIVE FIXES (added 2026-06-23)
+   ============================================================ */
+
+/* Studio tool root should fill the available workspace */
+.studio-tool-root,
+.studio-scroll > div {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* All studio inputs and textareas should not overflow */
+.studio-scroll input,
+.studio-scroll textarea,
+.studio-scroll select {
+  max-width: 100%;
+}
+
+/* Studio cards should not overflow */
+.studio-scroll .rounded-lg,
+.studio-scroll .border,
+.studio-scroll .border-2 {
+  max-width: 100%;
+}
+
+/* Tool preview areas should be responsive */
+.studio-scroll .aspect-video,
+.studio-scroll .aspect-square,
+.studio-scroll .aspect-[3/1] {
+  max-width: 100%;
+}
+
+/* Gallery asset bucket cards */
+.studio-scroll .asset-card {
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* Pipeline canvas should be responsive */
+.studio-scroll .pipeline-canvas,
+.studio-scroll canvas {
+  max-width: 100%;
+}
+
+/* Mobile: reduce padding in studio tools */
+@media (max-width: 640px) {
+  .studio-scroll {
+    padding: 12px;
+  }
+  .studio-scroll h1,
+  .studio-scroll h2,
+  .studio-scroll h3 {
+    font-size: 1rem;
+  }
+}
+
+/* Prevent any tool from creating horizontal overflow */
+.studio-scroll {
+  overflow-x: hidden;
+}
+
+/* Make sure the terminal/pipeline text wraps */
+.studio-scroll pre,
+.studio-scroll code,
+.studio-scroll .terminal-output {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 100%;
+}

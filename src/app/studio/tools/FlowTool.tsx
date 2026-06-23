@@ -129,7 +129,7 @@ export default function FlowTool() {
   const clearHistory = () => { setHistory([]); localStorage.removeItem(STORAGE_KEY); };
 
   return (
-    <div className="p-4 space-y-4 max-w-6xl mx-auto h-full overflow-y-auto">
+    <div className="p-4 space-y-4 w-full h-full overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

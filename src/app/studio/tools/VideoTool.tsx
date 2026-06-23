@@ -116,7 +116,7 @@ export default function VideoTool() {
   const handleClear = () => { setHistory([]); localStorage.removeItem(STORAGE_KEY); };
 
   return (
-    <div className="p-4 space-y-4 max-w-6xl mx-auto">
+    <div className="p-4 space-y-4 w-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Film size={14} style={{ color: T.accentColor }} />
