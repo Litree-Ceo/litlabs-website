@@ -289,6 +289,13 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - Rate limiter is in-memory (single-process), resets on restart
 - Many pages use demo/fallback data when DB or API keys are unavailable
 
+### CSP (Content-Security-Policy) Rules
+
+- Config is in `next.config.ts` under `headers()` — applied to `/(.*)`
+- **NEVER use `'strict-dynamic'` in `script-src`** — per spec it silently overrides both `'self'` and `'unsafe-inline'`, meaning only nonce/hash-gated scripts run. Next.js static chunks have no nonces, so they all get blocked and the entire app goes blank.
+- Current correct `script-src`: `'self' 'unsafe-inline' 'unsafe-eval'` + explicit third-party domains (Clerk, GTM, Cloudflare, etc.)
+- If you need stricter CSP in future, use nonces via `next.config.ts` `generateBuildId` + middleware injection — not `strict-dynamic` alone.
+
 ### Deploy Pipeline
 
 - **Vercel project:** `prj_EnE4JStJUENM89PWov574Y9q7mTy`
