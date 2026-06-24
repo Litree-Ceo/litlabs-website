@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "@/context/ThemeContext";
-import { useUser } from "@clerk/nextjs";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
 import { Bot, X, ChevronDown, MessageSquare, Sparkles } from "lucide-react";
 import { AGENTS } from "@/lib/agents";
 
@@ -38,7 +38,7 @@ const HYPE_MESSAGES = [
 
 export default function NpcGuide() {
   const { resolvedColors: T } = useTheme();
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, sessionClaims } = useClerkAuth();
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -133,7 +133,7 @@ export default function NpcGuide() {
           <div className="px-4 py-4 space-y-3">
             <p className="text-sm leading-relaxed" style={{ color: T.textColor }}>
               {isSignedIn
-                ? `Hey ${user?.firstName || user?.username || "builder"}! ${persona.greeting}`
+                ? `Hey ${(sessionClaims?.name as string) || "builder"}! ${persona.greeting}`
                 : persona.greeting}
             </p>
             <div

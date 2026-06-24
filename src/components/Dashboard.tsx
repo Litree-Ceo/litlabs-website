@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { useProfile } from "@/context/ProfileContext";
-import { useUser } from "@clerk/nextjs";
+import { useClerkAuth } from "@/hooks/useClerkAuth";
 import {
   Zap,
   Sparkles,
@@ -56,11 +56,11 @@ interface AgentItem {
 
 export default function Dashboard() {
   const { resolvedColors: T } = useTheme();
-  const { user } = useUser();
+  const { sessionClaims } = useClerkAuth();
   const { profile } = useProfile();
 
-  const displayName = user?.fullName || user?.username || "Builder";
-  const firstName = user?.firstName || displayName.split(" ")[0];
+  const displayName = (sessionClaims?.name as string) || (sessionClaims?.email as string)?.split("@")[0] || "Builder";
+  const firstName = displayName.split(" ")[0];
 
   const [wallet, setWallet] = useState<number | null>(null);
   const [agentCount, setAgentCount] = useState<number>(0);

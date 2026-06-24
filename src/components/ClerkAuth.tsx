@@ -55,7 +55,7 @@ function CustomAuthFallback({ linkColor }: NavAuthProps) {
     );
   }
   return (
-    <Link href="/login">
+    <Link href="/sign-in">
       <button className="px-3.5 py-1.5 rounded-md text-[11px] font-bold cursor-pointer transition-all hover:opacity-90"
         style={{ backgroundColor: linkColor, color: "#fff", letterSpacing: "0.05em" }}>
         Sign In

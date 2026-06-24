@@ -394,7 +394,8 @@ export default function HomePage() {
             <div className="text-2xl mb-2">⚡</div>
             <h1 className="text-xl font-black mb-2" style={{ color: C.headerColor }}>LiTree Labs Public Feed</h1>
             <p className="text-sm opacity-60 mb-4">See what the community is building. Join to create your own agents.</p>
-            <div className="flex justify-center gap-3">
+             <div className="flex justify-center gap-3 flex-wrap">
+              <Link href="/sign-in" className="px-6 py-2 text-sm font-bold border" style={{ borderColor: C.accentColor, color: C.accentColor, backgroundColor: C.accentColor + "12" }}>Sign In</Link>
               <Link href="/sign-up" className="px-6 py-2 text-sm font-bold border" style={{ borderColor: C.linkColor, color: C.linkColor }}>Get Started Free</Link>
               <Link href="/studio" className="px-6 py-2 text-sm font-bold border" style={{ borderColor: C.headerColor, color: C.headerColor }}>Try Studio</Link>
             </div>
@@ -444,7 +445,7 @@ export default function HomePage() {
               <div className="border-2 p-4 opacity-50" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
                 <div className="flex gap-3">
                   <div className="w-10 h-10 border flex items-center justify-center" style={{ borderColor: C.borderColor }}>👤</div>
-                  <div className="flex-1 p-2 text-sm border" style={{ borderColor: C.borderColor }}>Sign in to post...</div>
+                  <Link href="/sign-in" className="flex-1 p-2 text-sm border block" style={{ borderColor: C.borderColor }}>Sign in to post...</Link>
                 </div>
               </div>
 
