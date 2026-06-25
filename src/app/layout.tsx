@@ -50,11 +50,18 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+<<<<<<< HEAD
       { url: "/logo-sm.png", sizes: "192x192", type: "image/png" },
       { url: "/logo.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
       { url: "/logo-sm.png", sizes: "192x192", type: "image/png" },
+=======
+      { url: "/logo.webp", sizes: "192x192", type: "image/webp" },
+    ],
+    apple: [
+      { url: "/logo.webp", sizes: "192x192", type: "image/webp" },
+>>>>>>> 12f47af749c8fee31b41865e4d5741be53ece154
     ],
   },
   manifest: "/manifest.json",

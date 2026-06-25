@@ -438,6 +438,9 @@ export default function SignUpPage() {
             </div>
           )}
 
+          {/* Clerk CAPTCHA widget target */}
+          <div id="clerk-captcha" />
+
           {/* ── Step 2: Password — creates the Clerk account on submit ── */}
           {step === "credentials" && (
             <div
