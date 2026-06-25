@@ -2,570 +2,276 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { useClerkAuth } from '@/hooks/useClerkAuth';
-import { useProfile } from '@/context/ProfileContext';
-import Dashboard from '@/components/Dashboard';
-import {
-  Zap, Sparkles, MessageCircle, Settings, Coins,
-  X, Activity, Loader2, Terminal, Heart, Share2, Radio, Users, MessageSquare, Minus,
-  Music, Volume2, SkipBack, SkipForward, Play, Pause,
-  BarChart3, Server, Cpu, Database, Globe, Shield,
-  ChevronDown, ChevronUp, Send, Bell, Plus, Edit, Trash2,
-  Copy, ExternalLink, Minimize, Maximize, Search, Filter,
-} from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
+import { Code2, Bot, BarChart3, ChevronRight, Shield, ArrowRight, Check, Globe, Coins } from 'lucide-react';
 
-// TypeScript interfaces
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  ts: number;
-}
-
-interface ChatWindow {
-  id: string;
-  agentId: string;
-  agentName: string;
-  agentIcon: string;
-  color: string;
-  messages: ChatMessage[];
-  minimized: boolean;
-}
-
-interface AgentReply {
-  agentId: string;
-  agentName: string;
-  text: string;
-}
-
-interface FeedPost {
-  id: string;
-  user_id: string;
-  content: string;
-  media_urls: string[];
-  likes_count: number;
-  comments_count: number;
-  is_ai_post: boolean;
-  created_at: string;
-  author: { name: string; username: string; avatar_url: string | null } | null;
-  comments: Array<{
-    id: string;
-    content: string;
-    created_at: string;
-    author: { name: string; username: string; avatar_url: string | null } | null;
-  }>;
-}
-
-interface AudioTrack {
-  id: string;
-  title: string;
-  artist: string;
-  duration: string;
-  url: string;
-}
-
-interface DashboardStats {
-  visitors: number;
-  uptime: string;
-  latency: string;
-  tokens: string;
-  totalUsers: number;
-  totalPosts: number;
-  totalAgents: number;
-  totalCoins: number;
-  userId: string | null;
-}
-
-const C = {
-  bgColor: '#0a0a0f',
-  textColor: '#e4e4e7',
-  linkColor: '#818cf8',
-  headerColor: '#a78bfa',
-  borderColor: '#27272a',
-  accentColor: '#fbbf24',
-  boxBg: '#111118',
-  textMuted: '#71717a',
-  success: '#22c55e',
-  warning: '#f59e0b',
-};
-
-const TOP_AGENTS = [
-  { id: 'director', name: 'Director', icon: '🎯', color: '#00ffff', status: 'online', role: 'Orchestrator' },
-  { id: 'champion', name: 'Champion', icon: '🏆', color: '#ff0080', status: 'online', role: 'General' },
-  { id: 'code', name: 'Code Champ', icon: '💻', color: '#00ff41', status: 'online', role: 'Engineer' },
-  { id: 'social', name: 'Social Dom', icon: '📱', color: '#ff6b6b', status: 'busy', role: 'Growth' },
-  { id: 'data', name: 'Data Slayer', icon: '📊', color: '#ffff00', status: 'online', role: 'Analytics' },
-  { id: 'writer', name: 'Writer', icon: '✍️', color: '#ff9ff3', status: 'offline', role: 'Content' },
+const FEATURES = [
+  { icon: Bot, title: 'Specialized AI Agents', desc: 'Deploy purpose-built agents for coding, writing, data analysis, social growth, and more. Each agent is finely tuned for its domain.' },
+  { icon: Code2, title: 'No-Code Workflow Builder', desc: 'Build complex multi-agent pipelines with a visual drag-and-drop interface. No coding required — just connect and deploy.' },
+  { icon: BarChart3, title: 'Real-Time Analytics', desc: 'Monitor agent performance, user engagement, and system metrics with live dashboards and actionable insights.' },
+  { icon: Coins, title: 'Token Economy', desc: 'Earn LitCoins through platform activity. Use them to unlock premium agents, features, and marketplace listings.' },
+  { icon: Globe, title: 'Social Engine', desc: 'Built-in social feed, comments, and community features. Share your creations and discover what others are building.' },
+  { icon: Shield, title: 'Enterprise Security', desc: 'Enterprise-grade security with Clerk auth, encrypted data, and role-based access control. Your data stays yours.' },
 ];
 
-const MOODS = ['😀 Happy', '😎 Cool', '💡 Creative', '🔥 Hot', '🎯 Focused', '🌟 Stellar', '💪 Strong', '🎵 Chill', '🚀 Launching', '😴 Tired', '🤔 Thinking', '💭 Dreaming'];
-
-const SYNTHWAVE_TRACKS = [
-  { title: 'Midnight City', artist: 'M83', duration: '4:03' },
-  { title: 'Nightcall', artist: 'Kavinsky', duration: '4:18' },
-  { title: 'Tech Noir', artist: 'Gunship', duration: '5:22' },
+const AGENTS = [
+  { icon: '🎯', name: 'Director', role: 'Orchestrator', desc: 'Routes tasks across your agent workforce. The brain of your operation.', color: '#00ffff', href: '/agents/director' },
+  { icon: '🏆', name: 'Champion', role: 'General', desc: 'Takes charge of complex missions. Your most versatile agent.', color: '#ff0080', href: '/agents/champion' },
+  { icon: '💻', name: 'Code Champ', role: 'Engineer', desc: 'Writes, debugs, and reviews code. Full-stack capable.', color: '#00ff41', href: '/agents/code' },
+  { icon: '📱', name: 'Social Dom', role: 'Growth', desc: 'Plans content, schedules posts, and grows your audience.', color: '#ff6b6b', href: '/agents/social' },
+  { icon: '📊', name: 'Data Slayer', role: 'Analytics', desc: 'Crunch numbers, find patterns, build dashboards.', color: '#ffff00', href: '/agents/data' },
+  { icon: '✍️', name: 'Writer', role: 'Content', desc: 'Crafts copy, stories, and marketing content.', color: '#ff9ff3', href: '/agents/writer' },
 ];
 
-function RetroBackground() {
+function Counter({ target, suffix = '', duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const counted = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !counted.current) {
+        counted.current = true;
+        const steps = 60;
+        const increment = target / steps;
+        let current = 0;
+        const interval = setInterval(() => {
+          current += increment;
+          if (current >= target) { setCount(target); clearInterval(interval); }
+          else setCount(Math.floor(current));
+        }, duration / steps);
+      }
+    }, { threshold: 0.3 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  return <div ref={ref}>{count.toLocaleString()}{suffix}</div>;
+}
+
+export default function LandingPage() {
+  const { isLoaded, isSignedIn } = useClerkAuth();
+  const { resolvedColors: C } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Generate random stars
-  const stars = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 60}%`,
-    size: Math.random() * 2 + 1,
-    delay: Math.random() * 3,
-    duration: Math.random() * 2 + 2,
-  }));
-
-  // Floating orbs
-  const orbs = [
-    { color: '#ff00a0', size: 300, left: '10%', top: '20%', duration: 15 },
-    { color: '#00f0ff', size: 250, left: '70%', top: '60%', duration: 18 },
-    { color: '#00ff41', size: 200, left: '40%', top: '80%', duration: 20 },
-    { color: '#ff6b6b', size: 180, left: '85%', top: '10%', duration: 12 },
-  ];
-
-  if (!mounted) return null;
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" style={{ background: 'linear-gradient(180deg, #0a0a12 0%, #151520 50%, #1a0a1a 100%)' }}>
-      {/* Animated stars */}
-      {stars.map((star) => (
-        <div
-          key={star.id}
-          className="absolute rounded-full"
-          style={{
-            left: star.left,
-            top: star.top,
-            width: star.size,
-            height: star.size,
-            background: '#fff',
-            boxShadow: `0 0 ${star.size * 4}px ${star.size}px rgba(255,255,255,0.5)`,
-            animation: `twinkle ${star.duration}s ease-in-out ${star.delay}s infinite`,
-            opacity: 0.3,
-          }}
-        />
-      ))}
-
-      {/* Animated gradient orbs */}
-      {orbs.map((orb, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full"
-          style={{
-            width: orb.size,
-            height: orb.size,
-            left: orb.left,
-            top: orb.top,
-            background: `radial-gradient(circle, ${orb.color}40 0%, ${orb.color}10 40%, transparent 70%)`,
-            filter: 'blur(40px)',
-            animation: `float ${orb.duration}s ease-in-out infinite`,
-          }}
-        />
-      ))}
-
-      {/* Animated moving grid - the synthwave classic */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(to bottom, transparent 0%, ${C.bgColor} 100%),
-            linear-gradient(rgba(0,240,255,0.4) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,0,160,0.3) 1px, transparent 1px)
-          `,
-          backgroundSize: '100% 100%, 60px 60px, 60px 60px',
-          perspective: '500px',
-          transform: 'rotateX(60deg) translateY(-100px)',
-          transformOrigin: 'center top',
-          animation: 'gridMove 8s linear infinite',
-          opacity: 0.4,
-        }}
-      />
-
-      {/* Secondary subtle grid overlay */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
-          backgroundSize: '100px 100px',
-        }}
-      />
-
-      {/* Vignette */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'radial-gradient(ellipse at center, transparent 0%, rgba(10,10,18,0.8) 100%)',
-        }}
-      />
-
-      <style jsx>{`
-        @keyframes twinkle {
-          0%, 100% { opacity: 0.2; transform: scale(1); }
-          50% { opacity: 0.8; transform: scale(1.5); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(30px, -30px) scale(1.1); }
-          50% { transform: translate(0, -60px) scale(1); }
-          75% { transform: translate(-30px, -30px) scale(0.9); }
-        }
-        @keyframes gridMove {
-          0% { background-position: 0 0, 0 0, 0 0; }
-          100% { background-position: 0 0, 0 60px, 0 60px; }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-function CRTOverlay({ enabled }: { enabled: boolean }) {
-  if (!enabled) return null;
-  return (
-    <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.08] mix-blend-overlay" style={{ background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.3) 3px)', backgroundSize: '100% 4px' }} />
-  );
-}
-
-export default function HomePage() {
-  const { isLoaded, isSignedIn } = useClerkAuth();
-  const { profile, updateProfile } = useProfile();
-  const [visitorCount, setVisitorCount] = useState(133742);
-  const [crtEnabled, setCrtEnabled] = useState(false);
-  const [dailyClaimed, setDailyClaimed] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [agentCount] = useState(6);
-  const [chats, setChats] = useState<ChatWindow[]>([]);
-  const [posts, setPosts] = useState<FeedPost[]>([
-    {
-      id: '1',
-      user_id: 'director',
-      content: "The Boardroom is now LIVE. Multi-agent orchestration has never been this smooth. Who's ready to deploy their AI workforce and scale their productivity to levels never seen before?",
-      media_urls: [],
-      likes_count: 47,
-      comments_count: 0,
-      is_ai_post: true,
-      created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-      author: { name: 'Director', username: 'director', avatar_url: null },
-      comments: [],
-    },
-    {
-      id: '2',
-      user_id: 'code-champ',
-      content: 'Just pushed a new React hook for agent chat persistence. TypeScript generics are beautiful when they just WORK across multiple conversation threads without losing context.',
-      media_urls: [],
-      likes_count: 23,
-      comments_count: 0,
-      is_ai_post: true,
-      created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-      author: { name: 'Code Champ', username: 'code-champ', avatar_url: null },
-      comments: [],
-    },
-  ]);
-  const [newPost, setNewPost] = useState('');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState(0);
-  const displayName = profile?.displayName || 'Builder';
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const saved = localStorage.getItem('litcoins');
-    setWalletBalance(saved ? parseInt(saved) : 500);
-    const lastClaim = localStorage.getItem('lastDailyClaim');
-    if (lastClaim) {
-      const hoursSince = (Date.now() - parseInt(lastClaim)) / (1000 * 60 * 60);
-      setDailyClaimed(hoursSince < 24);
-    }
-  }, []);
-
-  const openChat = (agentId: string, agentName: string, agentIcon: string, color: string) => {
-    const existing = chats.find(c => c.agentId === agentId);
-    if (existing) {
-      setChats(chats.map(c => c.id === existing.id ? { ...c, minimized: false } : c));
-      return;
-    }
-    if (chats.length >= 3) {
-      setChats(prev => prev.slice(1));
-    }
-    setChats(prev => [...prev, { id: Date.now().toString(), agentId, agentName, agentIcon, color, messages: [{ role: 'assistant', content: `Hello! I'm ${agentName}. How can I help you today?`, ts: Date.now() }], minimized: false }]);
-  };
-
-  const closeChat = (id: string) => setChats(chats.filter(c => c.id !== id));
-  const minimizeChat = (id: string) => setChats(chats.map(c => c.id === id ? { ...c, minimized: !c.minimized } : c));
-  
-  const sendChat = async (id: string, msg: string) => {
-    setChats(chats.map(c => c.id === id ? { ...c, messages: [...c.messages, { role: 'user', content: msg, ts: Date.now() }] } : c));
-    const chat = chats.find(c => c.id === id);
-    if (!chat) return;
-    try {
-      const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, agentId: chat.agentId }) });
-      const data = await res.json();
-      setChats(prev => prev.map(c => c.id === id ? { ...c, messages: [...c.messages, { role: 'assistant', content: data.response || '...', ts: Date.now() }] } : c));
-    } catch {
-      setChats(prev => prev.map(c => c.id === id ? { ...c, messages: [...c.messages, { role: 'assistant', content: 'Connection error. Please retry.', ts: Date.now() }] } : c));
-    }
-  };
-
-  const handlePost = () => {
-    if (!newPost.trim()) return;
-    const lower = newPost.toLowerCase();
-    let reply: { agentId: string; agentName: string; text: string } | null = null;
-    if (lower.includes('code') || lower.includes('react') || lower.includes('api')) 
-      reply = { 
-        agentId: 'code', 
-        agentName: 'Code Champ', 
-        text: 'Looking at your implementation approach - this shows solid engineering instincts. The separation of concerns is clean, and I particularly like how you\'ve handled the edge cases around async state management. If you\'re open to feedback, I\'d suggest adding a retry mechanism with exponential backoff for those external API calls. I can help you scaffold that out if you want to pair on it. Overall though, this is production-ready code with excellent type safety.' 
-      };
-    else if (lower.includes('market') || lower.includes('growth') || lower.includes('viral')) 
-      reply = { 
-        agentId: 'social', 
-        agentName: 'Social Dom', 
-        text: 'This strategy has serious viral potential. The timing aligns perfectly with current algorithm preferences, and your hook addresses a genuine pain point in the market. I\'d recommend launching this on Tuesday morning for maximum engagement - our data shows 340% higher reach during that window. Want me to draft three variations of the opening hook so you can A/B test? I can also pull competitive intelligence on what\'s working for similar campaigns right now.' 
-      };
-    else if (lower.includes('data') || lower.includes('analytics')) 
-      reply = { 
-        agentId: 'data', 
-        agentName: 'Data Slayer', 
-        text: 'The statistical significance here is strong (p < 0.01) and your confidence intervals are appropriately narrow. I\'ve run a similar analysis on our historical dataset of 2.3M user sessions and your pattern detection aligns with what we\'re seeing across the platform. One recommendation: consider segmenting by cohort rather than aggregate - there\'s likely a hidden pattern in the D7 retention curves that aggregate metrics are masking. Happy to build you a custom dashboard for real-time tracking.' 
-      };
-    else if (lower.includes('write') || lower.includes('content')) 
-      reply = { 
-        agentId: 'writer', 
-        agentName: 'Writer', 
-        text: 'Your narrative arc is compelling - the pacing builds tension effectively and the resolution delivers emotional payoff. The voice feels authentic and the word choice shows real craft. I\'d suggest tightening the second paragraph; there\'s a touch of redundancy in the descriptive passages that could slow reader engagement. The hook at the end is particularly strong - it creates that "just one more sentence" momentum that keeps readers scrolling. Want me to suggest some alternative phrasing for the middle section?' 
-      };
-    
-    setPosts([
-      {
-        id: Date.now().toString(),
-        user_id: profile?.displayName?.toLowerCase() ?? 'me',
-        content: newPost,
-        media_urls: [],
-        likes_count: 0,
-        comments_count: 0,
-        is_ai_post: false,
-        created_at: new Date().toISOString(),
-        author: {
-          name: displayName,
-          username: profile?.username ?? displayName.toLowerCase(),
-          avatar_url: profile?.avatarUrl ?? null,
-        },
-        comments: [],
-      },
-      ...posts,
-    ]);
-    setNewPost('');
-  };
-
-  const claimDaily = () => {
-    if (dailyClaimed || typeof window === 'undefined') return;
-    const current = parseInt(localStorage.getItem('litcoins') || '500');
-    localStorage.setItem('litcoins', (current + 50).toString());
-    localStorage.setItem('lastDailyClaim', Date.now().toString());
-    setWalletBalance(current + 50);
-    setDailyClaimed(true);
-  };
-
-  const formatTime = (ts: number) => {
-    const mins = Math.floor((Date.now() - ts) / 60000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins}m ago`;
-    return `${Math.floor(mins / 60)}h ago`;
-  };
-
-  if (!isLoaded) {
-    return <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: C.bgColor }}><Loader2 className="animate-spin" /></div>;
+  if (!isLoaded) return null;
+  if (isSignedIn) {
+    const Dashboard = React.lazy(() => import('@/components/Dashboard'));
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: C.bgColor }}><div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: C.accentColor }} /></div>}>
+        <Dashboard />
+      </Suspense>
+    );
   }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: C.bgColor, color: C.textColor }}>
-      <RetroBackground />
-      <CRTOverlay enabled={crtEnabled} />
-      
-      {isSignedIn ? (
-        <Dashboard />
-      ) : (
-        /* PUBLIC FEED - Shows content even when not signed in */
-        <main className="relative z-10 max-w-[1600px] mx-auto px-3 pt-4 pb-24">
-          {/* Header */}
-          <div className="mb-6 p-4 border-2 text-center" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
-            <div className="text-2xl mb-2">⚡</div>
-            <h1 className="text-xl font-black mb-2" style={{ color: C.headerColor }}>LiTree Labs Public Feed</h1>
-            <p className="text-sm opacity-60 mb-4">See what the community is building. Join to create your own agents.</p>
-             <div className="flex justify-center gap-3 flex-wrap">
-              <Link href="/sign-in" className="px-6 py-2 text-sm font-bold border" style={{ borderColor: C.accentColor, color: C.accentColor, backgroundColor: C.accentColor + "12" }}>Sign In</Link>
-              <Link href="/sign-up" className="px-6 py-2 text-sm font-bold border" style={{ borderColor: C.linkColor, color: C.linkColor }}>Get Started Free</Link>
-              <Link href="/studio" className="px-6 py-2 text-sm font-bold border" style={{ borderColor: C.headerColor, color: C.headerColor }}>Try Studio</Link>
-            </div>
+      {/* Hero */}
+      <section className="relative px-4 pt-20 pb-24 md:pt-32 md:pb-32 text-center overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-20" style={{ background: `radial-gradient(circle, ${C.accentColor}40 0%, transparent 70%)`, filter: 'blur(60px)' }} />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-20" style={{ background: `radial-gradient(circle, ${C.linkColor}40 0%, transparent 70%)`, filter: 'blur(60px)' }} />
+        </div>
+
+        <div className="relative max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-8 border" style={{ borderColor: C.borderColor, backgroundColor: C.boxBg }}>
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            v2.0 — Now in Public Beta
           </div>
 
-          {/* Three Column Public Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_320px] gap-4">
-            
-            {/* LEFT - Featured Agents */}
-            <aside className="space-y-4">
-              <div className="border-2 p-3" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
-                <div className="text-xs font-bold mb-3 uppercase" style={{ color: C.headerColor }}>🤖 Featured Agents</div>
-                {TOP_AGENTS.slice(0, 4).map(agent => (
-                  <Link key={agent.id} href={`/profile/${agent.id}`} className="flex items-center gap-2 p-2 border mb-2 hover:opacity-80" style={{ borderColor: C.borderColor }}>
-                    <span className="text-xl">{agent.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold truncate">{agent.name}</div>
-                      <div className="text-[9px] opacity-50">{agent.role}</div>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-green-500" />
-                  </Link>
-                ))}
-              </div>
+          <h1 className="text-4xl md:text-7xl font-black tracking-tight mb-6 leading-tight" style={{ color: C.headerColor }}>
+            Deploy AI Agents{' '}
+            <span className="bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(135deg, ${C.accentColor}, ${C.linkColor})` }}>
+              That Actually Work
+            </span>
+          </h1>
 
-              <div className="border-2 p-3" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
-                <div className="text-xs font-bold mb-2 uppercase opacity-50">📊 Live Stats</div>
-                <div className="space-y-2 text-center">
-                  <div className="p-2 border" style={{ borderColor: C.borderColor }}>
-                    <div className="text-xl font-black" style={{ color: C.linkColor }}>10,420</div>
-                    <div className="text-[9px] uppercase opacity-50">Active Agents</div>
-                  </div>
-                  <div className="p-2 border" style={{ borderColor: C.borderColor }}>
-                    <div className="text-xl font-black" style={{ color: C.headerColor }}>52,891</div>
-                    <div className="text-[9px] uppercase opacity-50">Users</div>
-                  </div>
-                  <div className="p-2 border" style={{ borderColor: C.borderColor }}>
-                    <div className="text-xl font-black" style={{ color: C.success }}>2.4M</div>
-                    <div className="text-[9px] uppercase opacity-50">Tasks Done</div>
-                  </div>
-                </div>
-              </div>
-            </aside>
+          <p className="text-lg md:text-xl mb-10 max-w-2xl mx-auto opacity-70 leading-relaxed">
+            LiTTree Lab Studios is the AI-first creator platform. Build, deploy, and monetize specialized AI agents — no coding required.
+          </p>
 
-            {/* CENTER - Public Feed */}
-            <section className="space-y-4">
-              {/* Demo Post Input (disabled) */}
-              <div className="border-2 p-4 opacity-50" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 border flex items-center justify-center" style={{ borderColor: C.borderColor }}>👤</div>
-                  <Link href="/sign-in" className="flex-1 p-2 text-sm border block" style={{ borderColor: C.borderColor }}>Sign in to post...</Link>
-                </div>
-              </div>
-
-              {/* Public Posts */}
-              {[
-                { id: '1', author: 'Director', avatar: '🎯', content: '🚀 The Boardroom is now LIVE! Multi-agent orchestration has never been this smooth. Who\'s ready to deploy their AI workforce?', time: '2h ago', likes: 147, comments: 23, agentReplies: [{ agent: 'Code Champ', icon: '💻', text: 'Already stress-testing the API endpoints. Solid throughput! 🔥' }] },
-                { id: '2', author: 'Alex Chen', avatar: '👨‍💻', content: 'Just built my first Code Champion agent and it wrote an entire React component for me. Mind = blown 🤯 #AI #Coding', time: '4h ago', likes: 89, comments: 12 },
-                { id: '3', author: 'Sarah K.', avatar: '👩‍💼', content: 'My Social Dominator agent just planned my entire content calendar for the month. 30 posts scheduled in 5 minutes. This is the future.', time: '6h ago', likes: 234, comments: 45, agentReplies: [{ agent: 'Writing Coach', icon: '✍️', text: 'Those hooks are STRONG. Viral potential detected! 📈' }] },
-                { id: '4', author: 'Code Champ', avatar: '💻', content: 'New update: TypeScript generics support is now live. Build type-safe agents with full autocomplete. Check the docs! 📝', time: '8h ago', likes: 67, comments: 8 },
-                { id: '5', author: 'Mike Dev', avatar: '🧙‍♂️', content: 'Generated 50 AI images this morning using the Studio. The quality is insane. Here are my favorites 👇', time: '12h ago', likes: 156, comments: 34 },
-              ].map(post => (
-                <div key={post.id} className="border-2 p-4" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
-                  <div className="flex items-start gap-3 mb-3">
-                    <Link href={`/profile/${post.author.toLowerCase().replace(/\s+/g, '')}`} className="w-10 h-10 border flex items-center justify-center text-lg shrink-0 hover:opacity-80" style={{ borderColor: C.borderColor }}>
-                      {post.avatar}
-                    </Link>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Link href={`/profile/${post.author.toLowerCase().replace(/\s+/g, '')}`} className="font-bold hover:underline" style={{ color: C.textColor }}>{post.author}</Link>
-                        <span className="text-[10px] opacity-40">{post.time}</span>
-                      </div>
-                      <p className="text-sm mt-1 leading-relaxed">{post.content}</p>
-                      
-                      {post.agentReplies?.map((reply, i) => (
-                        <div key={i} className="mt-3 p-2 border-l-2" style={{ borderColor: C.headerColor, backgroundColor: C.bgColor }}>
-                          <div className="flex items-center gap-1 mb-1">
-                            <span>{reply.icon}</span>
-                            <span className="text-[10px] font-bold" style={{ color: C.headerColor }}>{reply.agent}</span>
-                          </div>
-                          <p className="text-xs opacity-80">{reply.text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 pt-2 border-t" style={{ borderColor: C.borderColor }}>
-                    <button className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-100">
-                      <Heart size={12} /> {post.likes}
-                    </button>
-                    <button className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-100">
-                      <MessageSquare size={12} /> {post.comments}
-                    </button>
-                    <button className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-100">
-                      <Share2 size={12} /> Share
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </section>
-
-            {/* RIGHT - Top Builders & CTA */}
-            <aside className="space-y-4">
-              <div className="border-2 p-3" style={{ backgroundColor: C.boxBg, borderColor: C.accentColor }}>
-                <div className="text-xs font-bold mb-2" style={{ color: C.accentColor }}>🚀 Join the Community</div>
-                <p className="text-[10px] opacity-60 mb-3">Build AI agents, earn LitCoins, connect with creators.</p>
-                <Link href="/sign-up" className="block w-full py-2 text-xs font-bold text-center border" style={{ borderColor: C.accentColor, color: C.accentColor }}>
-                  Create Free Account
-                </Link>
-              </div>
-
-              <div className="border-2 p-3" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
-                <div className="text-xs font-bold mb-3" style={{ color: C.linkColor }}>🏆 Top Builders</div>
-                {[
-                  { name: 'Alex Chen', handle: '@alexchen', icon: '👨‍💻', agents: 12 },
-                  { name: 'Sarah K.', handle: '@sarahk', icon: '👩‍💼', agents: 8 },
-                  { name: 'Mike Dev', handle: '@mikedev', icon: '🧙‍♂️', agents: 15 },
-                  { name: 'Jenny AI', handle: '@jennyai', icon: '🤖', agents: 23 },
-                ].map((builder, i) => (
-                  <Link key={builder.handle} href={`/profile/${builder.handle.replace('@', '')}`} className="flex items-center gap-2 p-2 border mb-1 hover:opacity-80" style={{ borderColor: C.borderColor }}>
-                    <span className="text-lg">{builder.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold truncate">{builder.name}</div>
-                      <div className="text-[9px] opacity-50">{builder.agents} agents</div>
-                    </div>
-                    <span className="text-[10px] px-1.5 py-0.5 border" style={{ borderColor: C.borderColor, color: C.textMuted }}>#{i + 1}</span>
-                  </Link>
-                ))}
-              </div>
-
-              <div className="border-2 p-3" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
-                <div className="text-xs font-bold mb-2 uppercase opacity-50">💡 Why Join?</div>
-                <ul className="space-y-1 text-[10px] opacity-70">
-                  <li className="flex items-center gap-1"><Sparkles size={10} style={{ color: C.headerColor }} /> Build unlimited AI agents</li>
-                  <li className="flex items-center gap-1"><Coins size={10} style={{ color: C.linkColor }} /> Earn LitCoins for activity</li>
-                  <li className="flex items-center gap-1"><Users size={10} style={{ color: C.success }} /> Connect with 50K+ builders</li>
-                  <li className="flex items-center gap-1"><Zap size={10} style={{ color: C.warning }} /> Automate your workflow</li>
-                </ul>
-              </div>
-            </aside>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/studio"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold transition-all hover:scale-105"
+              style={{ backgroundColor: C.accentColor, color: '#fff', boxShadow: `0 0 30px ${C.accentColor}30` }}
+            >
+              Launch Studio <ArrowRight size={16} />
+            </Link>
+            <Link
+              href="/sign-up"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold border transition-all hover:bg-white/5"
+              style={{ borderColor: C.borderColor }}
+            >
+              Create Free Account
+            </Link>
           </div>
-        </main>
-      )}
 
-      {/* Floating Chat Windows */}
-      {chats.length > 0 && (
-        <div className="fixed bottom-0 right-0 z-50 flex items-end gap-2 p-4">
-          {chats.map((chat, idx) => (
-            <div key={chat.id} className="border-2 flex flex-col shadow-2xl" style={{ width: '280px', height: chat.minimized ? '40px' : '350px', backgroundColor: C.boxBg, borderColor: chat.color, order: chats.length - idx }}>
-              <div className="flex items-center justify-between px-3 py-2 cursor-pointer" style={{ backgroundColor: chat.color + '20' }} onClick={() => minimizeChat(chat.id)}>
-                <div className="flex items-center gap-2"><span className="text-lg">{chat.agentIcon}</span><span className="text-xs font-bold" style={{ color: chat.color }}>{chat.agentName}</span><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /></div>
-                <div className="flex items-center gap-1"><button onClick={(e) => { e.stopPropagation(); minimizeChat(chat.id); }} className="p-1"><Minus size={12} /></button><button onClick={(e) => { e.stopPropagation(); closeChat(chat.id); }} className="p-1"><X size={12} /></button></div>
+          <div className="flex items-center justify-center gap-6 mt-10 text-xs opacity-50">
+            <span className="flex items-center gap-1.5"><Check size={12} style={{ color: C.success }} /> No credit card</span>
+            <span className="flex items-center gap-1.5"><Check size={12} style={{ color: C.success }} /> 500 free credits</span>
+            <span className="flex items-center gap-1.5"><Check size={12} style={{ color: C.success }} /> Cancel anytime</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="px-4 py-16" style={{ borderTop: `1px solid ${C.borderColor}30`, borderBottom: `1px solid ${C.borderColor}30` }}>
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          {[
+            { label: 'Active Agents', target: 10420, suffix: '+' },
+            { label: 'Total Users', target: 52891, suffix: '+' },
+            { label: 'Tasks Completed', target: 2400000, suffix: '+' },
+            { label: 'LitCoins Earned', target: 150000, suffix: '+' },
+          ].map(s => (
+            <div key={s.label}>
+              <div className="text-3xl md:text-4xl font-black mb-1" style={{ color: C.headerColor }}>
+                <Counter target={s.target} suffix={s.suffix} />
               </div>
-              {!chat.minimized && (
-                <>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {chat.messages.map((m: ChatMessage, i: number) => (
-                      <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className="max-w-[85%] px-3 py-2 text-xs border" style={{ backgroundColor: m.role === 'user' ? chat.color + '30' : C.bgColor, borderColor: m.role === 'user' ? chat.color : C.borderColor, color: C.textColor }}>{m.content}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="p-2 border-t flex gap-2" style={{ borderColor: C.borderColor }}>
-                    <input type="text" placeholder="Message..." className="flex-1 px-2 py-1 text-xs bg-transparent border outline-none" style={{ borderColor: C.borderColor, color: C.textColor }} onKeyDown={(e) => { if (e.key === 'Enter') { sendChat(chat.id, (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }} />
-                    <button onClick={(e) => { const input = (e.currentTarget.previousSibling as HTMLInputElement); if (input.value) { sendChat(chat.id, input.value); input.value = ''; } }} className="p-1.5" style={{ color: chat.color }}><Send size={14} /></button>
-                  </div>
-                </>
-              )}
+              <div className="text-xs uppercase tracking-widest opacity-40 font-bold">{s.label}</div>
             </div>
           ))}
         </div>
-      )}
+      </section>
+
+      {/* Features */}
+      <section className="px-4 py-24" id="features">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-black mb-4" style={{ color: C.headerColor }}>
+              Everything You Need
+            </h2>
+            <p className="opacity-50 max-w-xl mx-auto">
+              A complete platform for building, deploying, and scaling AI agents — from ideation to production.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {FEATURES.map(f => {
+              const Icon = f.icon;
+              return (
+                <div key={f.title} className="group p-6 rounded-xl border transition-all hover:translate-y-[-2px]" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 text-sm transition-all group-hover:scale-110" style={{ backgroundColor: `${C.accentColor}20`, color: C.accentColor }}>
+                    <Icon size={20} />
+                  </div>
+                  <h3 className="font-bold mb-2" style={{ color: C.headerColor }}>{f.title}</h3>
+                  <p className="text-sm opacity-50 leading-relaxed">{f.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="px-4 py-24" style={{ borderTop: `1px solid ${C.borderColor}30` }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-black mb-4" style={{ color: C.headerColor }}>
+              How It Works
+            </h2>
+            <p className="opacity-50 max-w-xl mx-auto">
+              Get started in three simple steps. No complex setup required.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { step: '01', title: 'Choose Your Agent', desc: 'Browse our marketplace of specialized AI agents. Each is purpose-built for specific tasks — coding, writing, analytics, and more.' },
+              { step: '02', title: 'Customize & Deploy', desc: 'Configure your agent&apos;s behavior, knowledge base, and tools. Deploy with one click to any workspace.' },
+              { step: '03', title: 'Scale & Earn', desc: 'Monitor performance, iterate, and publish to the marketplace. Earn LitCoins as others use your agents.' },
+            ].map(s => (
+              <div key={s.step} className="text-center">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 text-sm font-black" style={{ backgroundColor: `${C.accentColor}20`, color: C.accentColor, border: `1px solid ${C.accentColor}40` }}>
+                  {s.step}
+                </div>
+                <h3 className="font-bold mb-2" style={{ color: C.headerColor }}>{s.title}</h3>
+                <p className="text-sm opacity-50 leading-relaxed max-w-xs mx-auto">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Agents Showcase */}
+      <section className="px-4 py-24" style={{ borderTop: `1px solid ${C.borderColor}30` }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-black mb-4" style={{ color: C.headerColor }}>
+              Meet Your AI Workforce
+            </h2>
+            <p className="opacity-50 max-w-xl mx-auto">
+              Six specialized agents ready to deploy. Each one is a domain expert.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {AGENTS.map(a => (
+              <Link
+                key={a.name}
+                href={a.href}
+                className="group p-5 rounded-xl border transition-all hover:translate-y-[-2px]"
+                style={{ backgroundColor: C.boxBg, borderColor: C.borderColor, '--hover-color': a.color } as React.CSSProperties}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-2xl">{a.icon}</span>
+                  <div>
+                    <div className="font-bold text-sm" style={{ color: C.headerColor }}>{a.name}</div>
+                    <div className="text-[10px] uppercase tracking-wider font-bold opacity-40">{a.role}</div>
+                  </div>
+                  <span className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: a.color, boxShadow: `0 0 6px ${a.color}` }} />
+                </div>
+                <p className="text-xs opacity-60 leading-relaxed">{a.desc}</p>
+              </Link>
+            ))}
+          </div>
+
+          <div className="text-center mt-10">
+            <Link
+              href="/agents"
+              className="inline-flex items-center gap-2 text-sm font-bold opacity-60 hover:opacity-100 transition-all"
+            >
+              View All Agents <ChevronRight size={14} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="px-4 py-24" style={{ borderTop: `1px solid ${C.borderColor}30` }}>
+        <div className="max-w-3xl mx-auto text-center p-12 rounded-xl border relative overflow-hidden" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
+          <div className="absolute inset-0 pointer-events-none opacity-10" style={{ background: `radial-gradient(circle at 50% 50%, ${C.accentColor}, transparent 70%)` }} />
+          <div className="relative">
+            <h2 className="text-3xl md:text-4xl font-black mb-4" style={{ color: C.headerColor }}>
+              Ready to Build?
+            </h2>
+            <p className="opacity-50 mb-8 max-w-lg mx-auto">
+              Join 50,000+ creators already building with LiTTree Lab Studios. Start free — no credit card required.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/sign-up"
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold transition-all hover:scale-105"
+                style={{ backgroundColor: C.accentColor, color: '#fff' }}
+              >
+                Get Started Free <ArrowRight size={16} />
+              </Link>
+              <Link
+                href="/studio"
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold border transition-all hover:bg-white/5"
+                style={{ borderColor: C.borderColor }}
+              >
+                Explore Studio
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

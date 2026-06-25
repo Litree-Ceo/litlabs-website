@@ -1,10 +1,12 @@
-@import "tailwindcss";
-
 /* ============================================================
-   LiTTree Lab Studios — Modern Design System
-   Premium Dark UI: Sophisticated grays, glassmorphism,
-   subtle glows, and sharp typography.
-   ============================================================ */
+    LiTTree Lab Studios — Modern Design System
+    Premium Dark UI: Sophisticated grays, glassmorphism,
+    subtle glows, and sharp typography.
+    ============================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   /* Premium Midnight theme - default */
@@ -30,14 +32,10 @@
   --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@theme inline {
-  --color-background: var(--bg-color);
-  --color-foreground: var(--text-color);
-  --font-sans: var(--font-inter), "Inter", "Segoe UI", system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), "JetBrains Mono", "Fira Code", monospace;
-  --font-display: var(--font-inter), "Inter", sans-serif;
-
-  /* Modern semantic tokens */
+/* Modern semantic tokens - applied to body */
+body {
+  --color-background: #08080c;
+  --color-foreground: #e2e2e9;
   --color-ui-bg: #08080c;
   --color-ui-surface: #12121a;
   --color-ui-surface-2: #1e1e2e;
