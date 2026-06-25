@@ -1,10 +1,4 @@
-'use client';
-export const dynamic = 'force-dynamic';
-
 import Link from 'next/link';
-import React, { useEffect, useState, useRef, Suspense } from 'react';
-import { useClerkAuth } from '@/hooks/useClerkAuth';
-import { useTheme } from '@/context/ThemeContext';
 import { Code2, Bot, BarChart3, ChevronRight, Shield, ArrowRight, Check, Globe, Coins } from 'lucide-react';
 
 const FEATURES = [
@@ -25,68 +19,25 @@ const AGENTS = [
   { icon: '✍️', name: 'Writer', role: 'Content', desc: 'Crafts copy, stories, and marketing content.', color: '#ff9ff3', href: '/agents/writing-coach' },
 ];
 
-function Counter({ target, suffix = '', duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const counted = useRef(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !counted.current) {
-        counted.current = true;
-        const steps = 60;
-        const increment = target / steps;
-        let current = 0;
-        const interval = setInterval(() => {
-          current += increment;
-          if (current >= target) { setCount(target); clearInterval(interval); }
-          else setCount(Math.floor(current));
-        }, duration / steps);
-      }
-    }, { threshold: 0.3 });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [target, duration]);
-
-  return <div ref={ref}>{count.toLocaleString()}{suffix}</div>;
-}
-
 export default function LandingPage() {
-  const { isLoaded, isSignedIn } = useClerkAuth();
-  const { resolvedColors: C } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  if (!isLoaded) return null;
-  if (isSignedIn) {
-    const Dashboard = React.lazy(() => import('@/components/Dashboard'));
-    return (
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: C.bgColor }}><div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: C.accentColor }} /></div>}>
-        <Dashboard />
-      </Suspense>
-    );
-  }
-
   return (
-    <div className="min-h-screen" style={{ backgroundColor: C.bgColor, color: C.textColor }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#08080c', color: '#e2e2e9' }}>
       {/* Hero */}
       <section className="relative px-4 pt-20 pb-24 md:pt-32 md:pb-32 text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-20" style={{ background: `radial-gradient(circle, ${C.accentColor}40 0%, transparent 70%)`, filter: 'blur(60px)' }} />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-20" style={{ background: `radial-gradient(circle, ${C.linkColor}40 0%, transparent 70%)`, filter: 'blur(60px)' }} />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, #6366f140 0%, transparent 70%)', filter: 'blur(60px)' }} />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, #3b82f640 0%, transparent 70%)', filter: 'blur(60px)' }} />
         </div>
 
         <div className="relative max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-8 border" style={{ borderColor: C.borderColor, backgroundColor: C.boxBg }}>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-8 border" style={{ borderColor: '#26262e', backgroundColor: '#12121a' }}>
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             v2.0 — Now in Public Beta
           </div>
 
-          <h1 className="text-4xl md:text-7xl font-black tracking-tight mb-6 leading-tight" style={{ color: C.headerColor }}>
+          <h1 className="text-4xl md:text-7xl font-black tracking-tight mb-6 leading-tight" style={{ color: '#f8fafc' }}>
             Deploy AI Agents{' '}
-            <span className="bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(135deg, ${C.accentColor}, ${C.linkColor})` }}>
+            <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(135deg, #6366f1, #3b82f6)' }}>
               That Actually Work
             </span>
           </h1>
@@ -99,40 +50,38 @@ export default function LandingPage() {
             <Link
               href="/studio"
               className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold transition-all hover:scale-105"
-              style={{ backgroundColor: C.accentColor, color: '#fff', boxShadow: `0 0 30px ${C.accentColor}30` }}
+              style={{ backgroundColor: '#6366f1', color: '#fff', boxShadow: '0 0 30px #6366f130' }}
             >
               Launch Studio <ArrowRight size={16} />
             </Link>
             <Link
               href="/sign-up"
               className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold border transition-all hover:bg-white/5"
-              style={{ borderColor: C.borderColor }}
+              style={{ borderColor: '#26262e' }}
             >
               Create Free Account
             </Link>
           </div>
 
           <div className="flex items-center justify-center gap-6 mt-10 text-xs opacity-50">
-            <span className="flex items-center gap-1.5"><Check size={12} style={{ color: C.success }} /> No credit card</span>
-            <span className="flex items-center gap-1.5"><Check size={12} style={{ color: C.success }} /> 500 free credits</span>
-            <span className="flex items-center gap-1.5"><Check size={12} style={{ color: C.success }} /> Cancel anytime</span>
+            <span className="flex items-center gap-1.5"><Check size={12} style={{ color: '#10b981' }} /> No credit card</span>
+            <span className="flex items-center gap-1.5"><Check size={12} style={{ color: '#10b981' }} /> 500 free credits</span>
+            <span className="flex items-center gap-1.5"><Check size={12} style={{ color: '#10b981' }} /> Cancel anytime</span>
           </div>
         </div>
       </section>
 
       {/* Stats */}
-      <section className="px-4 py-16" style={{ borderTop: `1px solid ${C.borderColor}30`, borderBottom: `1px solid ${C.borderColor}30` }}>
+      <section className="px-4 py-16" style={{ borderTop: '1px solid #26262e30', borderBottom: '1px solid #26262e30' }}>
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { label: 'Active Agents', target: 10420, suffix: '+' },
-            { label: 'Total Users', target: 52891, suffix: '+' },
-            { label: 'Tasks Completed', target: 2400000, suffix: '+' },
-            { label: 'LitCoins Earned', target: 150000, suffix: '+' },
+            { label: 'Active Agents', value: '10,420+' },
+            { label: 'Total Users', value: '52,891+' },
+            { label: 'Tasks Completed', value: '2.4M+' },
+            { label: 'LitCoins Earned', value: '150K+' },
           ].map(s => (
             <div key={s.label}>
-              <div className="text-3xl md:text-4xl font-black mb-1" style={{ color: C.headerColor }}>
-                <Counter target={s.target} suffix={s.suffix} />
-              </div>
+              <div className="text-3xl md:text-4xl font-black mb-1" style={{ color: '#f8fafc' }}>{s.value}</div>
               <div className="text-xs uppercase tracking-widest opacity-40 font-bold">{s.label}</div>
             </div>
           ))}
@@ -143,23 +92,19 @@ export default function LandingPage() {
       <section className="px-4 py-24" id="features">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-black mb-4" style={{ color: C.headerColor }}>
-              Everything You Need
-            </h2>
-            <p className="opacity-50 max-w-xl mx-auto">
-              A complete platform for building, deploying, and scaling AI agents — from ideation to production.
-            </p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4" style={{ color: '#f8fafc' }}>Everything You Need</h2>
+            <p className="opacity-50 max-w-xl mx-auto">A complete platform for building, deploying, and scaling AI agents — from ideation to production.</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map(f => {
               const Icon = f.icon;
               return (
-                <div key={f.title} className="group p-6 rounded-xl border transition-all hover:translate-y-[-2px]" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 text-sm transition-all group-hover:scale-110" style={{ backgroundColor: `${C.accentColor}20`, color: C.accentColor }}>
+                <div key={f.title} className="group p-6 rounded-xl border transition-all hover:translate-y-[-2px]" style={{ backgroundColor: '#12121a', borderColor: '#26262e' }}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 text-sm transition-all group-hover:scale-110" style={{ backgroundColor: '#6366f120', color: '#6366f1' }}>
                     <Icon size={20} />
                   </div>
-                  <h3 className="font-bold mb-2" style={{ color: C.headerColor }}>{f.title}</h3>
+                  <h3 className="font-bold mb-2" style={{ color: '#f8fafc' }}>{f.title}</h3>
                   <p className="text-sm opacity-50 leading-relaxed">{f.desc}</p>
                 </div>
               );
@@ -169,15 +114,11 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section className="px-4 py-24" style={{ borderTop: `1px solid ${C.borderColor}30` }}>
+      <section className="px-4 py-24" style={{ borderTop: '1px solid #26262e30' }}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-black mb-4" style={{ color: C.headerColor }}>
-              How It Works
-            </h2>
-            <p className="opacity-50 max-w-xl mx-auto">
-              Get started in three simple steps. No complex setup required.
-            </p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4" style={{ color: '#f8fafc' }}>How It Works</h2>
+            <p className="opacity-50 max-w-xl mx-auto">Get started in three simple steps. No complex setup required.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -187,10 +128,10 @@ export default function LandingPage() {
               { step: '03', title: 'Scale & Earn', desc: 'Monitor performance, iterate, and publish to the marketplace. Earn LitCoins as others use your agents.' },
             ].map(s => (
               <div key={s.step} className="text-center">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 text-sm font-black" style={{ backgroundColor: `${C.accentColor}20`, color: C.accentColor, border: `1px solid ${C.accentColor}40` }}>
+                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 text-sm font-black" style={{ backgroundColor: '#6366f120', color: '#6366f1', border: '1px solid #6366f140' }}>
                   {s.step}
                 </div>
-                <h3 className="font-bold mb-2" style={{ color: C.headerColor }}>{s.title}</h3>
+                <h3 className="font-bold mb-2" style={{ color: '#f8fafc' }}>{s.title}</h3>
                 <p className="text-sm opacity-50 leading-relaxed max-w-xs mx-auto">{s.desc}</p>
               </div>
             ))}
@@ -199,15 +140,11 @@ export default function LandingPage() {
       </section>
 
       {/* Agents Showcase */}
-      <section className="px-4 py-24" style={{ borderTop: `1px solid ${C.borderColor}30` }}>
+      <section className="px-4 py-24" style={{ borderTop: '1px solid #26262e30' }}>
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-black mb-4" style={{ color: C.headerColor }}>
-              Meet Your AI Workforce
-            </h2>
-            <p className="opacity-50 max-w-xl mx-auto">
-              Six specialized agents ready to deploy. Each one is a domain expert.
-            </p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4" style={{ color: '#f8fafc' }}>Meet Your AI Workforce</h2>
+            <p className="opacity-50 max-w-xl mx-auto">Six specialized agents ready to deploy. Each one is a domain expert.</p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -216,12 +153,12 @@ export default function LandingPage() {
                 key={a.name}
                 href={a.href}
                 className="group p-5 rounded-xl border transition-all hover:translate-y-[-2px]"
-                style={{ backgroundColor: C.boxBg, borderColor: C.borderColor, '--hover-color': a.color } as React.CSSProperties}
+                style={{ backgroundColor: '#12121a', borderColor: '#26262e' }}
               >
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-2xl">{a.icon}</span>
                   <div>
-                    <div className="font-bold text-sm" style={{ color: C.headerColor }}>{a.name}</div>
+                    <div className="font-bold text-sm" style={{ color: '#f8fafc' }}>{a.name}</div>
                     <div className="text-[10px] uppercase tracking-wider font-bold opacity-40">{a.role}</div>
                   </div>
                   <span className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: a.color, boxShadow: `0 0 6px ${a.color}` }} />
@@ -232,10 +169,7 @@ export default function LandingPage() {
           </div>
 
           <div className="text-center mt-10">
-            <Link
-              href="/agents"
-              className="inline-flex items-center gap-2 text-sm font-bold opacity-60 hover:opacity-100 transition-all"
-            >
+            <Link href="/agents" className="inline-flex items-center gap-2 text-sm font-bold opacity-60 hover:opacity-100 transition-all">
               View All Agents <ChevronRight size={14} />
             </Link>
           </div>
@@ -243,29 +177,17 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="px-4 py-24" style={{ borderTop: `1px solid ${C.borderColor}30` }}>
-        <div className="max-w-3xl mx-auto text-center p-12 rounded-xl border relative overflow-hidden" style={{ backgroundColor: C.boxBg, borderColor: C.borderColor }}>
-          <div className="absolute inset-0 pointer-events-none opacity-10" style={{ background: `radial-gradient(circle at 50% 50%, ${C.accentColor}, transparent 70%)` }} />
+      <section className="px-4 py-24" style={{ borderTop: '1px solid #26262e30' }}>
+        <div className="max-w-3xl mx-auto text-center p-12 rounded-xl border relative overflow-hidden" style={{ backgroundColor: '#12121a', borderColor: '#26262e' }}>
+          <div className="absolute inset-0 pointer-events-none opacity-10" style={{ background: 'radial-gradient(circle at 50% 50%, #6366f1, transparent 70%)' }} />
           <div className="relative">
-            <h2 className="text-3xl md:text-4xl font-black mb-4" style={{ color: C.headerColor }}>
-              Ready to Build?
-            </h2>
-            <p className="opacity-50 mb-8 max-w-lg mx-auto">
-              Join 50,000+ creators already building with LiTTree Lab Studios. Start free — no credit card required.
-            </p>
+            <h2 className="text-3xl md:text-4xl font-black mb-4" style={{ color: '#f8fafc' }}>Ready to Build?</h2>
+            <p className="opacity-50 mb-8 max-w-lg mx-auto">Join 50,000+ creators already building with LiTTree Lab Studios. Start free — no credit card required.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                href="/sign-up"
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold transition-all hover:scale-105"
-                style={{ backgroundColor: C.accentColor, color: '#fff' }}
-              >
+              <Link href="/sign-up" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold transition-all hover:scale-105" style={{ backgroundColor: '#6366f1', color: '#fff' }}>
                 Get Started Free <ArrowRight size={16} />
               </Link>
-              <Link
-                href="/studio"
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold border transition-all hover:bg-white/5"
-                style={{ borderColor: C.borderColor }}
-              >
+              <Link href="/studio" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold border transition-all hover:bg-white/5" style={{ borderColor: '#26262e' }}>
                 Explore Studio
               </Link>
             </div>
