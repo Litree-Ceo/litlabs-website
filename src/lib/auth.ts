@@ -1,15 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export async function POST(req: NextRequest) {
+export async function auth() {
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return cookieStore.getAll(); },
+        getAll() {
+          return cookieStore.getAll();
+        },
         setAll(cookiesToSet) {
           try {
             for (const { name, value, options } of cookiesToSet) {
@@ -20,8 +21,7 @@ export async function POST(req: NextRequest) {
       },
     }
   );
-
-  await supabase.auth.signOut();
-
-  return NextResponse.redirect(new URL("/", req.url));
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id ?? null;
+  return { userId };
 }

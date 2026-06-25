@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) {
+  const { userId } = await auth();
+  if (!userId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   const sb = getSupabase();
 
   try {
-    // Check if user exists
     const { data: existing } = await sb
       .from("users")
-      .select("id, clerk_id, username")
-      .eq("clerk_id", clerkId)
+      .select("id, auth_id, username")
+      .eq("auth_id", userId)
       .single();
 
     if (existing) {
@@ -26,17 +25,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Get user info from Clerk (we'll need to create a basic record)
-    // Generate a username from clerkId
-    const shortId = clerkId.slice(-8);
+    const shortId = userId.slice(-8);
     const username = `user_${shortId}`;
     const displayName = `LiTBit User ${shortId}`;
 
-    // Create user in Supabase
     const { data: newUser, error } = await sb
       .from("users")
       .insert({
-        clerk_id: clerkId,
+        auth_id: userId,
         username: username,
         display_name: displayName,
         created_at: new Date().toISOString(),
@@ -46,17 +42,15 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      // DB error — returned to caller below
       return NextResponse.json(
         { error: "Failed to create user" },
         { status: 500 },
       );
     }
 
-    // Create initial wallet
     await sb.from("wallets").insert({
       user_id: newUser.id,
-      balance: 500, // Starting bonus
+      balance: 500,
       lifetime_earned: 500,
     });
 
@@ -67,15 +61,13 @@ export async function POST(req: NextRequest) {
       startingBalance: 500,
     });
   } catch (err) {
-    // Unexpected error — returned to caller below
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
-// Also allow GET for simple check
 export async function GET() {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) {
+  const { userId } = await auth();
+  if (!userId) {
     return NextResponse.json(
       { exists: false, error: "Not authenticated" },
       { status: 401 },
@@ -87,7 +79,7 @@ export async function GET() {
   const { data: user } = await sb
     .from("users")
     .select("id, username, display_name")
-    .eq("clerk_id", clerkId)
+    .eq("auth_id", userId)
     .single();
 
   return NextResponse.json({

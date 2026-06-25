@@ -1,18 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/jwt";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
-  const token = req.cookies.get("auth-token")?.value;
-  if (!token) return NextResponse.json({ user: null });
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll(cookiesToSet) {
+          try {
+            for (const { name, value, options } of cookiesToSet) {
+              cookieStore.set(name, value, options);
+            }
+          } catch {}
+        },
+      },
+    }
+  );
 
-  const payload = await verifyToken(token);
-  if (!payload) return NextResponse.json({ user: null });
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    return NextResponse.json({ user: null });
+  }
 
   return NextResponse.json({
     user: {
-      id: payload.id as string,
-      email: payload.email as string,
-      name: (payload.name as string) || null,
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || null,
     },
   });
 }

@@ -21,7 +21,7 @@ type Post = {
 };
 
 export default function SocialFeed({ embedded = false }: { embedded?: boolean }) {
-  const { isLoaded, isSignedIn, userId: clerkUserId } = useClerkAuth();
+  const { isLoaded, isSignedIn, userId: userId } = useClerkAuth();
   const { resolvedColors: T } = useTheme();
   const [posts, setPosts] = useState<Post[]>([]);
   const [postContent, setPostContent] = useState('');
@@ -42,7 +42,7 @@ export default function SocialFeed({ embedded = false }: { embedded?: boolean })
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchCurrentUser = async () => {
-    if (!isSignedIn || !clerkUserId) return;
+    if (!isSignedIn || !userId) return;
     try {
       const res = await fetch('/api/account');
       const data = await res.json();

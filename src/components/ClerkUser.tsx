@@ -1,28 +1,54 @@
 "use client";
 
-import { useUser, UserButton } from "@clerk/nextjs";
+import { useState, useEffect } from "react";
 
 type Props = {
   compact?: boolean;
 };
 
-export function ClerkUserWidget({ compact }: Props) {
-  const { user, isLoaded } = useUser();
+type UserData = {
+  id: string;
+  email?: string;
+  name?: string | null;
+  avatar_url?: string | null;
+};
 
-  if (!isLoaded) return null;
+export function ClerkUserWidget({ compact }: Props) {
+  const [user, setUser] = useState<UserData | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/session", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user) setUser(data.user);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  if (!loaded) return null;
 
   if (compact) {
-    return user ? <UserButton afterSignOutUrl="/" /> : null;
+    return user ? (
+      <form action="/api/auth/logout" method="POST">
+        <button type="submit" className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-black cursor-pointer hover:opacity-80 transition-opacity"
+          style={{ backgroundColor: "rgba(255,0,128,0.2)", color: "#ff0080", border: "1px solid rgba(255,0,128,0.4)" }} title="Sign out">
+          ✕
+        </button>
+      </form>
+    ) : null;
   }
 
-  const displayName = user?.firstName || user?.username || "User";
+  const displayName = user?.name || "User";
   const initials = displayName.slice(0, 2).toUpperCase();
+  const email = user?.email || "";
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-      {user?.imageUrl ? (
+      {user?.avatar_url ? (
         <img
-          src={user.imageUrl}
+          src={user.avatar_url}
           alt="Profile"
           style={{
             width: "44px",
@@ -74,7 +100,7 @@ export function ClerkUserWidget({ compact }: Props) {
             whiteSpace: "nowrap",
           }}
         >
-          {user?.primaryEmailAddress?.emailAddress}
+          {email}
         </div>
       </div>
     </div>

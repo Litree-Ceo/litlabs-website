@@ -1,6 +1,6 @@
 // Gallery API — GET (list) / POST (save image)
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { withRateLimit } from "@/lib/rate-limiter";
 
@@ -67,9 +67,9 @@ async function getHandler(req: NextRequest) {
     }
 
     // Require auth for DB-backed gallery to avoid leaking private uploads
-    const { userId: clerkId } = await auth();
-    if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { data: user } = await supabaseAdmin.from("users").select("id").eq("clerk_id", clerkId).single();
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { data: user } = await supabaseAdmin.from("users").select("id").eq("auth_id", userId).single();
     if (!user) return NextResponse.json({ items: [] });
 
     let query = supabaseAdmin
@@ -115,8 +115,8 @@ async function getHandler(req: NextRequest) {
 
 async function postHandler(req: NextRequest) {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -131,7 +131,7 @@ async function postHandler(req: NextRequest) {
       return NextResponse.json({ success: true, id: `mock_${Date.now()}`, mock: true });
     }
 
-    const { data: user } = await supabaseAdmin.from("users").select("id").eq("clerk_id", clerkId).single();
+    const { data: user } = await supabaseAdmin.from("users").select("id").eq("auth_id", userId).single();
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }

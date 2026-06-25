@@ -103,11 +103,11 @@ export default function Navbar() {
   const notifRef = useRef<HTMLDivElement>(null);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
-  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
-  const { isLoaded: sessionLoaded, isSignedIn: sessionSignedIn } =
+  const { isLoaded: authLoaded1, isSignedIn: authSignedIn1 } = useClerkAuth();
+  const { isLoaded: authLoaded2, isSignedIn: authSignedIn2 } =
     useSessionAuth();
-  const authLoaded = clerkLoaded || sessionLoaded;
-  const isSignedIn = clerkSignedIn || sessionSignedIn;
+  const authLoaded = authLoaded1 || authLoaded2;
+  const isSignedIn = authSignedIn1 || authSignedIn2;
 
   const isActive = (path: string) => {
     if (path === "/" && pathname !== "/") return false;

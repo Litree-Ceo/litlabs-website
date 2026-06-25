@@ -1,46 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { getUserByClerkId, updateUserProfile, getOrCreateUser } from "@/lib/user-db";
+import { auth } from "@/lib/auth";
+import { getUserByAuthId, updateUserProfile, getOrCreateUser } from "@/lib/user-db";
 import { withRateLimit } from "@/lib/rate-limiter";
 
-/**
- * GET /api/settings/profile
- * Returns the current user's profile from the database.
- */
 async function getHandler(req: NextRequest) {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let user = await getUserByClerkId(clerkId);
-    
-    // Auto-create user if not exists (first time sign in)
+    const user = await getUserByAuthId(userId);
     if (!user) {
-      // Get user info from Clerk
-      const clerkRes = await fetch(`https://api.clerk.dev/v1/users/${clerkId}`, {
-        headers: { Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}` },
-      });
-      
-      if (!clerkRes.ok) {
-        return NextResponse.json({ error: "Failed to fetch user from Clerk" }, { status: 500 });
-      }
-      
-      const clerkUser = await clerkRes.json();
-      const email = clerkUser.email_addresses?.[0]?.email_address || "";
-      const name = clerkUser.first_name && clerkUser.last_name 
-        ? `${clerkUser.first_name} ${clerkUser.last_name}`
-        : clerkUser.first_name || email.split("@")[0];
-      
-      const result = await getOrCreateUser(clerkId, email, name);
-      user = result.user;
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json({
       user: {
         id: user.id,
-        clerk_id: user.clerk_id,
+        auth_id: user.auth_id,
         email: user.email,
         name: user.name,
         username: user.username,
@@ -52,7 +30,6 @@ async function getHandler(req: NextRequest) {
       },
     });
   } catch (error) {
-    // Error fetching profile:
     return NextResponse.json(
       { error: "Failed to fetch profile" },
       { status: 500 }
@@ -60,14 +37,10 @@ async function getHandler(req: NextRequest) {
   }
 }
 
-/**
- * POST /api/settings/profile
- * Updates the user's profile in the database.
- */
 async function postHandler(req: NextRequest) {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -76,7 +49,6 @@ async function postHandler(req: NextRequest) {
       return NextResponse.json({ error: "Invalid body" }, { status: 400 });
     }
 
-    // Only allow updating certain fields
     const allowedUpdates = {
       ...(typeof body.name === "string" && body.name.trim() && { name: body.name.trim() }),
       ...(typeof body.username === "string" && body.username.trim() && { username: body.username.trim() }),
@@ -90,13 +62,13 @@ async function postHandler(req: NextRequest) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
-    const updatedUser = await updateUserProfile(clerkId, allowedUpdates);
+    const updatedUser = await updateUserProfile(userId, allowedUpdates);
 
     return NextResponse.json({
       message: "Profile updated successfully",
       user: {
         id: updatedUser.id,
-        clerk_id: updatedUser.clerk_id,
+        auth_id: updatedUser.auth_id,
         email: updatedUser.email,
         name: updatedUser.name,
         username: updatedUser.username,
@@ -107,7 +79,6 @@ async function postHandler(req: NextRequest) {
       },
     });
   } catch (error) {
-    // Error updating profile:
     return NextResponse.json(
       { error: "Failed to update profile" },
       { status: 500 }

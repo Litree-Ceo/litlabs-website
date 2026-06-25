@@ -114,7 +114,7 @@ export class AgentOrchestrator {
   "dependencies": {
     "next": "16.2.6",
     "react": "^19.0.0",
-    "@clerk/nextjs": "^6.0.0",
+    "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.45.0",
     "lucide-react": "^0.400.0",
     "tailwindcss": "^4.0.0"

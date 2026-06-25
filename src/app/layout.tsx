@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import MainLayout from "@/components/MainLayout";
 import "./globals.css";
 
@@ -59,8 +58,6 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
-const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -69,49 +66,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased min-h-screen" style={{ backgroundColor: "#0a0a0f" }}>
-        {clerkKey ? (
-          <ClerkProvider
-            publishableKey={clerkKey}
-            signInUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL ?? "/sign-in"}
-            signUpUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL ?? "/sign-up"}
-            signInFallbackRedirectUrl={process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL ?? "/studio"}
-            signUpFallbackRedirectUrl={process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL ?? "/studio"}
-            appearance={{
-              variables: {
-                colorPrimary: "#00f0ff",
-                colorBackground: "#0a0a12",
-                colorText: "#e0e0ff",
-                colorTextSecondary: "#8888aa",
-                colorDanger: "#ff00a0",
-                colorSuccess: "#00ff41",
-                borderRadius: "8px",
-              },
-              elements: {
-                card: {
-                  backgroundColor: "#151520",
-                  border: "1px solid #2a2a45",
-                  boxShadow: "0 4px 20px rgba(0,240,255,0.1)",
-                },
-                userButtonPopoverCard: {
-                  backgroundColor: "#151520",
-                  border: "1px solid #2a2a45",
-                },
-                userButtonPopoverActionButton: {
-                  "&:hover": {
-                    backgroundColor: "rgba(0,240,255,0.1)",
-                  },
-                },
-                badge: {
-                  backgroundColor: "#ff00a0",
-                },
-              },
-            }}
-          >
-            <MainLayout>{children}</MainLayout>
-          </ClerkProvider>
-        ) : (
-          <MainLayout>{children}</MainLayout>
-        )}
+        <MainLayout>{children}</MainLayout>
       </body>
     </html>
   );

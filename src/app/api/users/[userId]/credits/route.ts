@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { getUserWallet, updateWalletBalance } from "@/lib/user-db";
 import { rateLimit } from "@/lib/rate-limiter";
 
-/**
- * POST /api/users/[userId]/credits
- * Updates user credits (LiTBit Coins) - Admin or system use
- */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
-  // Rate limiting
   const { success, remaining, resetTime } = rateLimit(req, 50, 60);
   if (!success) {
     return new NextResponse(JSON.stringify({ error: "Rate limit exceeded" }), {
@@ -26,9 +21,8 @@ export async function POST(
   }
 
   try {
-    // Verify admin/system authentication
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId: authUserId } = await auth();
+    if (!authUserId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -36,7 +30,6 @@ export async function POST(
     const body = await req.json();
     const amount = Number(body.amount) || 0;
 
-    // Get current wallet
     const wallet = await getUserWallet(userId);
     const newBalance = wallet.balance + amount;
     if (newBalance < 0) {
@@ -61,7 +54,6 @@ export async function POST(
     
     return response;
   } catch (error) {
-    // Error updating credits:
     return NextResponse.json(
       { error: "Failed to update credits" },
       { status: 500 }
@@ -69,15 +61,10 @@ export async function POST(
   }
 }
 
-/**
- * GET /api/users/[userId]/credits
- * Get user credits (LiTBit Coins)
- */
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
-  // Rate limiting
   const { success, remaining, resetTime } = rateLimit(req, 100, 60);
   if (!success) {
     return new NextResponse(JSON.stringify({ error: "Rate limit exceeded" }), {
@@ -92,8 +79,8 @@ export async function GET(
   }
 
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId: authUserId } = await auth();
+    if (!authUserId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -101,7 +88,6 @@ export async function GET(
     const wallet = await getUserWallet(userId);
     return NextResponse.json({ credits: wallet.balance });
   } catch (error) {
-    // Error fetching credits:
     return NextResponse.json(
       { error: "Failed to fetch credits" },
       { status: 500 }

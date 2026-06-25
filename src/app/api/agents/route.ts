@@ -1,7 +1,7 @@
 // API Route: List marketplace agents from Supabase + create custom agents
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { withRateLimit } from "@/lib/rate-limiter";
 
 async function getHandler(req: NextRequest) {
@@ -20,7 +20,7 @@ async function getHandler(req: NextRequest) {
     if (includeOwn) {
       const { userId } = await auth();
       if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      const { data: user } = await supabase.from("users").select("id").eq("clerk_id", userId).single();
+      const { data: user } = await supabase.from("users").select("id").eq("auth_id", userId).single();
       if (user) query = query.or(`is_core.eq.true,owner_id.eq.${user.id}`);
       else query = query.eq("is_core", true);
     } else {
@@ -69,8 +69,8 @@ async function getHandler(req: NextRequest) {
 
 async function postHandler(req: NextRequest) {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -86,7 +86,7 @@ async function postHandler(req: NextRequest) {
       return NextResponse.json({ error: "Invalid slug" }, { status: 400 });
     }
 
-    const { data: user } = await supabase.from("users").select("id").eq("clerk_id", clerkId).single();
+    const { data: user } = await supabase.from("users").select("id").eq("auth_id", userId).single();
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }

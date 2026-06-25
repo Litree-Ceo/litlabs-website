@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { getUserPreferences, updateUserPreferences } from "@/lib/user-db";
 import { withRateLimit } from "@/lib/rate-limiter";
 
@@ -9,12 +9,12 @@ import { withRateLimit } from "@/lib/rate-limiter";
  */
 async function getHandler(req: NextRequest) {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const preferences = await getUserPreferences(clerkId);
+    const preferences = await getUserPreferences(userId);
     
     // Return defaults if no preferences found
     return NextResponse.json({
@@ -40,8 +40,8 @@ async function getHandler(req: NextRequest) {
  */
 async function postHandler(req: NextRequest) {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -75,7 +75,7 @@ async function postHandler(req: NextRequest) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
-    const updated = await updateUserPreferences(clerkId, updates);
+    const updated = await updateUserPreferences(userId, updates);
 
     return NextResponse.json({
       message: "Preferences updated successfully",

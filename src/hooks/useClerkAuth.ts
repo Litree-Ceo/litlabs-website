@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createClient } from "@/lib/supabase-client";
 
 export function useClerkAuth() {
   const [state, setState] = useState<{
@@ -21,19 +22,58 @@ export function useClerkAuth() {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
 
-    fetch("/api/auth/session", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.user) {
-          setState({
-            isLoaded: true,
-            isSignedIn: true,
-            userId: data.user.id,
-            sessionClaims: { name: data.user.name, email: data.user.email },
-          });
-        }
-      })
-      .catch(() => {});
+    const supabase = createClient();
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setState({
+          isLoaded: true,
+          isSignedIn: true,
+          userId: session.user.id,
+          sessionClaims: {
+            name: session.user.user_metadata?.name,
+            email: session.user.email,
+          },
+        });
+      } else {
+        setState({
+          isLoaded: true,
+          isSignedIn: false,
+          userId: null,
+          sessionClaims: undefined,
+        });
+      }
+    }).catch(() => {
+      setState({
+        isLoaded: true,
+        isSignedIn: false,
+        userId: null,
+        sessionClaims: undefined,
+      });
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setState({
+          isLoaded: true,
+          isSignedIn: true,
+          userId: session.user.id,
+          sessionClaims: {
+            name: session.user.user_metadata?.name,
+            email: session.user.email,
+          },
+        });
+      } else {
+        setState({
+          isLoaded: true,
+          isSignedIn: false,
+          userId: null,
+          sessionClaims: undefined,
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return state;

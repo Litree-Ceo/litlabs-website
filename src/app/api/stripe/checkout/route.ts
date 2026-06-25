@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Pass metadata for coin pack tracking (clerk_id, coin_amount)
+    // Pass metadata for coin pack tracking (auth_id, coin_amount)
     if (body.metadata && typeof body.metadata === "object") {
       Object.entries(body.metadata).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {

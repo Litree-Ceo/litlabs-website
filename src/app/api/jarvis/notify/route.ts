@@ -2,11 +2,11 @@
 // Triggers notifications to Discord, webhooks, etc.
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { jarvis, NotificationPayload } from "@/lib/jarvis";
 
 // Admin user ID
-const ADMIN_USER_ID = process.env.ADMIN_CLERK_ID || "user_litbit";
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID || "admin";
 
 export async function POST(req: NextRequest) {
   try {

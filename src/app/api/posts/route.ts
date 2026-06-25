@@ -1,6 +1,6 @@
 // Social Feed API — GET (feed) / POST (create post)
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { getAdminSupabase, isAdminSupabaseConfigured } from "@/lib/supabase-admin";
 import { withRateLimit } from "@/lib/rate-limiter";
 
@@ -79,7 +79,7 @@ async function getHandler(req: NextRequest) {
     if (filter === "following") {
       const { userId } = await auth();
       if (userId) {
-        const { data: user } = await sb.from("users").select("id").eq("clerk_id", userId).single();
+        const { data: user } = await sb.from("users").select("id").eq("auth_id", userId).single();
         if (user) {
           const { data: follows } = await sb.from("follows").select("followee_id").eq("follower_id", user.id);
           const followeeIds = (follows || []).map(f => f.followee_id);
@@ -125,7 +125,7 @@ async function postHandler(req: NextRequest) {
     let { data: user } = await sb
       .from("users")
       .select("id")
-      .eq("clerk_id", userId)
+      .eq("auth_id", userId)
       .single();
 
     if (!user) {
@@ -134,7 +134,7 @@ async function postHandler(req: NextRequest) {
       const { data: newUser, error: createError } = await sb
         .from("users")
         .insert({
-          clerk_id: userId,
+          auth_id: userId,
           username: `user_${shortId}`,
           display_name: `LiTBit User ${shortId}`,
           created_at: new Date().toISOString(),

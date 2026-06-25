@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { getUserWallet, updateWalletBalance, claimDailyBonus } from "@/lib/user-db";
 import { withRateLimit } from "@/lib/rate-limiter";
 
@@ -9,12 +9,12 @@ import { withRateLimit } from "@/lib/rate-limiter";
  */
 async function getHandler(req: NextRequest) {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const wallet = await getUserWallet(clerkId);
+    const wallet = await getUserWallet(userId);
     return NextResponse.json({
       balance: wallet.balance,
       last_claim_date: wallet.last_claim_date,
@@ -32,8 +32,8 @@ async function getHandler(req: NextRequest) {
  */
 async function postHandler(req: NextRequest) {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -51,7 +51,7 @@ async function postHandler(req: NextRequest) {
       if (amount <= 0) {
         return NextResponse.json({ error: "amount must be a positive number" }, { status: 400 });
       }
-      const currentWallet = await getUserWallet(clerkId);
+      const currentWallet = await getUserWallet(userId);
       const newBalance = currentWallet.balance - amount;
       if (newBalance < 0) {
         return NextResponse.json(
@@ -59,7 +59,7 @@ async function postHandler(req: NextRequest) {
           { status: 400 }
         );
       }
-      const wallet = await updateWalletBalance(clerkId, newBalance, { absolute: true });
+      const wallet = await updateWalletBalance(userId, newBalance, { absolute: true });
       return NextResponse.json({
         message: `${amount} LiTBit Coins spent`,
         balance: wallet.balance,
@@ -75,7 +75,7 @@ async function postHandler(req: NextRequest) {
       );
     }
 
-    const claimed = await claimDailyBonus(clerkId, 50);
+    const claimed = await claimDailyBonus(userId, 50);
     return NextResponse.json({
       message: "Daily bonus claimed! +50 LiTBit Coins",
       balance: claimed.balance,
@@ -99,8 +99,8 @@ async function postHandler(req: NextRequest) {
  */
 async function putHandler(req: NextRequest) {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -113,7 +113,7 @@ async function putHandler(req: NextRequest) {
       );
     }
 
-    const currentWallet = await getUserWallet(clerkId);
+    const currentWallet = await getUserWallet(userId);
     const newBalance = currentWallet.balance + body.amount;
     
     if (newBalance < 0) {
@@ -123,7 +123,7 @@ async function putHandler(req: NextRequest) {
       );
     }
 
-    const wallet = await updateWalletBalance(clerkId, newBalance, { absolute: true });
+    const wallet = await updateWalletBalance(userId, newBalance, { absolute: true });
 
     return NextResponse.json({
       message: body.amount > 0 

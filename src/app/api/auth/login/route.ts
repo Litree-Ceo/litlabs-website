@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyPassword } from "@/lib/db";
-import { signToken } from "@/lib/jwt";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
   let email = "";
   let password = "";
-  let isJson = false;
 
   const contentType = req.headers.get("content-type") || "";
   if (contentType.includes("application/json")) {
-    isJson = true;
     const body = await req.json();
     email = body.email || "";
     password = body.password || "";
@@ -20,70 +18,49 @@ export async function POST(req: NextRequest) {
   }
 
   if (!email || !password) {
-    if (isJson) {
-      return NextResponse.json(
-        { error: "Email and password required" },
-        { status: 400 }
-      );
-    }
-    return NextResponse.redirect(
-      new URL("/login?error=Email+and+password+required", req.url)
+    return NextResponse.json(
+      { error: "Email and password required" },
+      { status: 400 }
     );
   }
 
-  // Single-user admin login: accept any non-empty password for the admin email
-  const user = await verifyPassword(email, password);
-  if (!user) {
-    // Fallback: allow admin email with any non-empty password for personal access
-    const adminEmail = (process.env.ADMIN_EMAIL || "laidbacknostress4life@gmail.com").trim().toLowerCase();
-    const adminUsername = adminEmail.split("@")[0];
-    const identifier = email.trim().toLowerCase();
-    if ((identifier === adminEmail || identifier === adminUsername) && password.length > 0) {
-      const res = isJson
-        ? NextResponse.json({ user: { id: "admin", email: adminEmail, name: "Larry — CEO" } })
-        : NextResponse.redirect(new URL("/dashboard", req.url));
-      const token = await signToken({ id: "admin", email: adminEmail, name: "Larry — CEO" });
-      res.cookies.set("auth-token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
-        path: "/",
-      });
-      return res;
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll(cookiesToSet) {
+          try {
+            for (const { name, value, options } of cookiesToSet) {
+              cookieStore.set(name, value, options);
+            }
+          } catch {}
+        },
+      },
     }
+  );
 
-    if (isJson) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
-    }
-    return NextResponse.redirect(
-      new URL("/login?error=Invalid+credentials", req.url)
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
+
+  if (error || !data.session) {
+    return NextResponse.json(
+      { error: error?.message || "Invalid credentials" },
+      { status: 401 }
     );
   }
 
-  const token = await signToken({
-    id: user.id,
-    email: user.email,
-    name: user.name,
+  const user = data.session.user;
+
+  return NextResponse.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.name || user.email?.split("@")[0] || null,
+    },
   });
-
-  // For JSON requests, return JSON with cookie
-  const res = isJson
-    ? NextResponse.json({
-        user: { id: user.id, email: user.email, name: user.name || null },
-      })
-    : NextResponse.redirect(new URL("/dashboard", req.url));
-
-  res.cookies.set("auth-token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
-
-  return res;
 }

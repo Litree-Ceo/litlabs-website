@@ -5,12 +5,10 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       "@supabase/supabase-js",
       "lucide-react",
-      "@clerk/nextjs",
     ],
   },
 
   // Externalize jose from middleware bundling (fixes NFT build error)
-  serverExternalPackages: ["jose"],
 
   // Image optimization
   images: {
@@ -81,12 +79,12 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://js.clerk.dev https://clerk.litlabs.net https://www.googletagmanager.com https://challenges.cloudflare.com https://cdn-cgi.cloudflare.com https://static.cloudflareinsights.com https://litlabs.net https://vercel.live",
-              "style-src 'self' 'unsafe-inline' https://*.clerk.com",
-              "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://image.pollinations.ai https://img.clerk.com https://images.clerk.dev https://fal.media https://storage.googleapis.com https://img.youtube.com https://avatars.githubusercontent.com",
-              "font-src 'self' https://*.clerk.com",
-              "connect-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.dev https://clerk.litlabs.net https://*.supabase.co wss://*.supabase.co https://api.openai.com https://openrouter.ai https://api.stripe.com https://fal.run https://fal.ai wss://*.fal.run https://image.pollinations.ai https://cloud.activepieces.com https://api.minimax.chat https://together.xyz https://api.together.xyz https://cloudflareinsights.com https://challenges.cloudflare.com https://vercel.live",
-              "frame-src 'self' https://open.spotify.com https://js.stripe.com https://challenges.cloudflare.com https://*.clerk.com https://*.clerk.accounts.dev https://vercel.live",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://challenges.cloudflare.com https://cdn-cgi.cloudflare.com https://static.cloudflareinsights.com https://litlabs.net https://vercel.live",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://image.pollinations.ai https://fal.media https://storage.googleapis.com https://img.youtube.com https://avatars.githubusercontent.com",
+              "font-src 'self'",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://openrouter.ai https://api.stripe.com https://fal.run https://fal.ai wss://*.fal.run https://image.pollinations.ai https://cloud.activepieces.com https://api.minimax.chat https://together.xyz https://api.together.xyz https://cloudflareinsights.com https://challenges.cloudflare.com https://vercel.live",
+              "frame-src 'self' https://open.spotify.com https://js.stripe.com https://challenges.cloudflare.com https://vercel.live",
               "worker-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",

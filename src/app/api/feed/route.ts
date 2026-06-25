@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { getAdminSupabase, isAdminSupabaseConfigured } from "@/lib/supabase-admin";
 import { withRateLimit } from "@/lib/rate-limiter";
 
@@ -92,14 +92,14 @@ async function postHandler(req: NextRequest) {
 
   try {
     const sb = getAdminSupabase();
-    let { data: user } = await sb.from("users").select("id").eq("clerk_id", userId).single();
+    let { data: user } = await sb.from("users").select("id").eq("auth_id", userId).single();
 
     if (!user) {
       const shortId = userId.slice(-8);
       const { data: newUser, error: createError } = await sb
         .from("users")
         .insert({
-          clerk_id: userId,
+          auth_id: userId,
           username: `user_${shortId}`,
           display_name: `LiTBit User ${shortId}`,
           created_at: new Date().toISOString(),

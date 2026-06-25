@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withRateLimit } from "@/lib/rate-limiter";
 import { streamText, generateText } from "@/lib/llm";
 import { AGENTS, Agent } from "@/lib/agents";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";

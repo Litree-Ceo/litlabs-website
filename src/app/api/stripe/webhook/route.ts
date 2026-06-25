@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getAdminSupabase, isAdminSupabaseConfigured } from "@/lib/supabase-admin";
 
-async function creditCoinPack(clerkId: string, coinAmount: number, sessionId: string) {
+async function creditCoinPack(userId: string, coinAmount: number, sessionId: string) {
   if (!isAdminSupabaseConfigured()) {
     // Supabase not configured — skipping wallet credit
     return;
@@ -11,7 +11,7 @@ async function creditCoinPack(clerkId: string, coinAmount: number, sessionId: st
   try {
     const sb = getAdminSupabase();
     // Find user
-    const { data: user } = await sb.from("users").select("id").eq("clerk_id", clerkId).single();
+    const { data: user } = await sb.from("users").select("id").eq("auth_id", userId).single();
     if (!user) {
       // User not found for clerk_id — skip
       return;
@@ -72,9 +72,9 @@ export async function POST(req: NextRequest) {
       // Checkout completed — process coin pack
       const meta = session.metadata || {};
       const coinAmount = parseInt(meta.coin_amount || "0", 10);
-      const clerkId = meta.clerk_id;
-      if (coinAmount > 0 && clerkId) {
-        await creditCoinPack(clerkId, coinAmount, session.id);
+      const authId = meta.auth_id || meta.clerk_id;
+      if (coinAmount > 0 && authId) {
+        await creditCoinPack(authId, coinAmount, session.id);
       }
       break;
     }

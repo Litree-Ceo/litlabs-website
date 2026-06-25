@@ -2,10 +2,10 @@
 // Streams real-time stats and events to admin dashboard
 
 import { NextRequest } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
-const ADMIN_USER_ID = process.env.ADMIN_CLERK_ID || "user_litbit";
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID || "admin";
 
 // Mock stats generator for now
 function generateStats() {

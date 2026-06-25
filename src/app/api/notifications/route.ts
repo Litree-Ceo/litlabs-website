@@ -1,6 +1,6 @@
 // Notifications API — GET (list) / PATCH (mark read)
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { getAdminSupabase, isAdminSupabaseConfigured } from "@/lib/supabase-admin";
 import { withRateLimit } from "@/lib/rate-limiter";
 
@@ -18,7 +18,7 @@ async function getHandler(req: NextRequest) {
 
   try {
     const sb = getAdminSupabase();
-    const { data: user } = await sb.from("users").select("id").eq("clerk_id", userId).single();
+    const { data: user } = await sb.from("users").select("id").eq("auth_id", userId).single();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     let query = sb
@@ -54,7 +54,7 @@ async function patchHandler(req: NextRequest) {
 
   try {
     const sb = getAdminSupabase();
-    const { data: user } = await sb.from("users").select("id").eq("clerk_id", userId).single();
+    const { data: user } = await sb.from("users").select("id").eq("auth_id", userId).single();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     if (markAll) {

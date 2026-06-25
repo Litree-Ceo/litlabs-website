@@ -1,13 +1,12 @@
 /**
- * LiTTree Lab Studios - Service Worker v5
- * Asset caching only — navigation requests pass through to the network
- * so Lighthouse and browser devtools can record traces correctly.
+ * LiTTree Lab Studios - Service Worker v6
+ * Stale-while-revalidate for static assets.
+ * Navigation requests pass through so Lighthouse traces work.
  */
 
-const CACHE_NAME = "litlabs-v5";
+const CACHE_NAME = "litlabs-v6";
 const STATIC_ASSETS = ["/manifest.json", "/logo.webp", "/logo-sm.png"];
 
-// Install — pre-cache static assets only (not pages)
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
@@ -15,7 +14,6 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Activate — purge old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -29,36 +27,30 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch — network-first for navigation, cache-first for static assets
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
-  const url = event.request.url;
-
-  // Always pass navigation requests straight to the network
-  // (prevents NO_NAVSTART in Lighthouse and keeps pages fresh)
   if (event.request.mode === "navigate") return;
 
-  // Skip API, external, and non-basic requests
+  const url = event.request.url;
   if (url.includes("/api/")) return;
   if (!url.startsWith(self.location.origin)) return;
 
-  // Cache-first with background revalidation for static assets
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const networkFetch = fetch(event.request)
-        .then((response) => {
-          if (response.ok && response.type === "basic") {
-            caches
-              .open(CACHE_NAME)
-              .then((cache) => cache.put(event.request, response.clone()));
-          }
-          return response;
-        })
-        .catch(() => cached || new Response("Offline", { status: 503 }));
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(event.request);
 
-      return cached || networkFetch;
-    }),
+      try {
+        const response = await fetch(event.request);
+        if (response.ok && response.type === "basic") {
+          cache.put(event.request, response.clone());
+        }
+        return response;
+      } catch {
+        return cached || new Response("Offline", { status: 503 });
+      }
+    })(),
   );
 });
 

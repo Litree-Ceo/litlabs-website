@@ -3,7 +3,7 @@
 // Only admin user can access this
 
 import { spawn, ChildProcess } from 'child_process';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth';
 
 // Admin user ID - only this user can use CLI bridge
 const ADMIN_USER_ID = 'user_litbit'; // Will be replaced with actual Clerk ID
