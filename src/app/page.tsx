@@ -19,10 +19,10 @@ const FEATURES = [
 const AGENTS = [
   { icon: '🎯', name: 'Director', role: 'Orchestrator', desc: 'Routes tasks across your agent workforce. The brain of your operation.', color: '#00ffff', href: '/agents/director' },
   { icon: '🏆', name: 'Champion', role: 'General', desc: 'Takes charge of complex missions. Your most versatile agent.', color: '#ff0080', href: '/agents/champion' },
-  { icon: '💻', name: 'Code Champ', role: 'Engineer', desc: 'Writes, debugs, and reviews code. Full-stack capable.', color: '#00ff41', href: '/agents/code' },
-  { icon: '📱', name: 'Social Dom', role: 'Growth', desc: 'Plans content, schedules posts, and grows your audience.', color: '#ff6b6b', href: '/agents/social' },
-  { icon: '📊', name: 'Data Slayer', role: 'Analytics', desc: 'Crunch numbers, find patterns, build dashboards.', color: '#ffff00', href: '/agents/data' },
-  { icon: '✍️', name: 'Writer', role: 'Content', desc: 'Crafts copy, stories, and marketing content.', color: '#ff9ff3', href: '/agents/writer' },
+  { icon: '💻', name: 'Code Champ', role: 'Engineer', desc: 'Writes, debugs, and reviews code. Full-stack capable.', color: '#00ff41', href: '/agents/code-champion' },
+  { icon: '📱', name: 'Social Dom', role: 'Growth', desc: 'Plans content, schedules posts, and grows your audience.', color: '#ff6b6b', href: '/agents/social-dominator' },
+  { icon: '📊', name: 'Data Slayer', role: 'Analytics', desc: 'Crunch numbers, find patterns, build dashboards.', color: '#ffff00', href: '/agents/data-slayer' },
+  { icon: '✍️', name: 'Writer', role: 'Content', desc: 'Crafts copy, stories, and marketing content.', color: '#ff9ff3', href: '/agents/writing-coach' },
 ];
 
 function Counter({ target, suffix = '', duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
@@ -183,7 +183,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { step: '01', title: 'Choose Your Agent', desc: 'Browse our marketplace of specialized AI agents. Each is purpose-built for specific tasks — coding, writing, analytics, and more.' },
-              { step: '02', title: 'Customize & Deploy', desc: 'Configure your agent&apos;s behavior, knowledge base, and tools. Deploy with one click to any workspace.' },
+              { step: '02', title: 'Customize & Deploy', desc: "Configure your agent's behavior, knowledge base, and tools. Deploy with one click to any workspace." },
               { step: '03', title: 'Scale & Earn', desc: 'Monitor performance, iterate, and publish to the marketplace. Earn LitCoins as others use your agents.' },
             ].map(s => (
               <div key={s.step} className="text-center">
