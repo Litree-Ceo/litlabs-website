@@ -14,14 +14,18 @@
     "sync": "bash ./build.sh sync"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.0.0",
+    "@clerk/nextjs": "^6.39.5",
     "@google/genai": "^2.8.0",
     "@google/generative-ai": "^0.24.1",
+    "@next/third-parties": "^16.2.9",
     "@stripe/stripe-js": "^5.10.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.106.2",
-"bcryptjs": "^3.0.3",
+    "bcryptjs": "^3.0.3",
     "jose": "^6.2.3",
-    "keytar": "^7.9.0"
+    "keytar": "^7.9.0",
     "lucide-react": "^1.17.0",
     "next": "^16.2.9",
     "react": "^19.2.7",
@@ -40,6 +44,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "prettier": "^3.5.0"
   }
 }

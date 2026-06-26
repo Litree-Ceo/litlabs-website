@@ -10,7 +10,6 @@ import { useClerkAuth } from "@/hooks/useClerkAuth";
 import { useSessionAuth } from "@/hooks/useSessionAuth";
 import dynamic from "next/dynamic";
 import {
-  Home,
   ShoppingBag,
   Sparkles,
   Settings,
@@ -18,17 +17,15 @@ import {
   Moon,
   Zap,
   Bot,
-  ChevronDown,
   X,
   Menu,
-  Bell,
   Coins,
   User,
   Gamepad as GamepadIcon,
   Code2,
   Layout,
   Search,
-  Command,
+  Users,
 } from "lucide-react";
 
 const NavAuth = dynamic(
@@ -41,6 +38,7 @@ const navLinks = [
   { href: "/studio", label: "Studio", icon: Zap },
   { href: "/gallery", label: "Gallery", icon: Sparkles },
   { href: "/agent", label: "Jarvis", icon: Bot },
+  { href: "/agents", label: "Agents", icon: Users },
   { href: "/marketplace", label: "Market", icon: ShoppingBag },
   { href: "/games", label: "Play", icon: GamepadIcon },
 ];
@@ -54,14 +52,31 @@ const userLinks = [
 
 function WalletBadge({ accentColor }: { accentColor: string }) {
   const [balance, setBalance] = useState<number | null>(null);
-  useEffect(() => {
+
+  const fetchBalance = () => {
     fetch("/api/wallet")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.balance !== undefined) setBalance(data.balance);
       })
       .catch(() => setBalance(null));
+  };
+
+  useEffect(() => {
+    fetchBalance();
+    // Refresh when DashboardView (or any component) emits after a claim/spend
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ balance?: number }>).detail;
+      if (typeof detail?.balance === "number") {
+        setBalance(detail.balance);
+      } else {
+        fetchBalance();
+      }
+    };
+    window.addEventListener("wallet-updated", handler);
+    return () => window.removeEventListener("wallet-updated", handler);
   }, []);
+
   return (
     <div
       className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:scale-105"
@@ -78,36 +93,27 @@ function WalletBadge({ accentColor }: { accentColor: string }) {
   );
 }
 
-function useLocalStorageNumber(key: string, fallback: number) {
-  const [val, setVal] = useState(fallback);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) setVal(Number(raw));
-    } catch {}
-  }, [key]);
-  return val;
-}
-
 export default function Navbar() {
   const { resolvedColors: T, setMode, theme } = useTheme();
-  const { profile } = useProfile();
+  const { profile: _profile } = useProfile();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [userOpen, setUserOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [userOpen, _setUserOpen] = useState(false);
+  const [notifOpen, _setNotifOpen] = useState(false);
+  const [notifications, _setNotifications] = useState<
+    Record<string, unknown>[]
+  >([]);
+  const [unreadCount, _setUnreadCount] = useState(0);
 
   const userRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
-  const { isLoaded: authLoaded1, isSignedIn: authSignedIn1 } = useClerkAuth();
-  const { isLoaded: authLoaded2, isSignedIn: authSignedIn2 } =
+  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
+  const { isLoaded: sessionLoaded, isSignedIn: sessionSignedIn } =
     useSessionAuth();
-  const authLoaded = authLoaded1 || authLoaded2;
-  const isSignedIn = authSignedIn1 || authSignedIn2;
+  const authLoaded = clerkLoaded || sessionLoaded;
+  const isSignedIn = clerkSignedIn || sessionSignedIn;
 
   const isActive = (path: string) => {
     if (path === "/" && pathname !== "/") return false;
@@ -117,9 +123,9 @@ export default function Navbar() {
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (userRef.current && !userRef.current.contains(e.target as Node))
-        setUserOpen(false);
+        _setUserOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target as Node))
-        setNotifOpen(false);
+        _setNotifOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -209,12 +215,20 @@ export default function Navbar() {
           {/* Right Section Actions */}
           <div className="flex items-center gap-3">
             {/* Search Button (UI Only) */}
-            <button className="p-2.5 rounded-xl hover:bg-white/5 opacity-60 transition-all hidden sm:flex">
+            <button
+              aria-label="Search"
+              className="p-2.5 rounded-xl hover:bg-white/5 opacity-60 transition-all hidden sm:flex"
+            >
               <Search size={18} />
             </button>
 
             {/* Theme Toggle */}
             <button
+              aria-label={
+                theme.mode === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
               onClick={() => setMode(theme.mode === "dark" ? "light" : "dark")}
               className="p-2.5 rounded-xl hover:bg-white/5 transition-all"
               style={{ color: T.textMuted }}
@@ -236,6 +250,7 @@ export default function Navbar() {
             {/* Mobile Hamburger */}
             <button
               ref={hamburgerRef}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
               onClick={() => setMobileOpen(!mobileOpen)}
               className="lg:hidden p-2.5 rounded-xl hover:bg-white/5 transition-all"
               style={{ color: T.textColor }}
@@ -262,7 +277,10 @@ export default function Navbar() {
           >
             <div className="flex items-center justify-between">
               <span className="font-black text-lg">Menu</span>
-              <button onClick={() => setMobileOpen(false)}>
+              <button
+                aria-label="Close menu"
+                onClick={() => setMobileOpen(false)}
+              >
                 <X />
               </button>
             </div>
