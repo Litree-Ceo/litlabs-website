@@ -477,9 +477,28 @@ export default function JarvisTerminal() {
             }
           }
         }
+        // If stream returned nothing, fall back to non-streaming request
+        if (!fullText) {
+          const fallback = await fetch("/api/gemini/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              agentSlug: selectedAgent,
+              message: msg,
+              provider: "gemini",
+              stream: false,
+            }),
+          });
+          if (fallback.ok) {
+            const data = await fallback.json();
+            fullText = data.response || "";
+          }
+        }
         addLog({
           type: "brain",
-          text: fullText || "No response received.",
+          text:
+            fullText ||
+            "No response received. Check GEMINI_API_KEY in Vercel env vars.",
           agentName: "JARVIS",
         });
         speak(fullText);
