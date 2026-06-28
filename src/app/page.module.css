@@ -1,0 +1,90 @@
+/* Static text colors */
+.accentText {
+  color: #ff00a0;
+}
+
+.mutedText {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Border utility */
+.borderAlt {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Feature cards */
+.featureCard {
+  transition:
+    border-color 300ms,
+    box-shadow 300ms,
+    transform 300ms;
+}
+
+.featureCard:hover {
+  border-color: var(--hover-border, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--hover-shadow, none);
+}
+
+.featureIconBorder {
+  border-color: var(--icon-border, rgba(255, 255, 255, 0.1));
+}
+
+.featureIconInner {
+  color: var(--icon-color, #00f0ff);
+  transition: transform 300ms;
+}
+
+.featureCard:hover .featureIconInner {
+  transform: scale(1.1);
+}
+
+/* Preview cards */
+.previewCard {
+  transition:
+    border-color 300ms,
+    box-shadow 300ms,
+    transform 300ms;
+}
+
+.previewCard:hover {
+  border-color: var(--hover-border, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--hover-shadow, none);
+}
+
+.previewIconBorder {
+  border-color: var(--icon-border, rgba(255, 255, 255, 0.1));
+}
+
+.previewIconInner {
+  color: var(--icon-color, #00f0ff);
+  transition: transform 300ms;
+}
+
+.previewCard:hover .previewIconInner {
+  transform: scale(1.1);
+}
+
+.previewLink {
+  color: var(--link-color, #ff00a0);
+}
+
+/* Testimonial cards */
+.testimonialCard {
+  transition:
+    border-color 300ms,
+    box-shadow 300ms,
+    transform 300ms;
+}
+
+.testimonialCard:hover {
+  border-color: var(--hover-border, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--hover-shadow, none);
+}
+
+.avatarText {
+  color: var(--avatar-color, #00f0ff);
+}
+
+.avatarBg {
+  background-color: var(--avatar-bg, rgba(0, 240, 255, 0.12));
+}

@@ -1,73 +1,82 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { NextResponse } from "next/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { supabaseAdmin } from "@/lib/supabase";
 import { getOrCreateUser } from "@/lib/user-db";
-import { withRateLimit } from "@/lib/rate-limiter";
 
-async function getHandler(req: NextRequest) {
+/**
+ * GET /api/account
+ * Ensures the user exists in our database. Called on every page load via UserSync.
+ */
+export async function GET() {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const result = await getOrCreateUser(userId, "", "");
-
-    return NextResponse.json({
-      synced: true,
-      isNew: result.isNew,
-      user: result.user
-        ? {
-            id: result.user.id,
-            email: result.user.email,
-            name: result.user.name,
-          }
-        : null,
-    });
-  } catch (error) {
-    return NextResponse.json({ synced: false }, { status: 500 });
-  }
-}
-
-async function deleteHandler(req: NextRequest) {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: user, error: findError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("auth_id", userId)
-      .single();
+    const email = clerkUser.emailAddresses[0]?.emailAddress || "";
+    const name = clerkUser.firstName && clerkUser.lastName
+      ? `${clerkUser.firstName} ${clerkUser.lastName}`
+      : clerkUser.firstName || clerkUser.username || email.split("@")[0];
 
-    if (findError || !user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    const { user, isNew } = await getOrCreateUser(clerkId, email, name);
 
-    const { error: deleteError } = await supabase
-      .from("users")
-      .delete()
-      .eq("id", user.id);
-
-    if (deleteError) {
+    if (!user) {
       return NextResponse.json(
-        { error: "Failed to delete account" },
-        { status: 500 },
+        { error: "Failed to sync user account" },
+        { status: 500 }
       );
     }
 
     return NextResponse.json({
-      message: "Account deleted successfully",
+      synced: true,
+      isNew,
+      user,
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Error in GET /api/account:", error);
     return NextResponse.json(
-      { error: "Failed to delete account" },
-      { status: 500 },
+      { synced: false, error: error.message },
+      { status: 500 }
     );
   }
 }
 
-export const GET = withRateLimit(getHandler, 100, 60);
-export const DELETE = withRateLimit(deleteHandler, 10, 60);
+/**
+ * DELETE /api/account
+ * Deletes the current user's account and all associated data from Supabase.
+ */
+export async function DELETE() {
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Delete user from Supabase using admin client (cascades to other tables)
+    const { error } = await supabaseAdmin
+      .from("users")
+      .delete()
+      .eq("clerk_id", clerkId);
+
+    if (error) {
+      console.error("Error deleting user from database:", error);
+      return NextResponse.json({ error: "Failed to delete account" }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      message: "Account deletion successful",
+    });
+  } catch (error: any) {
+    console.error("Error in DELETE /api/account:", error);
+    return NextResponse.json(
+      { error: "Failed to delete account", details: error.message },
+      { status: 500 },
+    );
+  }
+}
